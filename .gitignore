@@ -1,104 +1,21 @@
-# =========================
-# Environment & Secrets
-# =========================
-.env
-.env.*
-!.env.example
-*.pem
-*.key
-
-# =========================
-# Python / FastAPI
-# =========================
+# Python
 __pycache__/
-*.py[cod]
-*.pyo
-*.pyd
-.Python
-.venv/
+*.pyc
+
+# Virtual environments
 venv/
-env/
-ENV/
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
+.venv/
 
-# =========================
-# Node / React
-# =========================
-node_modules/
-dist/
-build/
-.vite/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-
-# =========================
-# Flutter
-# =========================
-.dart_tool/
-.flutter-plugins
-.flutter-plugins-dependencies
-.pub-cache/
-.pub/
-build/
-
-# =========================
-# ML
-# =========================
-*.pkl
-*.pickle
-*.joblib
-*.h5
-*.keras
-*.pt
-*.pth
-*.onnx
-mlruns/
-
-# =========================
-# Datasets
-# =========================
-data/raw/*
-data/processed/*
-data/geo/*
-ml/data/*
-
-# Keep folder structure
-!data/raw/.gitkeep
-!data/processed/.gitkeep
-!data/geo/.gitkeep
-!ml/data/.gitkeep
-
-# =========================
 # Jupyter
-# =========================
 .ipynb_checkpoints/
 
-# =========================
-# OS files
-# =========================
-.DS_Store
-Thumbs.db
-desktop.ini
+# ML generated files
+ml/outputs/train.csv
+ml/outputs/test.csv
+ml/outputs/train_processed.csv
+ml/outputs/test_processed.csv
+ml/outputs/prepared_dataset.csv
+ml/outputs/test_predictions.csv
 
-# =========================
-# VS Code
-# =========================
-.vscode/*
-!.vscode/extensions.json
-!.vscode/settings.json
-
-# =========================
-# Logs
-# =========================
-*.log
-
-# =========================
 # Temporary files
-# =========================
 *.tmp
-*.temp
-*.swp
