@@ -164,10 +164,10 @@ if not TEST_FILE.exists():
     )
 
 
-print("\n✓ Training dataset found")
+print("\n[OK] Training dataset found")
 print(TRAIN_FILE)
 
-print("\n✓ Testing dataset found")
+print("\n[OK] Testing dataset found")
 print(TEST_FILE)
 
 
@@ -234,7 +234,7 @@ if TARGET_COLUMN not in test_df.columns:
 
 
 print(
-    f"\n✓ Target column found: "
+    f"\n[OK] Target column found: "
     f"{TARGET_COLUMN}"
 )
 
@@ -301,7 +301,7 @@ if list(X_train.columns) != list(X_test.columns):
 
 
 print(
-    "\n✓ Training and testing features match."
+    "\n[OK] Training and testing features match."
 )
 
 
@@ -355,7 +355,7 @@ if test_missing > 0:
 
 
 print(
-    "\n✓ No missing feature values found."
+    "\n[OK] No missing feature values found."
 )
 
 
@@ -422,7 +422,7 @@ def evaluate_model(
 
 
     print(
-        "✓ Training completed."
+        "[OK] Training completed."
     )
 
 
@@ -768,7 +768,7 @@ joblib.dump(
 
 
 print(
-    "\n✓ Logistic Regression model saved:"
+    "\n[OK] Logistic Regression model saved:"
 )
 
 print(
@@ -840,7 +840,7 @@ joblib.dump(
 
 
 print(
-    "\n✓ Random Forest model saved:"
+    "\n[OK] Random Forest model saved:"
 )
 
 print(
@@ -861,7 +861,7 @@ if XGBOOST_AVAILABLE:
 
 
     print(
-        "\n✓ XGBoost is installed."
+        "\n[OK] XGBoost is installed."
     )
 
 
@@ -929,7 +929,7 @@ if XGBOOST_AVAILABLE:
 
 
     print(
-        "\n✓ XGBoost model saved:"
+        "\n[OK] XGBoost model saved:"
     )
 
     print(
@@ -941,7 +941,7 @@ else:
 
 
     print(
-        "\n⚠ XGBoost is not installed."
+        "\n[WARN] XGBoost is not installed."
     )
 
     print(
@@ -1031,7 +1031,7 @@ comparison_df.to_csv(
 
 
 print(
-    "\n✓ Model comparison saved:"
+    "\n[OK] Model comparison saved:"
 )
 
 print(
@@ -1053,7 +1053,7 @@ comparison_df.to_csv(
 
 
 print(
-    "\n✓ Training results saved:"
+    "\n[OK] Training results saved:"
 )
 
 print(
@@ -1123,7 +1123,7 @@ joblib.dump(
 
 
 print(
-    "\n✓ Best model saved:"
+    "\n[OK] Best model saved:"
 )
 
 print(
@@ -1216,7 +1216,7 @@ if hasattr(
 
 
     print(
-        "\n✓ Feature importance saved:"
+        "\n[OK] Feature importance saved:"
     )
 
     print(
@@ -1302,7 +1302,7 @@ elif hasattr(
 
 
     print(
-        "\n✓ Feature coefficients saved:"
+        "\n[OK] Feature coefficients saved:"
     )
 
     print(
@@ -1313,7 +1313,7 @@ elif hasattr(
 if not feature_importance_saved:
 
     print(
-        "\n⚠ Feature importance "
+        "\n[WARN] Feature importance "
         "not available for this model."
     )
 
@@ -1406,5 +1406,5 @@ else:
 
 
 print("\n" + "=" * 70)
-print("✓ MODEL TRAINING COMPLETED SUCCESSFULLY")
+print("[OK] MODEL TRAINING COMPLETED SUCCESSFULLY")
 print("=" * 70)

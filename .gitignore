@@ -1,32 +1,19 @@
+node_modules/
+build/
+dist/
+coverage/
+.DS_Store
+*.log
+.env*
+!.env.example
+
 # Python
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
+*.sqlite
+*.db
+backend/database/*.db
+backend/uploads/*
+!backend/uploads/.gitkeep
 
-# Virtual environments
-venv/
-.venv/
-
-# Jupyter
-.ipynb_checkpoints/
-
-# ML generated files
-ml/outputs/train.csv
-ml/outputs/test.csv
-ml/outputs/train_processed.csv
-ml/outputs/test_processed.csv
-ml/outputs/prepared_dataset.csv
-ml/outputs/test_predictions.csv
-
-# Temporary files
-*.tmp
-
-# Node / Vite
-node_modules/
-.vite/
-
-# Environment files
-.env
-.env.local
-
-# Local database
-backend/database/

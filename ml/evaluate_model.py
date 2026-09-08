@@ -130,9 +130,9 @@ if not TEST_FILE.exists():
     )
 
 
-print("✓ Best model file found")
+print("[OK] Best model file found")
 
-print("✓ Processed test dataset found")
+print("[OK] Processed test dataset found")
 
 
 # ============================================================
@@ -147,7 +147,7 @@ model = joblib.load(
     MODEL_FILE
 )
 
-print("✓ Model loaded successfully")
+print("[OK] Model loaded successfully")
 
 print(f"\nModel type:")
 print(type(model).__name__)
@@ -166,7 +166,7 @@ test_df = pd.read_csv(
 )
 
 print(
-    f"\n✓ Test dataset loaded: "
+    f"\n[OK] Test dataset loaded: "
     f"{len(test_df):,} records"
 )
 
@@ -326,7 +326,7 @@ if total_missing > 0:
     )
 
 
-print("✓ No missing feature values found")
+print("[OK] No missing feature values found")
 
 
 # ============================================================
@@ -442,7 +442,7 @@ if hasattr(
 
 
     print(
-        "\n✓ Feature validation passed"
+        "\n[OK] Feature validation passed"
     )
 
 
@@ -461,7 +461,7 @@ y_pred = model.predict(
 
 
 print(
-    "\n✓ Predictions generated successfully"
+    "\n[OK] Predictions generated successfully"
 )
 
 
@@ -488,14 +488,14 @@ if hasattr(
 
 
     print(
-        "✓ Prediction probabilities generated"
+        "[OK] Prediction probabilities generated"
     )
 
 
 else:
 
     print(
-        "\n⚠ Model does not support "
+        "\n[WARN] Model does not support "
         "predict_proba()."
     )
 
@@ -703,7 +703,7 @@ plt.close()
 
 
 print(
-    "✓ Confusion matrix saved"
+    "[OK] Confusion matrix saved"
 )
 
 print(
@@ -750,7 +750,7 @@ if y_prob is not None:
 
 
     print(
-        "✓ ROC curve saved"
+        "[OK] ROC curve saved"
     )
 
     print(
@@ -803,7 +803,7 @@ report_df.to_csv(
 
 
 print(
-    "\n✓ Classification report saved"
+    "\n[OK] Classification report saved"
 )
 
 print(
@@ -872,7 +872,7 @@ with open(
 
 
 print(
-    "✓ Metrics saved"
+    "[OK] Metrics saved"
 )
 
 print(
@@ -909,7 +909,7 @@ prediction_df.to_csv(
 
 
 print(
-    "✓ Test predictions saved"
+    "[OK] Test predictions saved"
 )
 
 print(
@@ -922,7 +922,7 @@ print(
 # ============================================================
 
 print("\n" + "=" * 70)
-print("✓ MODEL EVALUATION COMPLETED SUCCESSFULLY")
+print("[OK] MODEL EVALUATION COMPLETED SUCCESSFULLY")
 print("=" * 70)
 
 

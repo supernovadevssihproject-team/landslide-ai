@@ -97,10 +97,10 @@ if not TEST_FILE.exists():
         f"\nTesting dataset not found:\n{TEST_FILE}"
     )
 
-print("✓ Training dataset found")
+print("[OK] Training dataset found")
 print(f"  {TRAIN_FILE}")
 
-print("\n✓ Testing dataset found")
+print("\n[OK] Testing dataset found")
 print(f"  {TEST_FILE}")
 
 
@@ -166,7 +166,7 @@ if missing_test:
         )
     )
 
-print("\n✓ All required columns found.")
+print("\n[OK] All required columns found.")
 
 print("\nNumeric features:")
 
@@ -240,7 +240,7 @@ if not set(test_labels).issubset(valid_labels):
         f"Found: {test_labels}"
     )
 
-print("\n✓ Label validation passed.")
+print("\n[OK] Label validation passed.")
 
 
 # ============================================================
@@ -292,7 +292,7 @@ if total_test_missing > 0:
         f"{total_test_missing} missing feature values."
     )
 
-print("\n✓ No missing values found.")
+print("\n[OK] No missing values found.")
 
 
 # ============================================================
@@ -331,7 +331,7 @@ for column in NUMERIC_FEATURES:
             f"in feature: {column}"
         )
 
-print("\n✓ Numeric feature validation passed.")
+print("\n[OK] Numeric feature validation passed.")
 
 
 # ============================================================
@@ -394,8 +394,8 @@ preprocessor = ColumnTransformer(
     remainder="drop"
 )
 
-print("\n✓ Numeric features will be standardized.")
-print("✓ Categorical features will be one-hot encoded.")
+print("\n[OK] Numeric features will be standardized.")
+print("[OK] Categorical features will be one-hot encoded.")
 
 
 # ============================================================
@@ -412,7 +412,7 @@ X_train_processed = preprocessor.fit_transform(
     X_train
 )
 
-print("✓ Training preprocessing complete.")
+print("[OK] Training preprocessing complete.")
 
 print("\nTransforming testing data...")
 
@@ -420,7 +420,7 @@ X_test_processed = preprocessor.transform(
     X_test
 )
 
-print("✓ Testing preprocessing complete.")
+print("[OK] Testing preprocessing complete.")
 
 
 # ============================================================
@@ -478,7 +478,7 @@ test_processed_df[TARGET_COLUMN] = (
     y_test.reset_index(drop=True)
 )
 
-print("\n✓ Target labels added.")
+print("\n[OK] Target labels added.")
 
 
 # ============================================================
@@ -601,7 +601,7 @@ if train_features != test_features:
         "do not match."
     )
 
-print("\n✓ Processed feature columns match.")
+print("\n[OK] Processed feature columns match.")
 
 
 # ============================================================
@@ -618,7 +618,7 @@ joblib.dump(
 )
 
 print(
-    "\n✓ Preprocessing pipeline saved:"
+    "\n[OK] Preprocessing pipeline saved:"
 )
 
 print(
@@ -644,10 +644,10 @@ test_processed_df.to_csv(
     index=False
 )
 
-print("\n✓ Processed training dataset saved:")
+print("\n[OK] Processed training dataset saved:")
 print(PROCESSED_TRAIN_FILE)
 
-print("\n✓ Processed testing dataset saved:")
+print("\n[OK] Processed testing dataset saved:")
 print(PROCESSED_TEST_FILE)
 
 
@@ -739,5 +739,5 @@ print(
 )
 
 print("\n" + "=" * 70)
-print("✓ FEATURE ENGINEERING COMPLETED SUCCESSFULLY")
+print("[OK] FEATURE ENGINEERING COMPLETED SUCCESSFULLY")
 print("=" * 70)

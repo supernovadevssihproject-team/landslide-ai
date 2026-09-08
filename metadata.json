@@ -1,0 +1,6 @@
+{
+  "name": "MDoNER Landslide Early Warning System",
+  "description": "National Landslide Early Warning & Risk Command system (LEWS NER) for the North Eastern Region, Government of India.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

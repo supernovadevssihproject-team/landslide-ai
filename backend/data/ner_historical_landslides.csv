@@ -1,0 +1,16 @@
+incident_id,date,location,district,state,latitude,longitude,elevation_m,slope_deg,soil_type,vegetation_ndvi,trigger_type,rainfall_mm,fatalities,runout_distance_m,slide_category
+LS-SK-2023-01,2023-10-04,Teesta Basin Chungthang-Mangan,Mangan,sikkim,27.5312,88.5134,1480,48.6,Schist Clay Loam,0.64,GLOF & Extreme Rainfall,280.0,42,1200,Rotational Rock-Debris Avalanche
+LS-SK-2022-04,2022-06-18,NH-10 Km 38 Singtam Cut-Slope,Gangtok,sikkim,27.2341,88.4988,1350,44.2,Weathered Gneissic Silt,0.58,Monsoon Downpour,145.0,4,350,Translational Rock Slide
+LS-AS-2022-09,2022-05-15,Dima Hasao New Haflong Railway Station,Dima Hasao,assam,25.1764,93.0248,960,39.2,Tertiary Shale & Sandstone,0.71,Continuous Torrential Rain,210.0,3,480,Complex Debris Flow
+LS-AS-2021-02,2021-07-08,Lumding-Badarpur Hill Section Jatinga,Dima Hasao,assam,25.1120,92.9850,890,36.5,Clayey Residual Soil,0.75,Heavy Rainfall,165.0,0,220,Mudslide & Track Subsidence
+LS-ML-2021-11,2021-06-22,Sohra Rim Pass Mawsmai Gorge,East Khasi Hills,meghalaya,25.2986,91.7322,1310,54.1,Karstic Sandstone & Limestone,0.52,Cloudburst Influx,320.0,6,650,Planar Rockfall & Slump
+LS-ML-2020-05,2020-09-24,Nongstoin-Shillong Highway NH-106,West Khasi Hills,meghalaya,25.5200,91.2700,1240,41.0,Lateritic Silty Clay,0.68,Prolonged Monsoon,180.0,2,190,Earth Flow
+LS-MN-2022-01,2022-06-30,Tupul Railway Yard Catchment (Ijei River),Noney,manipur,24.8167,93.6833,680,44.5,Disang Shales & Clay,0.61,Heavy Antecedent Monsoon,245.0,61,1400,Massive Rotational Earth Slide
+LS-MN-2023-03,2023-07-14,NH-37 Imphal-Silchar Highway Kotlen,Kangpokpi,manipur,24.8800,93.8100,820,38.0,Soft Shale Colluvium,0.69,Continuous Influx,140.0,1,280,Debris Slide
+LS-AR-2023-02,2023-06-25,Bhalukpong-Bomdila BCT Road Km 42,West Kameng,arunachal,27.0125,92.6458,1890,42.0,Phyllitic Metasediments,0.78,Monsoon Storm Burst,195.0,2,410,Rockfall & Talus Slide
+LS-AR-2022-07,2022-07-02,Itanagar-Naharlagun Papu Nallah,Papum Pare,arunachal,27.0980,93.6150,450,37.5,Siwalik Sandstone & Gravel,0.62,Torrential Rain,160.0,4,310,Mudflow & Bank Collapse
+LS-MZ-2023-01,2023-08-27,Aizawl Sairang Railway Construction,Aizawl,mizoram,23.7500,92.6500,920,47.0,Bhuban Siltstone & Shale,0.66,Heavy Monsoon Rain,190.0,7,520,Deep Bedrock Shear Slide
+LS-MZ-2021-03,2021-05-19,Champhai Fault Corridor Zokhawthar,Champhai,mizoram,23.4756,93.3281,1180,43.8,Tectonized Argillaceous Shale,0.59,Pre-monsoon Squall,135.0,0,260,Toe Failure & Road Crack
+LS-NL-2022-04,2022-07-20,Kohima-Dimapur 4-Lane NH-29 Pagla Pahar,Dimapur,nagaland,25.7900,93.7600,380,45.2,Barail Soft Clayey Sandstone,0.54,Intense Inundation,175.0,2,380,Boulder Drop & Slurry Runout
+LS-NL-2020-02,2020-08-11,Mokokchung-Mariani Road,Mokokchung,nagaland,26.3200,94.5200,1320,39.8,Disang Shale Weathering Zone,0.72,Sustained Rainfall,155.0,1,180,Rotational Slump
+LS-TR-2021-01,2021-06-14,Jampui Hills Vanghmun Ridge,North Tripura,tripura,23.9500,92.2800,780,34.0,Unconsolidated Tipam Sandstone,0.74,Tropical Depression Rain,160.0,0,140,Shallow Surface Slip
