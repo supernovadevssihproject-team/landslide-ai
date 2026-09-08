@@ -19,3 +19,14 @@ ml/outputs/test_predictions.csv
 
 # Temporary files
 *.tmp
+
+# Node / Vite
+node_modules/
+.vite/
+
+# Environment files
+.env
+.env.local
+
+# Local database
+backend/database/
