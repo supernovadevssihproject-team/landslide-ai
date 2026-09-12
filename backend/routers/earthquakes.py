@@ -21,3 +21,16 @@ def get_recent_earthquakes(
         radius_km=radius_km,
         limit=limit,
     )
+
+
+@router.get("/historical")
+def get_historical_earthquakes(
+    year: Optional[int] = Query(None, ge=1900, le=2100),
+    latitude: Optional[float] = Query(None, ge=-90, le=90),
+    longitude: Optional[float] = Query(None, ge=-180, le=180),
+):
+    """Return verified historical earthquake events.
+    Returns safe empty list since no verified historical NCS archive is configured.
+    """
+    return []
+

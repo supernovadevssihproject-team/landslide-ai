@@ -21,6 +21,7 @@ import {
 import { LandslideApi, LiveWeather } from '../services/api';
 import { EarthquakeResponse } from '../types';
 import { useMapContext } from '../context/MapContext';
+import { evaluateEventMetrics } from '../utils/seismicMetrics';
 
 interface HillsMountainRegionsProps {
   theme?: 'dark' | 'light';
@@ -248,6 +249,24 @@ export const HillsMountainRegions: React.FC<HillsMountainRegionsProps> = ({
       latestEarthquake.longitude
     );
     return Number.isFinite(dist) ? Math.round(dist) : null;
+  }, [selectedRegion, latestEarthquake]);
+
+  const latestSeismicMetrics = useMemo(() => {
+    if (
+      !selectedRegion?.coordinatesVerified ||
+      selectedRegion.latitude === undefined ||
+      selectedRegion.longitude === undefined ||
+      !latestEarthquake ||
+      !Number.isFinite(latestEarthquake.latitude) ||
+      !Number.isFinite(latestEarthquake.longitude)
+    ) {
+      return null;
+    }
+    return evaluateEventMetrics(
+      latestEarthquake,
+      selectedRegion.latitude,
+      selectedRegion.longitude
+    );
   }, [selectedRegion, latestEarthquake]);
 
   const recentCounts = useMemo(() => {
@@ -649,17 +668,51 @@ export const HillsMountainRegions: React.FC<HillsMountainRegionsProps> = ({
                             </div>
                           </div>
 
-                          {/* Region-Specific Distance */}
-                          <div className="mt-2.5 border-t border-slate-800/80 pt-2 text-[11px]">
-                            <span className={mutedTextClass}>Distance: </span>
-                            {latestDistanceKm !== null ? (
-                              <span className="font-mono font-bold text-cyan-300">
-                                {latestDistanceKm} km from {selectedRegion.name}
-                              </span>
-                            ) : (
-                              <span className="font-mono text-amber-300/90 italic">
-                                Region-specific seismic distance is unavailable.
-                              </span>
+                          {/* Region-Specific Distance, PGA, and MMI */}
+                          <div className="mt-2.5 border-t border-slate-800/80 pt-2 space-y-1.5 text-[11px]">
+                            <div className="flex items-center justify-between">
+                              <span className={mutedTextClass}>Epicentral Distance: </span>
+                              {latestDistanceKm !== null ? (
+                                <span className="font-mono font-bold text-cyan-300">
+                                  {latestDistanceKm} km from {selectedRegion.name}
+                                </span>
+                              ) : (
+                                <span className="font-mono text-amber-300/90 italic">
+                                  Region-specific seismic distance is unavailable.
+                                </span>
+                              )}
+                            </div>
+                            {latestSeismicMetrics && (
+                              <div className="grid grid-cols-2 gap-2 font-mono">
+                                <div
+                                  className={`rounded border p-1.5 ${
+                                    isDark ? 'border-slate-800 bg-slate-900/50' : 'border-slate-100 bg-slate-50'
+                                  }`}
+                                >
+                                  <span className={mutedTextClass}>Est. PGA: </span>
+                                  <span
+                                    className={`font-bold ${
+                                      latestSeismicMetrics.estimatedPgaG >= 0.05 ? 'text-amber-400' : 'text-slate-200'
+                                    }`}
+                                  >
+                                    {latestSeismicMetrics.estimatedPgaPercent}% g
+                                  </span>
+                                </div>
+                                <div
+                                  className={`rounded border p-1.5 ${
+                                    isDark ? 'border-slate-800 bg-slate-900/50' : 'border-slate-100 bg-slate-50'
+                                  }`}
+                                >
+                                  <span className={mutedTextClass}>Intensity: </span>
+                                  <span
+                                    className={`font-bold ${
+                                      latestSeismicMetrics.estimatedMmi.intensity >= 5 ? 'text-rose-400' : 'text-slate-200'
+                                    }`}
+                                  >
+                                    MMI {latestSeismicMetrics.estimatedMmi.roman}
+                                  </span>
+                                </div>
+                              </div>
                             )}
                           </div>
                         </div>
