@@ -110,6 +110,7 @@ export const GisMapContainer: React.FC<GisMapContainerProps> = ({
   const sensorsLayerGroupRef = useRef<L.LayerGroup | null>(null);
   const earthquakesLayerGroupRef = useRef<L.LayerGroup | null>(null);
   const historicalEarthquakesLayerGroupRef = useRef<L.LayerGroup | null>(null);
+  const selectedHillMarkerLayerRef = useRef<L.LayerGroup | null>(null);
 
   const [basemap, setBasemap] = useState<GoogleEarthBasemap>('hybrid');
   const [heatmapRadius, setHeatmapRadius] = useState<number>(32);
@@ -180,6 +181,7 @@ export const GisMapContainer: React.FC<GisMapContainerProps> = ({
     sensorsLayerGroupRef.current = L.layerGroup().addTo(map);
     earthquakesLayerGroupRef.current = L.layerGroup().addTo(map);
     historicalEarthquakesLayerGroupRef.current = L.layerGroup().addTo(map);
+    selectedHillMarkerLayerRef.current = L.layerGroup().addTo(map);
     mapRef.current = map;
 
     // Track zoom
@@ -217,22 +219,115 @@ export const GisMapContainer: React.FC<GisMapContainerProps> = ({
   // Fly to selected zone when selection changes
   useEffect(() => {
     const map = mapRef.current;
-    if (!map) return;
+    if (!map || focusCoordinates) return;
+
     map.flyTo(activeZoneCoords, Math.max(map.getZoom(), 11), {
       duration: 1.2,
       easeLinearity: 0.25,
     });
-  }, [activeZoneCoords]);
+  }, [activeZoneCoords, focusCoordinates]);
 
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !focusCoordinates) return;
+
+    if (
+      !Number.isFinite(focusCoordinates.latitude) ||
+      !Number.isFinite(focusCoordinates.longitude)
+    ) {
+      return;
+    }
+
     map.flyTo(
       [focusCoordinates.latitude, focusCoordinates.longitude],
       focusCoordinates.zoom ?? 10,
-      { duration: 1.2, easeLinearity: 0.25 }
+      {
+        duration: 1.2,
+        easeLinearity: 0.25,
+      }
     );
-  }, [focusCoordinates?.latitude, focusCoordinates?.longitude, focusCoordinates?.zoom]);
+  }, [
+    focusCoordinates?.latitude,
+    focusCoordinates?.longitude,
+    focusCoordinates?.zoom,
+  ]);
+
+  useEffect(() => {
+    const group = selectedHillMarkerLayerRef.current;
+    if (!group) return;
+
+    group.clearLayers();
+
+    if (
+      !selectedHillRegion ||
+      !selectedHillRegion.coordinatesVerified ||
+      selectedHillRegion.latitude === undefined ||
+      selectedHillRegion.longitude === undefined ||
+      !Number.isFinite(selectedHillRegion.latitude) ||
+      !Number.isFinite(selectedHillRegion.longitude)
+    ) {
+      return;
+    }
+
+    const iconHtml = `
+    <div class="relative flex flex-col items-center">
+      <span class="absolute top-0 inline-flex h-10 w-10 rounded-full bg-cyan-400/30 animate-ping"></span>
+
+      <div class="relative flex h-9 w-9 items-center justify-center rounded-full border-2 border-cyan-300 bg-slate-950 text-cyan-300 shadow-xl ring-2 ring-cyan-400/30">
+        <span class="text-lg leading-none">🏔️</span>
+      </div>
+
+      <div class="mt-1 rounded border border-cyan-400 bg-slate-950/95 px-2 py-1 text-[10px] font-mono font-bold text-cyan-300 whitespace-nowrap shadow-lg">
+        SELECTED HILL
+      </div>
+    </div>
+  `;
+
+    const icon = L.divIcon({
+      className: 'selected-hill-marker',
+      html: iconHtml,
+      iconSize: [44, 58],
+      iconAnchor: [22, 42],
+    });
+
+    const marker = L.marker(
+      [selectedHillRegion.latitude, selectedHillRegion.longitude],
+      {
+        icon,
+        zIndexOffset: 2000,
+      }
+    );
+
+    marker.bindPopup(`
+    <div class="p-2 font-sans text-xs bg-slate-950 text-slate-100 rounded-lg">
+      <div class="font-bold text-cyan-300 text-sm">
+        ${selectedHillRegion.name}
+      </div>
+
+      <div class="mt-1 text-slate-300">
+        ${selectedHillRegion.state}
+      </div>
+
+      <div class="mt-2 font-mono text-[10px] text-slate-400">
+        ${selectedHillRegion.latitude.toFixed(4)},
+        ${selectedHillRegion.longitude.toFixed(4)}
+      </div>
+
+      <div class="mt-1 text-[10px] text-emerald-300">
+        Verified representative coordinates
+      </div>
+    </div>
+  `);
+
+    marker.addTo(group);
+  }, [
+    selectedHillRegion?.id,
+    selectedHillRegion?.name,
+    selectedHillRegion?.state,
+    selectedHillRegion?.latitude,
+    selectedHillRegion?.longitude,
+    selectedHillRegion?.coordinatesVerified,
+  ]);
 
   // Render Hazard Zone Pins
   useEffect(() => {
