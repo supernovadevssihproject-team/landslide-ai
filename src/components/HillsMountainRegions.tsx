@@ -20,6 +20,7 @@ import {
 } from '../data/hillsData';
 import { LandslideApi, LiveWeather } from '../services/api';
 import { EarthquakeResponse } from '../types';
+import { useMapContext } from '../context/MapContext';
 
 interface HillsMountainRegionsProps {
   theme?: 'dark' | 'light';
@@ -57,19 +58,22 @@ export const HillsMountainRegions: React.FC<HillsMountainRegionsProps> = ({
   onNavigateToMap,
 }) => {
   const isDark = theme === 'dark';
+  const {
+    selectedRegion: contextRegion,
+    setSelectedRegion: setContextRegion,
+    setFocusCoordinates,
+  } = useMapContext();
+
+  const selectedRegion = propSelectedRegion !== undefined && propSelectedRegion !== null
+    ? propSelectedRegion
+    : (contextRegion ?? null);
+
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedRegion, setSelectedRegion] = useState<HillsRegion | null>(propSelectedRegion);
   const [collapsedStates, setCollapsedStates] = useState<Record<string, boolean>>({});
   const [weather, setWeather] = useState<LiveWeather | null>(null);
   const [weatherLoading, setWeatherLoading] = useState(false);
   const [earthquakeData, setEarthquakeData] = useState<EarthquakeResponse | null>(null);
   const [earthquakeLoading, setEarthquakeLoading] = useState(false);
-
-  useEffect(() => {
-    if (propSelectedRegion) {
-      setSelectedRegion(propSelectedRegion);
-    }
-  }, [propSelectedRegion]);
 
   const normalizedSearch = searchQuery.trim().toLowerCase();
   const groupedRegions = useMemo(() => {
@@ -101,18 +105,22 @@ export const HillsMountainRegions: React.FC<HillsMountainRegionsProps> = ({
     : 'border-slate-200 bg-white text-slate-900 shadow-sm';
   const mutedTextClass = isDark ? 'text-slate-400' : 'text-slate-600';
 
-  const weatherState = selectedRegion
-    ? WEATHER_STATE_BY_REGION[selectedRegion.state]
-    : null;
-
   const handleSelectRegion = (region: HillsRegion) => {
-    setSelectedRegion(region);
+    setContextRegion(region);
+    if (region.coordinatesVerified && region.latitude !== undefined && region.longitude !== undefined) {
+      setFocusCoordinates({
+        latitude: region.latitude,
+        longitude: region.longitude,
+        zoom: 10,
+      });
+    }
     onSelectRegion?.(region);
   };
 
+  // Region-Specific Live Weather Fetch with Cancellation and Race-Condition Prevention
   useEffect(() => {
     let active = true;
-    if (!weatherState) {
+    if (!selectedRegion) {
       setWeather(null);
       return () => {
         active = false;
@@ -120,9 +128,42 @@ export const HillsMountainRegions: React.FC<HillsMountainRegionsProps> = ({
     }
 
     setWeatherLoading(true);
-    LandslideApi.getLiveWeather(weatherState)
+    const weatherState = WEATHER_STATE_BY_REGION[selectedRegion.state] ?? selectedRegion.state.toLowerCase();
+    const lat = selectedRegion.coordinatesVerified ? selectedRegion.latitude : undefined;
+    const lon = selectedRegion.coordinatesVerified ? selectedRegion.longitude : undefined;
+
+    LandslideApi.getLiveWeather({
+      latitude: lat,
+      longitude: lon,
+      state: weatherState,
+      regionName: selectedRegion.name,
+    })
       .then((data) => {
         if (active) setWeather(data);
+      })
+      .catch((err) => {
+        console.warn(`Weather query failed for ${selectedRegion.name}:`, err);
+        if (active) {
+          setWeather({
+            source: 'Meteorological Data Temporarily Unavailable',
+            station_name: `${selectedRegion.name} Station`,
+            district: selectedRegion.state,
+            state: selectedRegion.state,
+            latitude: lat ?? 0,
+            longitude: lon ?? 0,
+            current_temperature_c: 0,
+            relative_humidity_pct: 0,
+            current_rainfall_mm_hr: 0,
+            antecedent_72h_rainfall_mm: 0,
+            soil_saturation_pct: 0,
+            wind_speed_kmh: 0,
+            radar_status: 'OFFLINE',
+            bhuvan_satellite_tile: '',
+            is_live_feed: false,
+            last_updated: 'Unavailable',
+            forecast: [],
+          });
+        }
       })
       .finally(() => {
         if (active) setWeatherLoading(false);
@@ -131,7 +172,13 @@ export const HillsMountainRegions: React.FC<HillsMountainRegionsProps> = ({
     return () => {
       active = false;
     };
-  }, [weatherState]);
+  }, [
+    selectedRegion?.id,
+    selectedRegion?.latitude,
+    selectedRegion?.longitude,
+    selectedRegion?.state,
+    selectedRegion?.coordinatesVerified,
+  ]);
 
   useEffect(() => {
     let active = true;
@@ -412,6 +459,7 @@ export const HillsMountainRegions: React.FC<HillsMountainRegionsProps> = ({
                           href={selectedRegion.source.url}
                           target="_blank"
                           rel="noreferrer"
+                          onClick={(e) => e.stopPropagation()}
                           className="inline-flex items-center gap-1 text-cyan-300 underline hover:text-cyan-200"
                         >
                           <span>{selectedRegion.source.name}</span>

@@ -49,7 +49,6 @@ export default function App() {
   const [selectedState, setSelectedState] = useState<NerState>('all');
   const [zones, setZones] = useState<HazardZone[]>(HAZARD_ZONES);
   const [selectedZone, setSelectedZone] = useState<HazardZone>(HAZARD_ZONES[0]);
-  const [selectedHillRegion, setSelectedHillRegion] = useState<HillsRegion | null>(null);
 
   const [isFieldModalOpen, setIsFieldModalOpen] = useState(false);
   const [globalToast, setGlobalToast] = useState<string | null>(null);
@@ -125,6 +124,27 @@ export default function App() {
   }, [isSirenActive]);
 
   useEffect(() => {
+    if (!window.history.state) {
+      window.history.replaceState(
+        { module: 'home' as const, selectedHillRegionId: selectedRegion?.id },
+        '',
+        window.location.href
+      );
+    }
+  }, []);
+
+  const handleNavigateModule = (nextModule: OperationalModule) => {
+    if (nextModule === activeModule) return;
+    const currentRegionId = selectedRegion?.id;
+    window.history.pushState(
+      { module: nextModule, selectedHillRegionId: currentRegionId },
+      '',
+      window.location.href
+    );
+    setActiveModule(nextModule);
+  };
+
+  useEffect(() => {
     const handlePopState = (event: PopStateEvent) => {
       const historyState = event.state as {
         module?: OperationalModule;
@@ -137,7 +157,6 @@ export default function App() {
         : null;
 
       if (historyState?.module) {
-        setSelectedHillRegion(region);
         setSelectedRegion(region);
         if (region?.coordinatesVerified && region.latitude !== undefined && region.longitude !== undefined) {
           setFocusCoordinates({
@@ -165,7 +184,6 @@ export default function App() {
       '',
       window.location.href
     );
-    setSelectedHillRegion(region);
     setSelectedRegion(region);
     if (region.coordinatesVerified && region.latitude !== undefined && region.longitude !== undefined) {
       setFocusCoordinates({
@@ -200,7 +218,7 @@ export default function App() {
       {/* Main Navigation Tabs */}
       <Navigation
         activeModule={activeModule}
-        onChangeModule={setActiveModule}
+        onChangeModule={handleNavigateModule}
         reportCount={12}
         theme={theme}
       />
@@ -215,9 +233,9 @@ export default function App() {
             selectedZone={selectedZone}
             onCheckLocationRisk={(zone) => {
               setSelectedZone(zone);
-              setActiveModule('risk-map');
+              handleNavigateModule('risk-map');
             }}
-            onNavigate={setActiveModule}
+            onNavigate={handleNavigateModule}
             theme={theme}
           />
         )}
@@ -228,7 +246,7 @@ export default function App() {
             selectedZone={selectedZone}
             onSelectZone={setSelectedZone}
             zones={zones}
-            onNavigate={setActiveModule}
+            onNavigate={handleNavigateModule}
             theme={theme}
           />
         )}
@@ -243,17 +261,17 @@ export default function App() {
                 setSelectedZone(z);
                 setContextSelectedZone(z);
               }}
-              onNavigateToLstm={() => setActiveModule('temporal-lstm-predictor')}
+              onNavigateToLstm={() => handleNavigateModule('temporal-lstm-predictor')}
               onNavigateToDispatch={() =>
-                setActiveModule('emergency-broadcast-and-dispatch')
+                handleNavigateModule('emergency-broadcast-and-dispatch')
               }
-              onNavigateToMlPipeline={() => setActiveModule('ml-models-pipeline')}
+              onNavigateToMlPipeline={() => handleNavigateModule('ml-models-pipeline')}
               onNavigateToDetails={(z) => {
                 setSelectedZone(z);
                 setContextSelectedZone(z);
-                setActiveModule('risk-details');
+                handleNavigateModule('risk-details');
               }}
-              selectedHillRegion={selectedRegion ?? selectedHillRegion}
+              selectedHillRegion={selectedRegion}
               theme={theme}
             />
           </div>
@@ -269,7 +287,7 @@ export default function App() {
             selectedZone={selectedZone}
             onSelectZone={setSelectedZone}
             zones={zones}
-            onNavigate={setActiveModule}
+            onNavigate={handleNavigateModule}
             theme={theme}
           />
         )}
@@ -280,7 +298,7 @@ export default function App() {
             zones={zones}
             selectedZone={selectedZone}
             onSelectZone={setSelectedZone}
-            onNavigate={setActiveModule}
+            onNavigate={handleNavigateModule}
             theme={theme}
             sirenActive={isSirenActive}
             onToggleSiren={() => sirenPlayer.toggle()}
@@ -291,7 +309,7 @@ export default function App() {
         {activeModule === 'emergency-sos' && (
           <TerraEmergencySos
             selectedZone={selectedZone}
-            onNavigate={setActiveModule}
+            onNavigate={handleNavigateModule}
             theme={theme}
             sirenActive={isSirenActive}
             onToggleSiren={() => sirenPlayer.toggle()}
@@ -300,14 +318,14 @@ export default function App() {
 
         {/* About & Advanced ML Architecture View */}
         {activeModule === 'about' && (
-          <TerraAbout onNavigate={setActiveModule} theme={theme} />
+          <TerraAbout onNavigate={handleNavigateModule} theme={theme} />
         )}
 
         {/* Sub-Module: Temporal LSTM Predictor */}
         {activeModule === 'temporal-lstm-predictor' && (
           <div className="max-w-7xl mx-auto px-3 sm:px-6 pt-4 pb-12">
             <TemporalLstmPredictor
-              onArmEvacuation={() => setActiveModule('emergency-broadcast-and-dispatch')}
+              onArmEvacuation={() => handleNavigateModule('emergency-broadcast-and-dispatch')}
             />
           </div>
         )}
@@ -317,7 +335,7 @@ export default function App() {
           <div className="max-w-7xl mx-auto px-3 sm:px-6 pt-4 pb-12">
             <CrowdsourceCvVerification
               onForwardToCap={(reportCode) => {
-                setActiveModule('emergency-broadcast-and-dispatch');
+                handleNavigateModule('emergency-broadcast-and-dispatch');
                 triggerGlobalToast(`CAP Alert pre-filled with incident parameters from ${reportCode}`);
               }}
             />
@@ -347,7 +365,7 @@ export default function App() {
           <div className="max-w-7xl mx-auto px-3 sm:px-6 pt-4 pb-12">
             <LandslideRiskSimulator
               theme={theme}
-              onNavigateToMap={() => setActiveModule('risk-map')}
+              onNavigateToMap={() => handleNavigateModule('risk-map')}
               onResultGenerated={(res) => {
                 triggerGlobalToast(
                   `Real ML Simulation: ${res.prediction_label} (${(res.landslide_probability * 100).toFixed(1)}% probability, Risk: ${res.risk_level})`
@@ -360,9 +378,8 @@ export default function App() {
         {activeModule === 'hills-regions' && (
           <HillsMountainRegions
             theme={theme}
-            selectedRegion={selectedRegion ?? selectedHillRegion}
+            selectedRegion={selectedRegion}
             onSelectRegion={(r) => {
-              setSelectedHillRegion(r);
               setSelectedRegion(r);
               if (r.coordinatesVerified && r.latitude !== undefined && r.longitude !== undefined) {
                 setFocusCoordinates({

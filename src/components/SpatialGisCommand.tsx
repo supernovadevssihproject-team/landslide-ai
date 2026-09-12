@@ -202,23 +202,59 @@ export const SpatialGisCommand: React.FC<SpatialGisCommandProps> = ({
   }, [selectedState, stressRainfall]);
 
   useEffect(() => {
-    const match = selectedZone.coords.match(/(-?\d+(?:\.\d+)?)[^,]*,\s*(-?\d+(?:\.\d+)?)/);
-    const latitude = match ? Number(match[1]) : undefined;
-    const longitude = match ? Number(match[2]) : undefined;
+    let active = true;
+    let latitude: number | undefined;
+    let longitude: number | undefined;
+
+    if (effectiveHillRegion?.coordinatesVerified && effectiveHillRegion.latitude !== undefined && effectiveHillRegion.longitude !== undefined) {
+      latitude = effectiveHillRegion.latitude;
+      longitude = effectiveHillRegion.longitude;
+    } else if (contextFocusCoordinates && Number.isFinite(contextFocusCoordinates.latitude) && Number.isFinite(contextFocusCoordinates.longitude)) {
+      latitude = contextFocusCoordinates.latitude;
+      longitude = contextFocusCoordinates.longitude;
+    } else {
+      const match = selectedZone.coords.match(/(-?\d+(?:\.\d+)?)[^,]*,\s*(-?\d+(?:\.\d+)?)/);
+      latitude = match ? Number(match[1]) : undefined;
+      longitude = match ? Number(match[2]) : undefined;
+    }
+
     LandslideApi.getEarthquakes(latitude, longitude).then((response) => {
+      if (!active) return;
       setEarthquakes(response.events);
       setEarthquakeStatus(response.earthquake_data_available
         ? `${response.events.length} NCS events in range`
         : 'NCS feed temporarily unavailable');
     });
-  }, [selectedZone.coords]);
+
+    return () => {
+      active = false;
+    };
+  }, [
+    effectiveHillRegion?.id,
+    effectiveHillRegion?.latitude,
+    effectiveHillRegion?.longitude,
+    contextFocusCoordinates?.latitude,
+    contextFocusCoordinates?.longitude,
+    selectedZone.coords,
+  ]);
 
   // Fetch historical earthquakes based on selected year
   useEffect(() => {
     let active = true;
-    const match = selectedZone.coords.match(/(-?\d+(?:\.\d+)?)[^,]*,\s*(-?\d+(?:\.\d+)?)/);
-    const latitude = match ? Number(match[1]) : undefined;
-    const longitude = match ? Number(match[2]) : undefined;
+    let latitude: number | undefined;
+    let longitude: number | undefined;
+
+    if (effectiveHillRegion?.coordinatesVerified && effectiveHillRegion.latitude !== undefined && effectiveHillRegion.longitude !== undefined) {
+      latitude = effectiveHillRegion.latitude;
+      longitude = effectiveHillRegion.longitude;
+    } else if (contextFocusCoordinates && Number.isFinite(contextFocusCoordinates.latitude) && Number.isFinite(contextFocusCoordinates.longitude)) {
+      latitude = contextFocusCoordinates.latitude;
+      longitude = contextFocusCoordinates.longitude;
+    } else {
+      const match = selectedZone.coords.match(/(-?\d+(?:\.\d+)?)[^,]*,\s*(-?\d+(?:\.\d+)?)/);
+      latitude = match ? Number(match[1]) : undefined;
+      longitude = match ? Number(match[2]) : undefined;
+    }
 
     LandslideApi.getHistoricalEarthquakes(selectedYear, latitude, longitude).then((res) => {
       if (active) {
@@ -226,7 +262,15 @@ export const SpatialGisCommand: React.FC<SpatialGisCommandProps> = ({
       }
     });
     return () => { active = false; };
-  }, [selectedYear, selectedZone.coords]);
+  }, [
+    selectedYear,
+    effectiveHillRegion?.id,
+    effectiveHillRegion?.latitude,
+    effectiveHillRegion?.longitude,
+    contextFocusCoordinates?.latitude,
+    contextFocusCoordinates?.longitude,
+    selectedZone.coords,
+  ]);
 
   // Filter hazard zones according to state, search query, and risk level toggles
   const normalizedSearchQuery = searchQuery.trim().toLowerCase();
@@ -294,17 +338,26 @@ export const SpatialGisCommand: React.FC<SpatialGisCommandProps> = ({
     if (!q) return { zones: filteredZones, regions: [], events: [], earthquakes: [] };
 
     const matchingRegions = HILLS_AND_MOUNTAIN_REGIONS.filter(
-      (r) => r.name.toLowerCase().includes(q) || r.state.toLowerCase().includes(q)
+      (r) =>
+        r.name.toLowerCase().includes(q) ||
+        r.state.toLowerCase().includes(q) ||
+        (r.category && r.category.toLowerCase().includes(q))
     );
 
-    const matchingEvents = trainingEvents.filter((e) =>
-      e.event_date.toLowerCase().includes(q) ||
-      e.state.toLowerCase().includes(q)
+    const matchingEvents = trainingEvents.filter(
+      (e) =>
+        e.state.toLowerCase().includes(q) ||
+        e.event_date.toLowerCase().includes(q) ||
+        (e.dataset_source && e.dataset_source.toLowerCase().includes(q)) ||
+        (e.type && e.type.toLowerCase().includes(q)) ||
+        (e.record_id && e.record_id.toLowerCase().includes(q))
     );
 
-    const matchingEarthquakes = historicalEarthquakes.filter((e) =>
-      e.location.toLowerCase().includes(q) ||
-      e.source.toLowerCase().includes(q)
+    const matchingEarthquakes = historicalEarthquakes.filter(
+      (e) =>
+        e.location.toLowerCase().includes(q) ||
+        e.source.toLowerCase().includes(q) ||
+        e.event_time.toLowerCase().includes(q)
     );
 
     return {
@@ -521,14 +574,23 @@ export const SpatialGisCommand: React.FC<SpatialGisCommandProps> = ({
               <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
-                placeholder="Search location..."
+                placeholder="Search hill, mountain, zone, corridor, earthquake..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className={`w-full pl-9 pr-3 py-2 rounded-xl text-xs sm:text-sm border outline-none font-medium transition-all ${isDark
+                className={`w-full pl-9 pr-8 py-2 rounded-xl text-xs sm:text-sm border outline-none font-medium transition-all ${isDark
                   ? 'bg-slate-800/80 text-white border-slate-700 focus:border-emerald-500'
                   : 'bg-slate-50 text-slate-900 border-slate-300 focus:border-emerald-600'
                   }`}
               />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 text-xs p-1"
+                >
+                  ✕
+                </button>
+              )}
             </div>
 
             {/* Section 1: Risk Zones Checkboxes (Screen 3 Mockup) */}

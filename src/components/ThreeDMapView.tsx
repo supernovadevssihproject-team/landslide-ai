@@ -44,10 +44,16 @@ export const ThreeDMapView: React.FC<ThreeDMapViewProps> = ({
   selectedHillRegion = null,
   onClose,
 }) => {
-  const selectedCoordinates = useMemo(
-    () => parseCoordinates(selectedZone.coords),
-    [selectedZone.coords]
-  );
+  const selectedCoordinates = useMemo(() => {
+    if (
+      selectedHillRegion?.coordinatesVerified &&
+      selectedHillRegion.latitude !== undefined &&
+      selectedHillRegion.longitude !== undefined
+    ) {
+      return [selectedHillRegion.latitude, selectedHillRegion.longitude] as [number, number];
+    }
+    return parseCoordinates(selectedZone.coords);
+  }, [selectedHillRegion, selectedZone.coords]);
 
   const filteredZones = useMemo(
     () => selectedHillRegion

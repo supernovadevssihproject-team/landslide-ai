@@ -73,6 +73,13 @@ export interface LiveWeather {
   forecast?: LiveWeatherForecastDay[];
 }
 
+export interface WeatherRequestOptions {
+  state?: string;
+  latitude?: number;
+  longitude?: number;
+  regionName?: string;
+}
+
 const BASE_URL = '';
 
 async function fetchJson<T>(url: string, options?: RequestInit, fallback?: T): Promise<T> {
@@ -341,27 +348,37 @@ export const LandslideApi = {
   },
 
   // Real-Time Meteorological Telemetry (IMD / Open-Meteo)
-  async getLiveWeather(state = 'sikkim'): Promise<LiveWeather> {
-    const fallback = {
+  async getLiveWeather(
+    options: string | WeatherRequestOptions = 'sikkim'
+  ): Promise<LiveWeather> {
+    const opts: WeatherRequestOptions =
+      typeof options === 'string' ? { state: options } : options;
+    const state = opts.state || 'sikkim';
+    const params = new URLSearchParams({ state });
+    if (opts.latitude !== undefined) params.set('latitude', String(opts.latitude));
+    if (opts.longitude !== undefined) params.set('longitude', String(opts.longitude));
+    if (opts.regionName) params.set('region_name', opts.regionName);
+
+    const fallback: LiveWeather = {
       source: 'IMD Central Influx (Offline Fallback)',
-      station_name: 'Mangan-Gangtok IMD AWS Hub',
-      district: 'Mangan / North Sikkim',
+      station_name: opts.regionName ? `${opts.regionName} AWS (Offline Baseline)` : 'Mangan-Gangtok IMD AWS Hub',
+      district: opts.regionName ? opts.regionName : 'Mangan / North Sikkim',
       state,
-      latitude: 27.5,
-      longitude: 88.53,
+      latitude: opts.latitude ?? 27.5,
+      longitude: opts.longitude ?? 88.53,
       current_temperature_c: 21.8,
       relative_humidity_pct: 93,
       current_rainfall_mm_hr: 12.4,
       antecedent_72h_rainfall_mm: 218.0,
       soil_saturation_pct: 72.7,
       wind_speed_kmh: 14.2,
-      radar_status: 'ONLINE (GSAT-7A Locked)',
+      radar_status: 'OFFLINE / CACHED BASELINE',
       bhuvan_satellite_tile: 'ISRO-BHUVAN-NER-01',
-      is_live_feed: true,
-      last_updated: 'Just now',
+      is_live_feed: false,
+      last_updated: 'Cached Offline Data',
       forecast: [],
     };
-    return fetchJson(`/api/weather/live?state=${encodeURIComponent(state)}`, undefined, fallback);
+    return fetchJson(`/api/weather/live?${params.toString()}`, undefined, fallback);
   },
 
   // Emergency SMS Broadcast (Twilio / Fast2SMS)

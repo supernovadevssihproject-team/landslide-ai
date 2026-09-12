@@ -150,10 +150,16 @@ export const GisMapContainer: React.FC<GisMapContainerProps> = ({
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
 
-    const initialCoords = activeZoneCoords;
+    const initialCoords = (focusCoordinates && Number.isFinite(focusCoordinates.latitude) && Number.isFinite(focusCoordinates.longitude))
+      ? [focusCoordinates.latitude, focusCoordinates.longitude] as [number, number]
+      : (selectedHillRegion?.coordinatesVerified && selectedHillRegion.latitude !== undefined && selectedHillRegion.longitude !== undefined)
+      ? [selectedHillRegion.latitude, selectedHillRegion.longitude] as [number, number]
+      : activeZoneCoords;
+    const initialZoom = focusCoordinates?.zoom ?? 9;
+
     const map = L.map(mapContainerRef.current, {
       center: initialCoords,
-      zoom: 9,
+      zoom: initialZoom,
       zoomControl: false,
       attributionControl: false,
       fadeAnimation: true,

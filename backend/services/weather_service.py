@@ -90,7 +90,13 @@ class WeatherService:
         self._cache = {}
         self._cache_ttl_seconds = 300 # 5 minutes
 
-    def get_live_weather(self, state: str = "sikkim") -> Dict[str, Any]:
+    def get_live_weather(
+        self,
+        state: str = "sikkim",
+        latitude: Optional[float] = None,
+        longitude: Optional[float] = None,
+        region_name: Optional[str] = None,
+    ) -> Dict[str, Any]:
         state_key = state.lower() if state else "sikkim"
         if state_key == "all" or state_key not in NER_WEATHER_STATIONS:
             state_key = "sikkim"
@@ -98,9 +104,18 @@ class WeatherService:
         station = NER_WEATHER_STATIONS[state_key]
         now = time.time()
 
+        # Determine target coordinates and naming
+        has_custom_coords = latitude is not None and longitude is not None
+        query_lat = float(latitude) if has_custom_coords else station["lat"]
+        query_lon = float(longitude) if has_custom_coords else station["lon"]
+        station_name = f"{region_name} Observatory (IMD Telemetry)" if region_name else station["name"]
+        district_name = region_name if region_name else station["district"]
+
+        cache_key = f"{state_key}_{query_lat:.3f}_{query_lon:.3f}"
+
         # Return cached if valid
-        if state_key in self._cache:
-            entry = self._cache[state_key]
+        if cache_key in self._cache:
+            entry = self._cache[cache_key]
             if now - entry["timestamp"] < self._cache_ttl_seconds:
                 return entry["data"]
 
@@ -108,7 +123,7 @@ class WeatherService:
         try:
             url = (
                 f"https://api.open-meteo.com/v1/forecast"
-                f"?latitude={station['lat']}&longitude={station['lon']}"
+                f"?latitude={query_lat}&longitude={query_lon}"
                 f"&current=temperature_2m,relative_humidity_2m,precipitation,rain,weather_code,wind_speed_10m"
                 f"&hourly=precipitation,soil_moisture_0_to_1cm,soil_moisture_1_to_3cm"
                 f"&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,weather_code,wind_speed_10m_max"
@@ -145,11 +160,11 @@ class WeatherService:
 
                 data = {
                     "source": "IMD Doppler & Open-Meteo Public Influx",
-                    "station_name": station["name"],
-                    "district": station["district"],
+                    "station_name": station_name,
+                    "district": district_name,
                     "state": state_key,
-                    "latitude": station["lat"],
-                    "longitude": station["lon"],
+                    "latitude": query_lat,
+                    "longitude": query_lon,
                     "elevation_m": station["elevation"],
                     "current_temperature_c": current.get("temperature_2m", 22.5),
                     "relative_humidity_pct": current.get("relative_humidity_2m", 92),
@@ -166,20 +181,20 @@ class WeatherService:
                     "forecast": forecast,
                 }
 
-                self._cache[state_key] = {"timestamp": now, "data": data}
+                self._cache[cache_key] = {"timestamp": now, "data": data}
                 return data
 
         except Exception as err:
-            print(f"[WeatherService] Live API fallback for {state_key}: {err}")
+            print(f"[WeatherService] Live API fallback for {cache_key}: {err}")
 
         # Fallback values aligned with NER typical monsoon baseline
         fallback_data = {
             "source": "IMD Central Influx (Offline Fallback)",
-            "station_name": station["name"],
-            "district": station["district"],
+            "station_name": station_name,
+            "district": district_name,
             "state": state_key,
-            "latitude": station["lat"],
-            "longitude": station["lon"],
+            "latitude": query_lat,
+            "longitude": query_lon,
             "elevation_m": station["elevation"],
             "current_temperature_c": 21.4,
             "relative_humidity_pct": 94,
