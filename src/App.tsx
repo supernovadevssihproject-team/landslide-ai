@@ -14,6 +14,7 @@ import { HAZARD_ZONES, ASSET_URLS } from './data/mockData';
 import { HILLS_AND_MOUNTAIN_REGIONS, HillsRegion } from './data/hillsData';
 import { LandslideApi } from './services/api';
 import { PlusCircle, VolumeX, Zap } from 'lucide-react';
+import { useMapContext } from './context/MapContext';
 
 const TerraDashboard = lazy(() => import('./components/TerraDashboard').then((module) => ({ default: module.TerraDashboard })));
 const TerraRiskDetails = lazy(() => import('./components/TerraRiskDetails').then((module) => ({ default: module.TerraRiskDetails })));
@@ -36,11 +37,20 @@ const ModuleLoadingFallback = () => (
 );
 
 export default function App() {
+  const {
+    selectedRegion,
+    setSelectedRegion,
+    setFocusCoordinates,
+    selectedZone: contextSelectedZone,
+    setSelectedZone: setContextSelectedZone,
+  } = useMapContext();
+
   const [activeModule, setActiveModule] = useState<OperationalModule>('home');
   const [selectedState, setSelectedState] = useState<NerState>('all');
   const [zones, setZones] = useState<HazardZone[]>(HAZARD_ZONES);
   const [selectedZone, setSelectedZone] = useState<HazardZone>(HAZARD_ZONES[0]);
   const [selectedHillRegion, setSelectedHillRegion] = useState<HillsRegion | null>(null);
+
   const [isFieldModalOpen, setIsFieldModalOpen] = useState(false);
   const [globalToast, setGlobalToast] = useState<string | null>(null);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -128,13 +138,21 @@ export default function App() {
 
       if (historyState?.module) {
         setSelectedHillRegion(region);
+        setSelectedRegion(region);
+        if (region?.coordinatesVerified && region.latitude !== undefined && region.longitude !== undefined) {
+          setFocusCoordinates({
+            latitude: region.latitude,
+            longitude: region.longitude,
+            zoom: 10,
+          });
+        }
         setActiveModule(historyState.module);
       }
     };
 
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, []);
+  }, [setSelectedRegion, setFocusCoordinates]);
 
   const navigateFromHillsToRiskMap = (region: HillsRegion) => {
     const historyState = {
@@ -148,8 +166,17 @@ export default function App() {
       window.location.href
     );
     setSelectedHillRegion(region);
+    setSelectedRegion(region);
+    if (region.coordinatesVerified && region.latitude !== undefined && region.longitude !== undefined) {
+      setFocusCoordinates({
+        latitude: region.latitude,
+        longitude: region.longitude,
+        zoom: 10,
+      });
+    }
     setActiveModule('risk-map');
   };
+
 
   const isDark = theme === 'dark';
 
@@ -212,7 +239,10 @@ export default function App() {
             <SpatialGisCommand
               selectedState={selectedState}
               selectedZone={selectedZone}
-              onSelectZone={setSelectedZone}
+              onSelectZone={(z) => {
+                setSelectedZone(z);
+                setContextSelectedZone(z);
+              }}
               onNavigateToLstm={() => setActiveModule('temporal-lstm-predictor')}
               onNavigateToDispatch={() =>
                 setActiveModule('emergency-broadcast-and-dispatch')
@@ -220,9 +250,10 @@ export default function App() {
               onNavigateToMlPipeline={() => setActiveModule('ml-models-pipeline')}
               onNavigateToDetails={(z) => {
                 setSelectedZone(z);
+                setContextSelectedZone(z);
                 setActiveModule('risk-details');
               }}
-              selectedHillRegion={selectedHillRegion}
+              selectedHillRegion={selectedRegion ?? selectedHillRegion}
               theme={theme}
             />
           </div>
@@ -329,8 +360,18 @@ export default function App() {
         {activeModule === 'hills-regions' && (
           <HillsMountainRegions
             theme={theme}
-            selectedRegion={selectedHillRegion}
-            onSelectRegion={setSelectedHillRegion}
+            selectedRegion={selectedRegion ?? selectedHillRegion}
+            onSelectRegion={(r) => {
+              setSelectedHillRegion(r);
+              setSelectedRegion(r);
+              if (r.coordinatesVerified && r.latitude !== undefined && r.longitude !== undefined) {
+                setFocusCoordinates({
+                  latitude: r.latitude,
+                  longitude: r.longitude,
+                  zoom: 10,
+                });
+              }
+            }}
             onNavigateToMap={navigateFromHillsToRiskMap}
           />
         )}

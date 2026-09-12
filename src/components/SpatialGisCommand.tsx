@@ -3,6 +3,7 @@ import {
   HazardZone,
   SensorNode,
   NerState,
+  HistoricalLandslideEvent,
   ZoneMlRiskEvaluation,
   MlHeatmapPoint,
   EarthquakeEvent,
@@ -11,7 +12,8 @@ import {
 import { HAZARD_ZONES, SENSOR_NODES, ASSET_URLS } from '../data/mockData';
 import { LandslideApi } from '../services/api';
 import { GisMapContainer } from './GisMapContainer';
-import { HillsRegion } from '../data/hillsData';
+import { HillsRegion, HILLS_AND_MOUNTAIN_REGIONS } from '../data/hillsData';
+import { useMapContext } from '../context/MapContext';
 import {
   HistoricalReplayTimeline,
   HistoricalReplayRange,
@@ -34,6 +36,7 @@ import {
   Info,
   ChevronRight,
   MapPin,
+  Mountain,
   Cpu,
   Sparkles,
   Flame,
@@ -67,8 +70,25 @@ export const SpatialGisCommand: React.FC<SpatialGisCommandProps> = ({
   theme = 'dark',
   selectedZone: propSelectedZone,
   onSelectZone: propOnSelectZone,
-  selectedHillRegion = null,
+  selectedHillRegion: propSelectedHillRegion = null,
 }) => {
+  const {
+    selectedRegion: contextRegion,
+    setSelectedRegion: setContextRegion,
+    focusCoordinates: contextFocusCoordinates,
+    setFocusCoordinates: setContextFocusCoordinates,
+    mapMode,
+    setMapMode,
+    selectedYear,
+    setSelectedYear,
+    searchQuery,
+    setSearchQuery,
+    enabledLayers: contextEnabledLayers,
+    setEnabledLayers: setContextEnabledLayers,
+  } = useMapContext();
+
+  const effectiveHillRegion = propSelectedHillRegion || contextRegion;
+
   const [internalSelectedZone, setInternalSelectedZone] = useState<HazardZone>(HAZARD_ZONES[0]);
   const selectedZone = propSelectedZone || internalSelectedZone;
 
@@ -90,28 +110,22 @@ export const SpatialGisCommand: React.FC<SpatialGisCommandProps> = ({
     pastEvents: true,
   });
 
-  const [activeLayers, setActiveLayers] = useState({
-    susceptibility: true,
-    demContours: true,
-    imdRadar: true,
-    soilSaturation: true,
-    sensorNodes: true,
-    mlInference: true,
-    trainingEvents: true,
-    mlHeatmap: true,
-    earthquakeEvents: true,
-    historicalEarthquakeEvents: true,
-  });
+  const activeLayers = contextEnabledLayers;
+  const setActiveLayers = (updater: any) => {
+    if (typeof updater === 'function') {
+      setContextEnabledLayers(updater(contextEnabledLayers));
+    } else {
+      setContextEnabledLayers(updater);
+    }
+  };
 
-  const [mapMode, setMapMode] = useState<'LIVE' | 'HISTORICAL'>('LIVE');
-  const [selectedYear, setSelectedYear] = useState<number>(2023);
-
-  const [searchQuery, setSearchQuery] = useState('');
+  const [showCurrentMlOverlay, setShowCurrentMlOverlay] = useState<boolean>(false);
   const [is3DMode, setIs3DMode] = useState(false);
   const [mapZoom, setMapZoom] = useState(1);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isDispatching, setIsDispatching] = useState(false);
-  const [localFocusCoords, setLocalFocusCoords] = useState<{latitude: number; longitude: number; zoom?: number} | undefined>(undefined);
+  const [localFocusCoords, setLocalFocusCoords] = useState<{ latitude: number; longitude: number; zoom?: number } | undefined>(undefined);
+
 
   const [zones, setZones] = useState<HazardZone[]>(HAZARD_ZONES);
   const [sensors, setSensors] = useState<SensorNode[]>(SENSOR_NODES);
@@ -205,7 +219,7 @@ export const SpatialGisCommand: React.FC<SpatialGisCommandProps> = ({
     const match = selectedZone.coords.match(/(-?\d+(?:\.\d+)?)[^,]*,\s*(-?\d+(?:\.\d+)?)/);
     const latitude = match ? Number(match[1]) : undefined;
     const longitude = match ? Number(match[2]) : undefined;
-    
+
     LandslideApi.getHistoricalEarthquakes(selectedYear, latitude, longitude).then((res) => {
       if (active) {
         setHistoricalEarthquakes(res);
@@ -262,10 +276,12 @@ export const SpatialGisCommand: React.FC<SpatialGisCommandProps> = ({
   }, [historicalEarthquakes, mapMode, selectedYear, activeLayers.historicalEarthquakeEvents]);
 
   const visibleHeatmapPoints = useMemo(() => {
-    if (!activeLayers.mlHeatmap) return [];
-    // In HISTORICAL mode, it requires the multi-hazard overlay checkbox to be checked (which sets mlHeatmap to true)
-    return heatmapPoints;
-  }, [heatmapPoints, activeLayers.mlHeatmap]);
+    if (mapMode === 'HISTORICAL') {
+      // In HISTORICAL mode, Extra Trees ML risk is separate and only shown when explicitly enabled
+      return showCurrentMlOverlay && activeLayers.mlHeatmap ? heatmapPoints : [];
+    }
+    return activeLayers.mlHeatmap ? heatmapPoints : [];
+  }, [heatmapPoints, mapMode, showCurrentMlOverlay, activeLayers.mlHeatmap]);
 
   const visibleEarthquakes = useMemo(() => {
     if (mapMode !== 'LIVE' || !activeLayers.earthquakeEvents) return [];
@@ -275,7 +291,11 @@ export const SpatialGisCommand: React.FC<SpatialGisCommandProps> = ({
   // Unified Search Derived State
   const unifiedSearchResults = useMemo(() => {
     const q = normalizedSearchQuery;
-    if (!q) return { zones: filteredZones, events: [], earthquakes: [] };
+    if (!q) return { zones: filteredZones, regions: [], events: [], earthquakes: [] };
+
+    const matchingRegions = HILLS_AND_MOUNTAIN_REGIONS.filter(
+      (r) => r.name.toLowerCase().includes(q) || r.state.toLowerCase().includes(q)
+    );
 
     const matchingEvents = trainingEvents.filter((e) =>
       e.event_date.toLowerCase().includes(q) ||
@@ -289,10 +309,12 @@ export const SpatialGisCommand: React.FC<SpatialGisCommandProps> = ({
 
     return {
       zones: filteredZones,
+      regions: matchingRegions,
       events: matchingEvents,
       earthquakes: matchingEarthquakes,
     };
   }, [normalizedSearchQuery, filteredZones, trainingEvents, historicalEarthquakes]);
+
 
   const timelineMinYear = yearCounts[0]?.year ?? 2009;
   const timelineMaxYear = yearCounts[yearCounts.length - 1]?.year ?? 2022;
@@ -341,8 +363,8 @@ export const SpatialGisCommand: React.FC<SpatialGisCommandProps> = ({
   const riskScoreNum = selectedZone.riskStatus.includes('CRITICAL')
     ? 78
     : selectedZone.riskStatus.includes('ADVISORY')
-    ? 58
-    : 24;
+      ? 58
+      : 24;
 
   return (
     <div className={`space-y-4 pb-12 transition-colors duration-200 ${isDark ? 'text-slate-100' : 'text-slate-800'}`}>
@@ -355,11 +377,10 @@ export const SpatialGisCommand: React.FC<SpatialGisCommandProps> = ({
       )}
 
       {/* Command header */}
-      <section className={`relative overflow-hidden rounded-2xl border p-5 sm:p-6 ${
-        isDark
-          ? 'border-cyan-400/20 bg-[radial-gradient(circle_at_85%_20%,rgba(34,211,238,0.16),transparent_32%),linear-gradient(120deg,#0d1c2d_0%,#0a1728_58%,#102b36_100%)]'
-          : 'border-cyan-200 bg-[radial-gradient(circle_at_85%_20%,rgba(6,182,212,0.12),transparent_32%),linear-gradient(120deg,#ffffff_0%,#f0fdfa_100%)] shadow-sm'
-      }`}>
+      <section className={`relative overflow-hidden rounded-2xl border p-5 sm:p-6 ${isDark
+        ? 'border-cyan-400/20 bg-[radial-gradient(circle_at_85%_20%,rgba(34,211,238,0.16),transparent_32%),linear-gradient(120deg,#0d1c2d_0%,#0a1728_58%,#102b36_100%)]'
+        : 'border-cyan-200 bg-[radial-gradient(circle_at_85%_20%,rgba(6,182,212,0.12),transparent_32%),linear-gradient(120deg,#ffffff_0%,#f0fdfa_100%)] shadow-sm'
+        }`}>
         <div className="absolute -right-12 -top-16 h-44 w-44 rounded-full border border-cyan-300/15" />
         <div className="absolute right-5 top-5 h-2 w-2 rounded-full bg-cyan-300 shadow-[0_0_18px_5px_rgba(103,232,249,0.35)]" />
         <div className="relative flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
@@ -387,19 +408,19 @@ export const SpatialGisCommand: React.FC<SpatialGisCommandProps> = ({
         </div>
       </section>
 
-      {selectedHillRegion && (
+      {effectiveHillRegion && (
         <section className={`rounded-xl border px-4 py-3 ${isDark ? 'border-cyan-400/25 bg-cyan-500/10' : 'border-cyan-200 bg-cyan-50'}`}>
           <div className="text-[10px] font-mono font-bold uppercase tracking-[0.18em] text-cyan-400">
             Selected Region
           </div>
           <div className="mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-1">
-            <span className="text-base font-black">{selectedHillRegion.name}</span>
+            <span className="text-base font-black">{effectiveHillRegion.name}</span>
             <span className={`text-sm ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
-              {selectedHillRegion.state}
+              {effectiveHillRegion.state}
             </span>
           </div>
           <p className={`mt-1 text-xs ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-            {selectedHillRegion.coordinatesVerified
+            {effectiveHillRegion.coordinatesVerified
               ? 'Verified representative coordinates loaded. The existing GIS map is focusing this region while preserving all active layers.'
               : 'GIS focus is currently unavailable because verified geographic coordinates or boundaries have not been added for this region. Existing map layers and current viewport are preserved.'}
           </p>
@@ -408,9 +429,8 @@ export const SpatialGisCommand: React.FC<SpatialGisCommandProps> = ({
 
       {/* KPI Telemetry Strip */}
       <div className="grid grid-cols-2 gap-2.5 sm:gap-3 md:grid-cols-4">
-        <div className={`border rounded-xl p-3 sm:p-3.5 relative overflow-hidden ${
-          isDark ? 'bg-[#0d1c2d] border-[#1c2b3c]' : 'bg-white border-slate-200 shadow-sm'
-        }`}>
+        <div className={`border rounded-xl p-3 sm:p-3.5 relative overflow-hidden ${isDark ? 'bg-[#0d1c2d] border-[#1c2b3c]' : 'bg-white border-slate-200 shadow-sm'
+          }`}>
           <div className="flex items-center justify-between text-xs">
             <span className={`font-mono text-[11px] uppercase tracking-wider ${isDark ? 'text-[#8a9297]' : 'text-slate-500'}`}>
               Active Threat Matrix
@@ -430,9 +450,8 @@ export const SpatialGisCommand: React.FC<SpatialGisCommandProps> = ({
           </p>
         </div>
 
-        <div className={`border rounded-xl p-3 sm:p-3.5 relative overflow-hidden ${
-          isDark ? 'bg-[#0d1c2d] border-[#1c2b3c]' : 'bg-white border-slate-200 shadow-sm'
-        }`}>
+        <div className={`border rounded-xl p-3 sm:p-3.5 relative overflow-hidden ${isDark ? 'bg-[#0d1c2d] border-[#1c2b3c]' : 'bg-white border-slate-200 shadow-sm'
+          }`}>
           <div className="flex items-center justify-between text-xs">
             <span className={`font-mono text-[11px] uppercase tracking-wider ${isDark ? 'text-[#8a9297]' : 'text-slate-500'}`}>
               24h Neural Trigger
@@ -450,9 +469,8 @@ export const SpatialGisCommand: React.FC<SpatialGisCommandProps> = ({
           </p>
         </div>
 
-        <div className={`border rounded-xl p-3 sm:p-3.5 relative overflow-hidden ${
-          isDark ? 'bg-[#0d1c2d] border-[#1c2b3c]' : 'bg-white border-slate-200 shadow-sm'
-        }`}>
+        <div className={`border rounded-xl p-3 sm:p-3.5 relative overflow-hidden ${isDark ? 'bg-[#0d1c2d] border-[#1c2b3c]' : 'bg-white border-slate-200 shadow-sm'
+          }`}>
           <div className="flex items-center justify-between text-xs">
             <span className={`font-mono text-[11px] uppercase tracking-wider ${isDark ? 'text-[#8a9297]' : 'text-slate-500'}`}>
               In-Situ IoT Mesh
@@ -470,9 +488,8 @@ export const SpatialGisCommand: React.FC<SpatialGisCommandProps> = ({
           </p>
         </div>
 
-        <div className={`border rounded-xl p-3 sm:p-3.5 relative overflow-hidden ${
-          isDark ? 'bg-[#0d1c2d] border-[#1c2b3c]' : 'bg-white border-slate-200 shadow-sm'
-        }`}>
+        <div className={`border rounded-xl p-3 sm:p-3.5 relative overflow-hidden ${isDark ? 'bg-[#0d1c2d] border-[#1c2b3c]' : 'bg-white border-slate-200 shadow-sm'
+          }`}>
           <div className="flex items-center justify-between text-xs">
             <span className={`font-mono text-[11px] uppercase tracking-wider ${isDark ? 'text-[#8a9297]' : 'text-slate-500'}`}>
               Doppler Radar Ingest
@@ -496,9 +513,8 @@ export const SpatialGisCommand: React.FC<SpatialGisCommandProps> = ({
         {/* Left Sidebar (Screen 3 Layout: 3.5 cols on large screen) */}
         <div className="lg:col-span-4 space-y-4">
           <div
-            className={`p-5 rounded-2xl border ${
-              isDark ? 'bg-[#0d1c2d] border-[#1c2b3c]' : 'bg-white border-slate-200 shadow-sm'
-            }`}
+            className={`p-5 rounded-2xl border ${isDark ? 'bg-[#0d1c2d] border-[#1c2b3c]' : 'bg-white border-slate-200 shadow-sm'
+              }`}
           >
             {/* Search Location Input */}
             <div className="relative mb-5">
@@ -508,11 +524,10 @@ export const SpatialGisCommand: React.FC<SpatialGisCommandProps> = ({
                 placeholder="Search location..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className={`w-full pl-9 pr-3 py-2 rounded-xl text-xs sm:text-sm border outline-none font-medium transition-all ${
-                  isDark
-                    ? 'bg-slate-800/80 text-white border-slate-700 focus:border-emerald-500'
-                    : 'bg-slate-50 text-slate-900 border-slate-300 focus:border-emerald-600'
-                }`}
+                className={`w-full pl-9 pr-3 py-2 rounded-xl text-xs sm:text-sm border outline-none font-medium transition-all ${isDark
+                  ? 'bg-slate-800/80 text-white border-slate-700 focus:border-emerald-500'
+                  : 'bg-slate-50 text-slate-900 border-slate-300 focus:border-emerald-600'
+                  }`}
               />
             </div>
 
@@ -586,28 +601,26 @@ export const SpatialGisCommand: React.FC<SpatialGisCommandProps> = ({
 
             {/* Section 2: Map Modes & Layers */}
             <div className="pt-4 border-t border-slate-200 dark:border-slate-800 mb-5">
-              
+
               {/* Map Mode Toggle */}
               <div className="flex items-center gap-2 mb-4 bg-slate-900/30 p-1.5 rounded-lg border border-slate-700/50">
                 <button
                   type="button"
                   onClick={() => setMapMode('LIVE')}
-                  className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all ${
-                    mapMode === 'LIVE'
-                      ? 'bg-cyan-500 text-slate-950 shadow-sm'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
+                  className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all ${mapMode === 'LIVE'
+                    ? 'bg-cyan-500 text-slate-950 shadow-sm'
+                    : 'text-slate-400 hover:text-white'
+                    }`}
                 >
                   LIVE RISK
                 </button>
                 <button
                   type="button"
                   onClick={() => setMapMode('HISTORICAL')}
-                  className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all ${
-                    mapMode === 'HISTORICAL'
-                      ? 'bg-purple-500 text-white shadow-sm'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
+                  className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all ${mapMode === 'HISTORICAL'
+                    ? 'bg-purple-500 text-white shadow-sm'
+                    : 'text-slate-400 hover:text-white'
+                    }`}
                 >
                   HISTORICAL DATA
                 </button>
@@ -616,8 +629,8 @@ export const SpatialGisCommand: React.FC<SpatialGisCommandProps> = ({
               {mapMode === 'HISTORICAL' && (
                 <div className="mb-4">
                   <label className="text-[10px] font-bold uppercase text-slate-400 block mb-1">Select Year</label>
-                  <select 
-                    value={selectedYear} 
+                  <select
+                    value={selectedYear}
                     onChange={(e) => setSelectedYear(Number(e.target.value))}
                     className="w-full bg-slate-800/80 text-white border border-slate-700 rounded-md py-1.5 text-xs px-2 outline-none"
                   >
@@ -734,28 +747,36 @@ export const SpatialGisCommand: React.FC<SpatialGisCommandProps> = ({
                         type="checkbox"
                         checked={activeLayers.historicalEarthquakeEvents}
                         onChange={() =>
-                          setActiveLayers((p) => ({ ...p, historicalEarthquakeEvents: !p.historicalEarthquakeEvents }))
+                          setActiveLayers((p: any) => ({ ...p, historicalEarthquakeEvents: !p.historicalEarthquakeEvents }))
                         }
                         className="w-4 h-4 rounded text-purple-500 focus:ring-purple-400 cursor-pointer accent-purple-500"
                       />
                       <span className="w-3.5 h-3.5 rounded-full border border-purple-400 bg-purple-500/30" />
                       <span>Historical Earthquakes ({visibleHistoricalEarthquakes.length})</span>
                     </label>
-                    
-                    {/* Multi-hazard toggle to allow blending live ML risk over historical data */}
-                    <div className="pt-2 mt-2 border-t border-slate-700/50">
-                      <label className="flex items-center gap-2.5 cursor-pointer text-xs font-medium group opacity-80">
+
+                    {/* Historical Earthquake Empty State */}
+                    {activeLayers.historicalEarthquakeEvents && visibleHistoricalEarthquakes.length === 0 && (
+                      <div className="text-[11px] leading-relaxed text-purple-200/90 bg-purple-950/40 border border-purple-800/50 rounded-lg p-2.5 mt-1 font-sans">
+                        No verified historical earthquake records are available for the selected year and region.
+                      </div>
+                    )}
+
+                    {/* Separate Historical Data from Current ML Risk Overlay */}
+                    <div className="pt-2.5 mt-2.5 border-t border-slate-700/50">
+                      <label className="flex items-center gap-2.5 cursor-pointer text-xs font-medium group">
                         <input
                           type="checkbox"
-                          checked={activeLayers.mlHeatmap}
-                          onChange={() =>
-                            setActiveLayers((p) => ({ ...p, mlHeatmap: !p.mlHeatmap }))
-                          }
+                          checked={showCurrentMlOverlay}
+                          onChange={(e) => setShowCurrentMlOverlay(e.target.checked)}
                           className="w-4 h-4 rounded text-red-500 focus:ring-red-400 cursor-pointer accent-red-500"
                         />
                         <Flame className="w-3.5 h-3.5 text-red-500" />
-                        <span>Show Live ML Risk (Multi-Hazard Overlay)</span>
+                        <span className="font-semibold text-red-400">Overlay Current ML Risk (Extra Trees)</span>
                       </label>
+                      <p className="text-[10px] text-slate-400 mt-1 pl-6 leading-tight">
+                        Current ML inference model, not historical data.
+                      </p>
                     </div>
                   </>
                 )}
@@ -764,15 +785,14 @@ export const SpatialGisCommand: React.FC<SpatialGisCommandProps> = ({
 
             {/* Section 3: Selected Zone Quick Info Card (Screen 3 Mockup) */}
             <div
-              className={`p-4 rounded-xl border transition-all ${
-                selectedZone.riskStatus.includes('CRITICAL')
-                  ? isDark
-                    ? 'bg-red-950/20 border-red-500/40'
-                    : 'bg-red-50 border-red-200'
-                  : isDark
+              className={`p-4 rounded-xl border transition-all ${selectedZone.riskStatus.includes('CRITICAL')
+                ? isDark
+                  ? 'bg-red-950/20 border-red-500/40'
+                  : 'bg-red-50 border-red-200'
+                : isDark
                   ? 'bg-slate-800/40 border-slate-700'
                   : 'bg-slate-50 border-slate-200'
-              }`}
+                }`}
             >
               <div className="flex items-start justify-between">
                 <div>
@@ -780,11 +800,10 @@ export const SpatialGisCommand: React.FC<SpatialGisCommandProps> = ({
                   <p className="text-xs text-slate-400 mt-0.5">{selectedZone.corridor}</p>
                 </div>
                 <span
-                  className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${
-                    selectedZone.riskStatus.includes('CRITICAL')
-                      ? 'bg-red-500/20 text-red-500'
-                      : 'bg-amber-500/20 text-amber-500'
-                  }`}
+                  className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${selectedZone.riskStatus.includes('CRITICAL')
+                    ? 'bg-red-500/20 text-red-500'
+                    : 'bg-amber-500/20 text-amber-500'
+                    }`}
                 >
                   {selectedZone.riskStatus.includes('CRITICAL') ? 'High (78%)' : 'Moderate'}
                 </span>
@@ -830,23 +849,57 @@ export const SpatialGisCommand: React.FC<SpatialGisCommandProps> = ({
                       <button
                         key={z.id}
                         onClick={() => handleSelectZone(z)}
-                        className={`w-full text-left p-2 rounded-lg text-xs transition-all flex items-center justify-between ${
-                          selectedZone.id === z.id
-                            ? 'bg-emerald-600 text-white font-semibold shadow-sm'
-                            : isDark
+                        className={`w-full text-left p-2 rounded-lg text-xs transition-all flex items-center justify-between ${selectedZone.id === z.id
+                          ? 'bg-emerald-600 text-white font-semibold shadow-sm'
+                          : isDark
                             ? 'hover:bg-slate-800/80 text-slate-300'
                             : 'hover:bg-slate-100 text-slate-700'
-                        }`}
+                          }`}
                       >
                         <span className="truncate max-w-[160px]">{z.name}</span>
                         <span
-                          className={`text-[9px] px-1.5 py-0.5 rounded ${
-                            z.riskStatus.includes('CRITICAL')
-                              ? 'bg-red-500/20 text-red-400'
-                              : 'bg-amber-500/20 text-amber-400'
-                          }`}
+                          className={`text-[9px] px-1.5 py-0.5 rounded ${z.riskStatus.includes('CRITICAL')
+                            ? 'bg-red-500/20 text-red-400'
+                            : 'bg-amber-500/20 text-amber-400'
+                            }`}
                         >
                           {z.riskStatus.includes('CRITICAL') ? 'HIGH' : 'MED'}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* Hill & Mountain Regions */}
+                {searchQuery && unifiedSearchResults.regions.length > 0 && (
+                  <div className="space-y-1.5">
+                    <div className="text-[10px] text-cyan-400 font-bold uppercase pl-1 flex items-center gap-1">
+                      <Mountain className="w-3 h-3" />
+                      <span>Hills &amp; Mountain Regions</span>
+                    </div>
+                    {unifiedSearchResults.regions.map((r) => (
+                      <button
+                        key={r.id}
+                        onClick={() => {
+                          setContextRegion(r);
+                          if (r.coordinatesVerified && r.latitude !== undefined && r.longitude !== undefined) {
+                            setLocalFocusCoords({ latitude: r.latitude, longitude: r.longitude, zoom: 10 });
+                            setContextFocusCoordinates({ latitude: r.latitude, longitude: r.longitude, zoom: 10 });
+                            showToast(`Focused on ${r.name} (${r.state})`);
+                          } else {
+                            showToast(`Selected ${r.name} (${r.state}) - coordinates unverified`);
+                          }
+                        }}
+                        className={`w-full text-left p-2 rounded-lg text-xs transition-all flex items-center justify-between ${effectiveHillRegion?.id === r.id
+                          ? 'bg-cyan-900/40 text-cyan-200 border border-cyan-500/50 shadow-sm'
+                          : isDark
+                            ? 'hover:bg-slate-800/80 text-slate-300'
+                            : 'hover:bg-slate-100 text-slate-700'
+                          }`}
+                      >
+                        <span className="truncate max-w-[160px] font-medium">{r.name}</span>
+                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300">
+                          {r.state}
                         </span>
                       </button>
                     ))}
@@ -862,12 +915,12 @@ export const SpatialGisCommand: React.FC<SpatialGisCommandProps> = ({
                         key={e.id}
                         onClick={() => {
                           setLocalFocusCoords({ latitude: e.latitude, longitude: e.longitude, zoom: 12 });
+                          setContextFocusCoordinates({ latitude: e.latitude, longitude: e.longitude, zoom: 12 });
                           setMapMode('HISTORICAL');
                           setSelectedYear(Number(e.event_date.substring(0, 4)));
                         }}
-                        className={`w-full text-left p-2 rounded-lg text-xs transition-all flex items-center justify-between ${
-                          isDark ? 'hover:bg-slate-800/80 text-slate-300' : 'hover:bg-slate-100 text-slate-700'
-                        }`}
+                        className={`w-full text-left p-2 rounded-lg text-xs transition-all flex items-center justify-between ${isDark ? 'hover:bg-slate-800/80 text-slate-300' : 'hover:bg-slate-100 text-slate-700'
+                          }`}
                       >
                         <span className="truncate max-w-[160px]">{e.state} - {e.event_date}</span>
                         <MapPin className="w-3 h-3 text-purple-400" />
@@ -885,12 +938,12 @@ export const SpatialGisCommand: React.FC<SpatialGisCommandProps> = ({
                         key={eq.id}
                         onClick={() => {
                           setLocalFocusCoords({ latitude: eq.latitude, longitude: eq.longitude, zoom: 10 });
+                          setContextFocusCoordinates({ latitude: eq.latitude, longitude: eq.longitude, zoom: 10 });
                           setMapMode('HISTORICAL');
                           setSelectedYear(new Date(eq.event_time).getFullYear());
                         }}
-                        className={`w-full text-left p-2 rounded-lg text-xs transition-all flex items-center justify-between ${
-                          isDark ? 'hover:bg-slate-800/80 text-slate-300' : 'hover:bg-slate-100 text-slate-700'
-                        }`}
+                        className={`w-full text-left p-2 rounded-lg text-xs transition-all flex items-center justify-between ${isDark ? 'hover:bg-slate-800/80 text-slate-300' : 'hover:bg-slate-100 text-slate-700'
+                          }`}
                       >
                         <span className="truncate max-w-[160px]">M{eq.magnitude.toFixed(1)} - {eq.location}</span>
                         <span className="w-2 h-2 rounded-full border border-purple-400 bg-purple-500/30" />
@@ -899,14 +952,15 @@ export const SpatialGisCommand: React.FC<SpatialGisCommandProps> = ({
                   </div>
                 )}
 
-                {searchQuery && 
-                 unifiedSearchResults.zones.length === 0 && 
-                 unifiedSearchResults.events.length === 0 && 
-                 unifiedSearchResults.earthquakes.length === 0 && (
-                  <div className="text-center py-4 text-xs text-slate-500">
-                    No results found for "{searchQuery}"
-                  </div>
-                )}
+                {searchQuery &&
+                  unifiedSearchResults.zones.length === 0 &&
+                  unifiedSearchResults.regions.length === 0 &&
+                  unifiedSearchResults.events.length === 0 &&
+                  unifiedSearchResults.earthquakes.length === 0 && (
+                    <div className="text-center py-4 text-xs text-slate-500">
+                      No results found for "{searchQuery}"
+                    </div>
+                  )}
               </div>
             </div>
           </div>
@@ -915,15 +969,13 @@ export const SpatialGisCommand: React.FC<SpatialGisCommandProps> = ({
         {/* Right Column: Google Earth GIS Map Canvas + Telemetry & Inspector (8 cols) */}
         <div className="lg:col-span-8 space-y-4">
           <div
-            className={`border rounded-2xl overflow-hidden relative shadow-lg ${
-              isDark ? 'bg-[#0d1c2d] border-[#1c2b3c]' : 'bg-white border-slate-200'
-            }`}
+            className={`border rounded-2xl overflow-hidden relative shadow-lg ${isDark ? 'bg-[#0d1c2d] border-[#1c2b3c]' : 'bg-white border-slate-200'
+              }`}
           >
             {/* Map Header Toolbar */}
             <div
-              className={`px-4 py-3 border-b flex items-center justify-between gap-2 ${
-                isDark ? 'bg-[#122131]/90 border-[#1c2b3c]' : 'bg-slate-50 border-slate-200'
-              }`}
+              className={`px-4 py-3 border-b flex items-center justify-between gap-2 ${isDark ? 'bg-[#122131]/90 border-[#1c2b3c]' : 'bg-slate-50 border-slate-200'
+                }`}
             >
               <div className="flex items-center gap-2">
                 <Compass className="w-4 h-4 text-cyan-500 animate-spin-slow" />
@@ -936,24 +988,22 @@ export const SpatialGisCommand: React.FC<SpatialGisCommandProps> = ({
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setIs3DMode(!is3DMode)}
-                  className={`text-[11px] font-mono px-2.5 py-1 rounded-lg border transition-all ${
-                    is3DMode
-                      ? 'bg-cyan-600 text-white border-cyan-500'
-                      : isDark
+                  className={`text-[11px] font-mono px-2.5 py-1 rounded-lg border transition-all ${is3DMode
+                    ? 'bg-cyan-600 text-white border-cyan-500'
+                    : isDark
                       ? 'bg-[#051424] text-[#8a9297] border-[#273647] hover:text-white'
                       : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'
-                  }`}
+                    }`}
                 >
                   {is3DMode ? '3D OBLIQUE' : '2D TOP-DOWN'}
                 </button>
                 <button
                   onClick={() => setMapZoom(mapZoom === 1 ? 1.25 : 1)}
                   aria-label="Toggle map zoom magnification"
-                  className={`p-1.5 rounded-lg border ${
-                    isDark
-                      ? 'bg-[#051424] text-[#8a9297] hover:text-white border-[#273647]'
-                      : 'bg-white text-slate-700 hover:bg-slate-100 border-slate-300'
-                  }`}
+                  className={`p-1.5 rounded-lg border ${isDark
+                    ? 'bg-[#051424] text-[#8a9297] hover:text-white border-[#273647]'
+                    : 'bg-white text-slate-700 hover:bg-slate-100 border-slate-300'
+                    }`}
                 >
                   {mapZoom > 1 ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
                 </button>
@@ -982,25 +1032,26 @@ export const SpatialGisCommand: React.FC<SpatialGisCommandProps> = ({
               onShowToast={showToast}
               is3DMode={is3DMode}
               onToggle3D={() => setIs3DMode((previous) => !previous)}
-              selectedHillRegion={selectedHillRegion}
+              selectedHillRegion={effectiveHillRegion}
               focusCoordinates={
-                localFocusCoords || (selectedHillRegion?.coordinatesVerified &&
-                selectedHillRegion.latitude !== undefined &&
-                selectedHillRegion.longitude !== undefined
+                contextFocusCoordinates ||
+                localFocusCoords ||
+                (effectiveHillRegion?.coordinatesVerified &&
+                  effectiveHillRegion.latitude !== undefined &&
+                  effectiveHillRegion.longitude !== undefined
                   ? {
-                      latitude: selectedHillRegion.latitude,
-                      longitude: selectedHillRegion.longitude,
-                      zoom: 10,
-                    }
+                    latitude: effectiveHillRegion.latitude,
+                    longitude: effectiveHillRegion.longitude,
+                    zoom: 10,
+                  }
                   : undefined)
               }
             />
 
             {/* Bottom Status bar under map */}
             <div
-              className={`px-4 py-2.5 border-t flex flex-wrap items-center justify-between text-xs gap-2 ${
-                isDark ? 'bg-[#0d1c2d] border-[#1c2b3c] text-slate-400' : 'bg-slate-50 border-slate-200 text-slate-600'
-              }`}
+              className={`px-4 py-2.5 border-t flex flex-wrap items-center justify-between text-xs gap-2 ${isDark ? 'bg-[#0d1c2d] border-[#1c2b3c] text-slate-400' : 'bg-slate-50 border-slate-200 text-slate-600'
+                }`}
             >
               <div className="flex items-center gap-3 text-[11px] font-mono">
                 <span className="flex items-center gap-1.5 text-red-500 font-bold">
@@ -1023,9 +1074,8 @@ export const SpatialGisCommand: React.FC<SpatialGisCommandProps> = ({
 
           {/* Inspector Panel & Real-time ML Evaluation */}
           <div
-            className={`p-5 rounded-2xl border ${
-              isDark ? 'bg-[#0d1c2d] border-[#1c2b3c]' : 'bg-white border-slate-200 shadow-sm'
-            }`}
+            className={`p-5 rounded-2xl border ${isDark ? 'bg-[#0d1c2d] border-[#1c2b3c]' : 'bg-white border-slate-200 shadow-sm'
+              }`}
           >
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-3 border-b border-slate-200 dark:border-slate-800">
               <div>
@@ -1099,11 +1149,10 @@ export const SpatialGisCommand: React.FC<SpatialGisCommandProps> = ({
               <div className="flex items-center gap-2">
                 <button
                   onClick={handleDroneDispatch}
-                  className={`px-3 py-2 rounded-xl text-xs font-semibold border transition-all flex items-center gap-1.5 ${
-                    isDark
-                      ? 'bg-slate-800 hover:bg-slate-700 text-cyan-400 border-slate-700'
-                      : 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-200'
-                  }`}
+                  className={`px-3 py-2 rounded-xl text-xs font-semibold border transition-all flex items-center gap-1.5 ${isDark
+                    ? 'bg-slate-800 hover:bg-slate-700 text-cyan-400 border-slate-700'
+                    : 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-200'
+                    }`}
                 >
                   <Send className="w-3.5 h-3.5" />
                   <span>Dispatch Drone Recon</span>
@@ -1111,11 +1160,10 @@ export const SpatialGisCommand: React.FC<SpatialGisCommandProps> = ({
 
                 <button
                   onClick={handleExportGeoJson}
-                  className={`px-3 py-2 rounded-xl text-xs font-semibold border transition-all flex items-center gap-1.5 ${
-                    isDark
-                      ? 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'
-                      : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200'
-                  }`}
+                  className={`px-3 py-2 rounded-xl text-xs font-semibold border transition-all flex items-center gap-1.5 ${isDark
+                    ? 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'
+                    : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200'
+                    }`}
                 >
                   <Download className="w-3.5 h-3.5" />
                   <span>Export GeoJSON</span>
