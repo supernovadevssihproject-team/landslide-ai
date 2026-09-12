@@ -5,7 +5,9 @@
 **Smart India Hackathon (SIH) 2026**  
 **Problem Statement: 26001**
 
-TerraGuard is an integrated landslide risk monitoring and early warning system designed to support landslide risk assessment in the North Eastern Region of India. The system combines historical landslide inventories, geospatial and environmental datasets, machine learning, GIS-based visualization, backend APIs, citizen reporting, and alert workflows within a unified application.
+TerraGuard is an integrated landslide risk monitoring, susceptibility assessment, spatial intelligence, and early-warning prototype designed for the North Eastern Region of India. The system combines historical landslide inventories, geospatial and environmental datasets, machine learning, GIS-based visualization, terrain analysis, live meteorological and seismic integrations, citizen reporting, and alert workflows within a unified application.
+
+The current prototype extends the original TerraGuard platform with synchronized geographic state across map, weather, seismic, hill-region, search, and 3D terrain workflows.
 
 ---
 
@@ -17,39 +19,48 @@ TerraGuard is an integrated landslide risk monitoring and early warning system d
 4. [Key Objectives](#key-objectives)
 5. [System Features](#system-features)
 6. [Application Modules](#application-modules)
-7. [System Architecture](#system-architecture)
-8. [Data Pipeline](#data-pipeline)
-9. [Machine Learning Pipeline](#machine-learning-pipeline)
-10. [Datasets](#datasets)
-11. [Feature Engineering](#feature-engineering)
-12. [Machine Learning Model](#machine-learning-model)
-13. [Backend and API Architecture](#backend-and-api-architecture)
-14. [Prediction Workflow](#prediction-workflow)
-15. [Risk Classification](#risk-classification)
-16. [Technology Stack](#technology-stack)
-17. [Project Structure](#project-structure)
-18. [Installation and Setup](#installation-and-setup)
-19. [Project Status](#project-status)
-20. [Future Scope](#future-scope)
-21. [Team](#team)
+7. [New Prototype Additions](#new-prototype-additions)
+8. [System Architecture](#system-architecture)
+9. [Data Pipeline](#data-pipeline)
+10. [Machine Learning Pipeline](#machine-learning-pipeline)
+11. [Datasets](#datasets)
+12. [Feature Engineering](#feature-engineering)
+13. [Machine Learning Model](#machine-learning-model)
+14. [Seismic and Earthquake Intelligence](#seismic-and-earthquake-intelligence)
+15. [Geographic State and Synchronization](#geographic-state-and-synchronization)
+16. [Weather and Environmental Telemetry](#weather-and-environmental-telemetry)
+17. [Backend and API Architecture](#backend-and-api-architecture)
+18. [Prediction Workflow](#prediction-workflow)
+19. [Risk Classification](#risk-classification)
+20. [Technology Stack](#technology-stack)
+21. [Project Structure](#project-structure)
+22. [Installation and Setup](#installation-and-setup)
+23. [Prototype Notes and Data Integrity](#prototype-notes-and-data-integrity)
+24. [Project Status](#project-status)
+25. [Future Scope](#future-scope)
+26. [Team](#team)
 
 ---
 
 ## Project Overview
 
-Landslides pose significant risks to communities, transportation infrastructure, public assets, and remote settlements, particularly in mountainous and high-rainfall regions. Effective landslide risk assessment requires the integration of terrain characteristics, environmental conditions, historical events, and spatial information.
+Landslides pose significant risks to communities, transportation infrastructure, public assets, and remote settlements, particularly in mountainous and high-rainfall regions. Effective landslide risk assessment requires the integration of terrain characteristics, environmental conditions, historical events, seismic activity, and spatial information.
 
 TerraGuard provides a unified platform for:
 
 - Landslide susceptibility assessment using machine learning
 - GIS-based visualization of risk and environmental layers
 - Terrain and land-surface analysis
-- Integration of historical landslide records
+- Historical landslide visualization
 - Location-based risk assessment
 - Rainfall and environmental trigger monitoring
+- Live and recent earthquake monitoring
+- Earthquake-derived ground-motion indicators
+- Hills and mountain region discovery
+- 3D terrain exploration
 - Citizen and field incident reporting
 - Alert and emergency response workflows
-- API-based communication between the machine learning pipeline and application
+- API-based communication between machine learning and application layers
 
 The project combines a completed application with a geospatial machine learning pipeline built from processed regional datasets.
 
@@ -67,6 +78,7 @@ Landslide occurrence is influenced by multiple environmental and geographical fa
 - Land-cover characteristics
 - Rainfall and triggering conditions
 - Historical landslide occurrence
+- Seismic activity and ground motion
 
 Relevant data are commonly distributed across different sources, formats, coordinate systems, and spatial resolutions. A practical landslide monitoring system therefore requires data preparation, validation, spatial feature extraction, machine learning, and an accessible application layer.
 
@@ -91,19 +103,26 @@ GIS Feature Extraction
 Machine Learning Dataset Preparation
       |
       v
-Extra Trees Classification Model
+Extra Trees Susceptibility Model
       |
-      v
-FastAPI Backend
-      |
-      v
-TerraGuard Application
-      |
-      v
-Risk Visualization and Alert Workflows
+      +----------------------+
+      |                      |
+      v                      v
+FastAPI Backend        Live Weather / Seismic Data
+      |                      |
+      +----------+-----------+
+                 |
+                 v
+        TerraGuard Application
+                 |
+       +---------+---------+
+       |         |         |
+       v         v         v
+     GIS       3D       Alerts
+     Risk     Terrain    & SOS
 ```
 
-The solution is designed to connect environmental data processing and machine learning outputs with an interactive application for risk assessment and monitoring.
+The platform is designed to connect environmental data processing, machine learning outputs, spatial context, and operational monitoring into one interface.
 
 ---
 
@@ -117,8 +136,10 @@ The primary objectives of TerraGuard are:
 4. Train and integrate an Extra Trees-based machine learning model.
 5. Provide API-based prediction services through a FastAPI backend.
 6. Visualize risk information through GIS-based application interfaces.
-7. Support citizen reporting and alert workflows.
-8. Establish a foundation for future real-time environmental monitoring and early warning capabilities.
+7. Synchronize selected geographic regions across all relevant application modules.
+8. Integrate weather and seismic context for selected hill and mountain regions.
+9. Support citizen reporting and alert workflows.
+10. Establish a foundation for future real-time environmental monitoring and early warning capabilities.
 
 ---
 
@@ -128,7 +149,7 @@ The primary objectives of TerraGuard are:
 
 TerraGuard includes a machine learning pipeline that processes environmental and geographical features to estimate landslide susceptibility.
 
-The established classification model is:
+The established terrain classification model is:
 
 ```text
 ExtraTreesClassifier
@@ -143,11 +164,13 @@ The model operates on structured geospatial and environmental features extracted
 The application supports GIS-based exploration of spatial information, including:
 
 - Regional risk visualization
+- Risk-zone filtering
 - Historical landslide locations
-- Terrain information
-- Environmental layers
-- Risk indicators
-- Location-based analysis
+- Machine learning susceptibility visualization
+- Environmental layer controls
+- Seismic event visualization
+- Location inspection
+- Search-driven map navigation
 
 ---
 
@@ -161,7 +184,7 @@ Slope
 Aspect
 ```
 
-These terrain variables form part of the machine learning feature set.
+These terrain variables form part of the machine learning feature set and are also used for spatial interpretation.
 
 ---
 
@@ -175,13 +198,7 @@ Current machine learning feature:
 soil_id
 ```
 
-The architecture can be expanded to incorporate additional soil properties, subject to metadata availability and validation, including:
-
-- Clay content
-- Sand content
-- Silt content
-- Soil depth
-- Bulk density
+The architecture can be expanded to incorporate additional soil properties, subject to metadata availability and validation.
 
 ---
 
@@ -201,13 +218,15 @@ Land-cover information provides a representation of surface characteristics rele
 
 ## Rainfall and Trigger Monitoring
 
-Rainfall is included as an environmental factor within the TerraGuard data architecture and supports future development of:
+Rainfall is included as an environmental factor within the TerraGuard data architecture and supports:
 
 - Rainfall accumulation analysis
 - Trigger monitoring
 - Dynamic risk assessment
-- Early warning workflows
+- Early-warning workflows
 - Live environmental data integration
+
+The current prototype also supports coordinate-aware weather requests for selected hill and mountain regions.
 
 ---
 
@@ -233,9 +252,8 @@ The system architecture supports risk communication and alert workflows, includi
 - Warning feeds
 - Location-based alerts
 - Emergency workflows
+- SOS workflows
 - CAP-compatible alert architecture
-
-Additional notification channels can be integrated in future deployments.
 
 ---
 
@@ -266,11 +284,14 @@ The dashboard provides:
 The GIS module provides:
 
 - Regional risk visualization
-- Risk zone filtering
+- Risk-zone filtering
 - Environmental layer controls
-- Historical event visualization
-- Machine learning risk visualization
+- Historical landslide visualization
+- Current ML susceptibility visualization
+- Live earthquake visualization
+- Historical earthquake empty-state handling
 - Location inspection
+- Search-driven navigation
 
 ## Risk Details
 
@@ -302,6 +323,42 @@ The emergency module supports workflows such as:
 - Offline-aware communication workflows
 - Safety information
 
+## Hills & Mountain Regions
+
+This module provides:
+
+- Searchable hills and mountain regions
+- Region selection
+- Representative verified coordinates
+- Region-aware weather
+- Nearby/latest earthquake context
+- Epicentral distance display
+- Estimated PGA and MMI indicators
+- External reference links such as Wikipedia/Britannica
+
+## Earthquake Monitor
+
+The earthquake monitor provides:
+
+- Selected Hill Region monitoring
+- Hazard Corridor Zone monitoring
+- NCS earthquake event integration
+- Location search
+- Radius filters
+- Minimum magnitude filters
+- Event sorting
+- Expandable earthquake event details
+- Hypocentral distance
+- Estimated PGA
+- Instrumental MMI
+- Arias intensity
+- Trigger scoring
+- Geotechnical advisories
+
+## 3D Terrain
+
+The 3D terrain interface provides geographic visualization tied to the selected hill or mountain region, allowing terrain context to follow the same geographic selection used by the GIS map.
+
 ## Additional Modules
 
 The application also includes modules for:
@@ -311,6 +368,134 @@ The application also includes modules for:
 - Prediction workflows
 - Citizen reporting
 - Alert and dispatch workflows
+
+---
+
+# New Prototype Additions
+
+The current prototype retains the original TerraGuard capabilities and adds the following major workflows.
+
+## 1. Authoritative Geographic State
+
+`MapContext` is used as the shared geographic state for the application.
+
+The selected region and map focus coordinates are designed to remain consistent across:
+
+```text
+Hills & Mountain Regions
+        |
+        +--> GIS Risk Map
+        |
+        +--> 3D Terrain
+        |
+        +--> Weather
+        |
+        +--> Earthquake / Seismic Context
+        |
+        +--> Search
+        |
+        +--> Browser Navigation
+```
+
+This reduces conflicting local copies of selected-region state.
+
+---
+
+## 2. Coordinate-Aware Weather
+
+The weather API accepts:
+
+```text
+state
+latitude
+longitude
+region_name
+```
+
+For a verified hill or mountain region, the application's selected coordinates are forwarded to the weather service so the environmental context follows the selected region rather than relying only on a state-level default.
+
+---
+
+## 3. Seismic Ground-Motion Metrics
+
+The prototype includes seismic utility calculations for:
+
+- Epicentral distance
+- Hypocentral distance
+- Estimated PGA
+- PGA as `% g`
+- Instrumental MMI
+- Arias intensity
+- Composite destabilization / trigger scoring
+- Time-decay effects
+
+The implementation is intended for prototype hazard visualization and decision-support workflows.
+
+---
+
+## 4. Historical Map Mode Separation
+
+Historical mode distinguishes historical event visualization from the current ML inference layer.
+
+The application supports an explicit current-risk overlay rather than silently presenting present-day ML output as historical data.
+
+---
+
+## 5. Unified Spatial Search
+
+Search is designed to span multiple spatial categories:
+
+```text
+Risk Zones
+Hills & Mountain Regions
+Historical Landslides
+NCS Earthquakes
+```
+
+Selecting search results can update the geographic context and map focus.
+
+---
+
+## 6. Browser Navigation Restoration
+
+The prototype integrates browser history with geographic/module state so that:
+
+```text
+Select Region A
+      |
+      v
+Select Region B
+      |
+      v
+Browser Back
+      |
+      v
+Restore Region A
+      |
+      v
+Browser Forward
+      |
+      v
+Restore Region B
+```
+
+This is intended to make navigation behave more predictably during map-driven exploration.
+
+---
+
+## 7. Safe Historical Earthquake Handling
+
+When an authoritative historical earthquake archive is unavailable, TerraGuard presents an empty state instead of inventing historical earthquake events.
+
+This keeps the historical earthquake interface distinguishable from live NCS data.
+
+---
+
+## 8. External Reference Link Isolation
+
+Wikipedia, Britannica, and similar reference links are treated as external navigation.
+
+Opening a source link should not mutate the application's selected geographic state.
 
 ---
 
@@ -348,21 +533,25 @@ flowchart TD
     M --> O
     N --> O
 
-      O --> P[Terrain + Rainfall Ensemble]
+    O --> P[Extra Trees Classifier]
+
     P --> Q[FastAPI Backend]
+
     Q --> R[TerraGuard Application]
 
-    R --> S[Risk Visualization]
-    R --> T[Prediction]
-    R --> U[Alerts]
-    R --> V[Citizen Reporting]
+    R --> S[GIS Risk Map]
+    R --> T[3D Terrain]
+    R --> U[Weather Telemetry]
+    R --> V[Earthquake Monitor]
+    R --> W[Alerts]
+    R --> X[Citizen Reporting]
 ```
 
 ---
 
 # Data Pipeline
 
-The data engineering workflow used for the project is organized as follows:
+The data engineering workflow is organized as follows:
 
 ```text
 Data Acquisition
@@ -498,8 +687,6 @@ Current machine learning feature:
 soil_id
 ```
 
-The soil identifiers provide a foundation for future integration with soil property metadata and lookup tables.
-
 ---
 
 ## Land-Cover Data
@@ -536,20 +723,7 @@ NER_landcover_class_frequency.csv
 
 ---
 
-## Rainfall Data
-
-Rainfall data forms part of the project's environmental data architecture and is intended to support:
-
-- Historical rainfall analysis
-- Trigger analysis
-- Dynamic risk assessment
-- Early warning integration
-
----
-
 ## India Landslide Master Dataset
-
-The project processed multiple landslide sources into a consolidated India landslide inventory.
 
 Final dataset:
 
@@ -557,17 +731,11 @@ Final dataset:
 India_Landslide_Master_Final.csv
 ```
 
-Final processed size:
-
-```text
-32,227 records
-```
+The original TerraGuard data-processing workflow consolidated multiple landslide sources into a common India inventory.
 
 ---
 
 ## North Eastern Region Landslide Dataset
-
-The India landslide inventory was filtered for the project's North Eastern Region study area.
 
 Dataset:
 
@@ -575,11 +743,7 @@ Dataset:
 NER_Landslide_Records_Final.csv
 ```
 
-Initial regional inventory:
-
-```text
-9,297 landslide records
-```
+The regional inventory is used as the basis for the North Eastern Region modelling workflow.
 
 ---
 
@@ -603,14 +767,6 @@ soil_id
 landcover_class
 ```
 
-Processing summary:
-
-| Dataset Stage | Records |
-|---|---:|
-| Initial Landslide Records | 9,297 |
-| Complete Feature Records | 9,289 |
-| Incomplete Records | 8 |
-
 ---
 
 # Positive Training Dataset
@@ -619,12 +775,6 @@ Dataset:
 
 ```text
 NER_Landslide_Training_Features_Clean.csv
-```
-
-Records:
-
-```text
-9,289
 ```
 
 Class label:
@@ -645,12 +795,6 @@ Dataset:
 NER_Background_Samples_Validated.csv
 ```
 
-Initial validated sample count:
-
-```text
-9,289
-```
-
 Class label:
 
 ```text
@@ -669,21 +813,7 @@ Dataset:
 NER_Landslide_ML_Dataset.csv
 ```
 
-Final dataset size:
-
-```text
-18,109 records
-```
-
-Class distribution:
-
-| Class | Samples |
-|---|---:|
-| Background / No Landslide (`0`) | 9,289 |
-| Landslide (`1`) | 8,820 |
-| **Total** | **18,109** |
-
-Core dataset columns:
+Core dataset columns include:
 
 ```text
 latitude_standardized
@@ -699,7 +829,7 @@ label
 sample_type
 ```
 
-The final dataset was processed to remove invalid and duplicate records and to address conflicting labels.
+The final dataset is processed to remove invalid and duplicate records and to address conflicting labels.
 
 ---
 
@@ -707,32 +837,101 @@ The final dataset was processed to remove invalid and duplicate records and to a
 
 ## Terrain + Rainfall Ensemble
 
-The prediction pipeline combines two complementary models:
+The original TerraGuard prediction architecture combines complementary models:
 
 ```text
 Terrain model: ExtraTreesClassifier
 Rainfall model: RandomForestClassifier
 ```
 
-The terrain model is trained from the 18,109-record NER labeled dataset. After
-missing-value and duplicate removal, 18,033 records are used for training and
-evaluation. The rainfall model remains trained on the 654-record dataset that
-contains complete 1-day, 3-day, 7-day, 15-day, and 30-day rainfall windows.
+The terrain model is the established landslide susceptibility model used throughout the current application workflow.
 
-At inference time, the terrain probability contributes 70% and the rainfall
-probability contributes 30%. This uses the larger terrain inventory without
-inventing rainfall values for records that do not contain them.
+The rainfall model is used as a complementary environmental signal where the required rainfall-window features are available.
 
-Relevant characteristics include:
+The combined architecture is intended to provide:
 
-- Ability to model non-linear relationships
-- Ability to capture interactions between input features
-- Suitability for structured tabular data
-- Probability-based classification output
+- Non-linear relationship modelling
+- Interaction capture
+- Structured tabular-data classification
+- Probability-based outputs
 - Feature importance analysis
-- Ensemble-based classification
+- Ensemble-based risk interpretation
 
-The trained machine learning pipeline is integrated with the application's prediction workflow.
+---
+
+# Seismic and Earthquake Intelligence
+
+TerraGuard integrates live/recent earthquake information through the National Center for Seismology (NCS) workflow used by the application.
+
+## Earthquake Metrics
+
+For a selected region and earthquake event, the prototype calculates or presents:
+
+- Epicentral distance
+- Hypocentral distance
+- Estimated Peak Ground Acceleration (PGA)
+- PGA in `% g`
+- Instrumental Modified Mercalli Intensity (MMI)
+- Arias intensity
+- Focal proximity
+- Composite trigger score
+- Time-decay contribution
+
+The seismic metrics are intended as prototype decision-support indicators rather than a substitute for authoritative engineering or emergency-management products.
+
+---
+
+# Geographic State and Synchronization
+
+A selected hill or mountain region is treated as the main geographic context.
+
+When a verified region is selected, the application can propagate:
+
+```text
+Region
+Coordinates
+Map focus
+Weather query
+Earthquake query
+3D terrain focus
+Search context
+Browser history state
+```
+
+Representative coordinates are used where the data source provides a verified representative point rather than an exact polygon boundary. The application should not interpret a representative point as an exact administrative or geographic boundary.
+
+---
+
+# Weather and Environmental Telemetry
+
+The backend weather route supports:
+
+```text
+/api/weather/live
+```
+
+Optional request parameters include:
+
+```text
+state
+latitude
+longitude
+region_name
+```
+
+The prototype uses coordinate-aware weather retrieval for selected geographic regions.
+
+The current implementation can use public meteorological data through Open-Meteo and retains an offline fallback for prototype continuity.
+
+A response can distinguish live data from fallback data using:
+
+```text
+is_live_feed
+```
+
+where live service responses are marked as live and offline fallback responses are marked as not live.
+
+Some prototype dashboard metrics may use baseline/fallback values when external services are unavailable. These values are intended for prototype continuity and should not be interpreted as authoritative measurements.
 
 ---
 
@@ -752,7 +951,8 @@ The backend supports:
 - Prediction requests
 - Machine learning model inference
 - Input validation
-- Application APIs
+- Weather telemetry
+- Earthquake/seismic APIs
 - Reporting workflows
 - Alert workflows
 - Frontend-backend communication
@@ -839,16 +1039,16 @@ These categories support:
 | API Server | Uvicorn |
 | Validation | Pydantic |
 | Machine Learning | Scikit-learn |
-| ML Model | Extra Trees Classifier |
+| Primary ML Model | Extra Trees Classifier |
 | Data Processing | Pandas, NumPy |
-| Visualization | Matplotlib |
+| Visualization | Matplotlib / Interactive Web Maps |
 | Geospatial Data | GeoTIFF / Raster Data |
 | GIS | Interactive Map Layers |
 | Terrain | DEM, Elevation, Slope, Aspect |
 | Soil | HWSD2 |
 | Land Cover | ESA WorldCover |
-| Alert Architecture | CAP-compatible workflows |
-| Application Integration | Antigravity-based application workflow |
+| Weather | Open-Meteo / Prototype telemetry adapters |
+| Earthquake Source | National Center for Seismology (NCS) |
 
 ---
 
@@ -857,33 +1057,54 @@ These categories support:
 ```text
 landslide-ai/
 │
-├── backend/                  # FastAPI backend and application services
+├── backend/
+│   ├── routers/
+│   │   ├── earthquakes.py
+│   │   ├── weather.py
+│   │   └── ...
+│   ├── services/
+│   │   ├── weather_service.py
+│   │   └── ...
+│   └── main.py
 │
-├── data/                     # Project datasets
+├── public/
+│
+├── src/
+│   ├── components/
+│   │   ├── GisMapContainer.tsx
+│   │   ├── HillsMountainRegions.tsx
+│   │   ├── SpatialGisCommand.tsx
+│   │   ├── ThreeDMapView.tsx
+│   │   └── ...
+│   │
+│   ├── context/
+│   │   └── MapContext.tsx
+│   │
+│   ├── data/
+│   │   └── hillsData.ts
+│   │
+│   ├── services/
+│   │   └── api.ts
+│   │
+│   ├── utils/
+│   │   └── seismicMetrics.ts
+│   │
+│   ├── types.ts
+│   ├── App.tsx
+│   └── main.tsx
+│
+├── data/
 │   ├── dem/
 │   ├── soil/
-│   ├── landcover/
-│   └── landslides/
+│   └── landcover/
 │
-├── docs/                     # Project documentation
-│
-├── ml/                       # Machine learning pipeline and models
-│   ├── models/
-│   └── ...
-│
-├── public/                   # Public application assets
-│
-├── src/                      # React and TypeScript frontend
-│
-├── .env.example              # Environment configuration example
-├── package.json              # Frontend dependencies and scripts
-├── vite.config.ts            # Vite configuration
-├── tsconfig.json             # TypeScript configuration
-│
-└── README.md
+├── models/
+├── notebooks/
+├── scripts/
+├── README.md
+├── package.json
+└── requirements.txt
 ```
-
-> Large datasets and generated machine learning artifacts may be managed separately depending on repository size and deployment requirements.
 
 ---
 
@@ -891,11 +1112,14 @@ landslide-ai/
 
 ## Prerequisites
 
-The development environment requires:
+Install:
 
-- Node.js 18 or later
-- Python 3.10 or later
-- npm
+```text
+Node.js
+npm
+Python 3.x
+Git
+```
 
 ---
 
@@ -908,27 +1132,49 @@ cd landslide-ai
 
 ---
 
-## Install Frontend Dependencies
+## Frontend Setup
+
+Install dependencies:
 
 ```bash
 npm install
 ```
 
+Start the development server:
+
+```bash
+npm run dev
+```
+
+The Vite development server will display the local URL in the terminal.
+
 ---
 
-## Install Python Dependencies
+## Backend Setup
 
-Where a Python requirements file is provided:
+Create and activate a Python virtual environment:
+
+### Windows
+
+```powershell
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+```
+
+### Linux / macOS
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+```
+
+Install Python dependencies:
 
 ```bash
 pip install -r requirements.txt
 ```
 
----
-
-## Run the Backend
-
-Start the FastAPI backend:
+Start FastAPI:
 
 ```bash
 python -m uvicorn backend.main:app --reload --port 8000
@@ -942,177 +1188,316 @@ http://localhost:8000/docs
 
 ---
 
-## Run the Frontend
+## Build Verification
 
-In a separate terminal:
+Frontend lint:
 
 ```bash
-npm run dev
+npm run lint
 ```
 
-Open the local development URL displayed by Vite.
+Production build:
+
+```bash
+npm run build
+```
+
+Backend syntax verification:
+
+```bash
+python -m compileall backend
+```
 
 ---
 
-# Running the Machine Learning Pipeline
+# Prototype Notes and Data Integrity
 
-The project machine learning workflow follows these stages:
+TerraGuard is currently a **prototype / portfolio / demonstration application**.
 
-```text
-1. Prepare Landslide Inventory
-        |
-        v
-2. Clean and Standardize Records
-        |
-        v
-3. Extract GIS Features
-        |
-        v
-4. Generate Background Samples
-        |
-        v
-5. Create Final Machine Learning Dataset
-        |
-        v
-6. Validate Dataset
-        |
-        v
-7. Train Extra Trees Classifier
-        |
-        v
-8. Evaluate Model
-        |
-        v
-9. Save Trained Model
-        |
-        v
-10. Connect Model to FastAPI
-        |
-        v
-11. Serve Predictions to the Application
-```
+Important implementation notes:
 
-The exact execution commands depend on the scripts and model resources included in the project's machine learning directory.
+- Live external services may be unavailable or rate-limited.
+- Offline fallback data can be used to preserve application continuity.
+- Prototype baseline values may appear for selected environmental metrics when an external service is unavailable.
+- Fallback data should not be interpreted as real-time authoritative measurements.
+- Historical earthquake records are not fabricated when a verified archive is unavailable.
+- Representative hill coordinates are used where a source provides a representative point rather than an exact boundary polygon.
+- Seismic metrics are intended for prototype decision support and visualization.
+
+For operational disaster-management deployment, all external data sources, geospatial boundaries, alert thresholds, model calibration, and engineering formulas should undergo domain validation and independent verification.
 
 ---
 
 # Project Status
 
-## Dataset Engineering
+## Current Status
 
-- Completed landslide inventory collection
-- Completed multi-source dataset processing
-- Completed data cleaning and validation
-- Completed dataset merging
-- Completed duplicate handling
-- Completed coordinate standardization
-- Completed North Eastern Region filtering
-- Completed DEM processing
-- Completed elevation extraction
-- Completed slope extraction
-- Completed aspect extraction
-- Completed soil integration
-- Completed land-cover integration
-- Completed feature extraction
-- Completed positive sample preparation
-- Completed background sample generation
-- Completed final machine learning dataset preparation
-- Completed dataset validation
+**Prototype / Demonstration Ready**
 
-## Machine Learning
+The current TerraGuard application includes:
 
-- Machine learning dataset established
-- Environmental feature pipeline established
-- Extra Trees model established
-- Model training pipeline established
-- Prediction pipeline established
-- Backend integration workflow established
+- Extra Trees-based landslide susceptibility workflow
+- GIS risk visualization
+- Historical landslide visualization
+- Current ML risk visualization
+- Hills and mountain region discovery
+- Coordinate-aware weather context
+- NCS earthquake integration
+- Seismic ground-motion metrics
+- 3D terrain context
+- Unified multi-category spatial search
+- Browser Back/Forward geographic restoration
+- Citizen reporting workflows
+- Alert and emergency workflows
+- Historical-earthquake safe empty state
+- FastAPI backend integration
 
-## Application
+## Validation
 
-- Application interface completed
-- Risk dashboard completed
-- GIS risk visualization completed
-- Risk analysis interface completed
-- Alert interface completed
-- Emergency SOS workflow completed
-- Risk simulation module completed
-- Machine learning pipeline interface completed
-- Citizen reporting workflows integrated
-- Backend application integration completed
+The development workflow includes verification of:
+
+- TypeScript compilation
+- Frontend linting
+- Production build
+- Python backend compilation
+- Git diff integrity
+- Preservation of existing ML and application modules
 
 ---
 
 # Future Scope
 
-Potential future enhancements include:
+Future TerraGuard development can include:
 
-- Live rainfall API integration
-- Soil moisture integration
-- Automated satellite data ingestion
-- Real-time sensor integration
-- Advanced spatial susceptibility maps
-- Mobile application deployment
-- AI-assisted field image verification
-- Push notification integration
-- SMS-based alerts
-- Expanded CAP integration
-- Cloud deployment
-- Automated model retraining
-- Continuous environmental monitoring pipelines
+- Real-time IMD data integration
+- Verified satellite and radar feeds
+- Higher-resolution precipitation products
+- Soil-moisture data integration
+- Real-time sensor networks
+- More detailed seismic hazard models
+- Verified historical earthquake archives
+- Improved regional administrative boundaries
+- Larger and more representative training datasets
+- Explainable AI dashboards
+- Model calibration with field observations
+- Automated alert threshold optimization
+- SMS / email / push notification integrations
+- Offline-first field applications
+- Mobile deployment
+- Cloud-native deployment
+- Continuous model monitoring and retraining
+- Production-grade data provenance and auditability
 
 ---
 
-# Project Vision
 
-TerraGuard is intended to establish a data-driven framework that connects:
+# Deployment
+
+TerraGuard can be deployed as a split frontend/backend application because the project contains a React/Vite frontend and a FastAPI backend.
+
+## Deployment Architecture
 
 ```text
-Environmental Data
-        +
-Geospatial Analysis
-        +
-Historical Landslide Information
-        +
-Machine Learning
-        +
-Risk Monitoring
-        +
-Early Warning Workflows
+Users
+  |
+  v
+Public Frontend
+React + Vite
+  |
+  | HTTPS API Requests
+  v
+FastAPI Backend
+  |
+  +-------------------+
+  |                   |
+  v                   v
+ML Models        External Services
+                 Weather / NCS
 ```
 
-The objective is to support improved landslide preparedness, risk awareness, and decision support for landslide-prone regions.
+## Frontend Deployment
+
+The frontend can be built for production using:
+
+```bash
+npm run build
+```
+
+The resulting Vite production output is normally generated in:
+
+```text
+dist/
+```
+
+The `dist/` directory can be served by a static hosting platform or a conventional web server.
+
+Before deployment, configure the frontend API base URL or environment variables required by the project so that production requests point to the deployed FastAPI service rather than the local backend.
+
+Example production workflow:
+
+```text
+1. Install Node.js dependencies
+2. Configure production environment variables
+3. Run npm run build
+4. Deploy the generated dist/ directory
+5. Configure the backend API URL
+6. Verify CORS and HTTPS connectivity
+```
+
+## Backend Deployment
+
+The FastAPI backend can be started with:
+
+```bash
+python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000
+```
+
+For a production deployment, the backend should run behind a production-capable process manager or application platform.
+
+Required backend configuration should include:
+
+```text
+Python environment
+Required Python packages
+Model files
+Application configuration
+CORS settings
+External API configuration
+```
+
+The API documentation is available at:
+
+```text
+https://<your-backend-domain>/docs
+```
+
+when the service is publicly deployed.
+
+## Environment Variables
+
+Do not commit private credentials or API keys to the repository.
+
+Use an environment file for local development, for example:
+
+```text
+.env
+```
+
+and provide a safe example file such as:
+
+```text
+.env.example
+```
+
+Typical configuration may include:
+
+```text
+VITE_API_BASE_URL=
+BACKEND_CORS_ORIGINS=
+WEATHER_API_KEY=
+EARTHQUAKE_API_CONFIG=
+OTHER_SERVICE_KEYS=
+```
+
+Only define variables that are actually required by the deployment configuration.
+
+## CORS
+
+When the frontend and backend are hosted on different domains, configure FastAPI CORS to allow the production frontend origin.
+
+Example:
+
+```text
+Frontend:
+https://your-frontend-domain
+
+Backend:
+https://your-backend-domain
+```
+
+Do not use an unrestricted production CORS configuration unless it is intentionally required and understood.
+
+## Model and Data Deployment
+
+The deployment must make all required machine learning artifacts and runtime data available to the backend.
+
+Depending on repository size, large files may be:
+
+```text
+Stored in the repository
+Stored in object storage
+Mounted from a persistent volume
+Downloaded during deployment
+Managed through a model/data registry
+```
+
+Verify that the deployed backend can locate:
+
+```text
+Model files
+Required GIS data
+Configuration files
+Required lookup tables
+```
+
+## Production Verification Checklist
+
+After deployment, verify:
+
+```text
+[ ] Frontend loads successfully
+[ ] Backend health/API endpoint responds
+[ ] CORS allows frontend requests
+[ ] Prediction endpoint works
+[ ] GIS map renders
+[ ] 3D terrain renders
+[ ] Hill selection updates geographic context
+[ ] Weather endpoint responds
+[ ] Earthquake endpoint responds
+[ ] Alerts and reporting workflows operate
+[ ] External source links open correctly
+[ ] Browser Back/Forward restores geographic state
+[ ] No secret keys are exposed in frontend source
+[ ] HTTPS is enabled for public deployment
+```
+
+## Prototype Deployment Note
+
+TerraGuard is currently a prototype and can be deployed as a demonstration application. A production disaster-management deployment should additionally include:
+
+- Production-grade monitoring
+- Authentication and authorization
+- Secure secret management
+- Rate limiting
+- Data provenance
+- Strong API validation
+- Centralized logging
+- Backups
+- Model/version tracking
+- Domain-specific validation of hazard metrics
+- High-availability infrastructure
+- Independent verification of authoritative data sources
 
 ---
 
 # Team
 
-**Team Name:** Supernova Devs
-# Team Members:
+**Supernova Devs — SIH Project Team**
 
-- B NITHIN CHANDRA GIT REPO: https://github.com/bnithinchandra-dotcom
-- B DHANUSH GIT REPO: https://github.com/bondidhanush01-bit
-- 3
-- 4
-- 5
-- 6
-  
+TerraGuard was developed as a collaborative Smart India Hackathon project and is being further developed as a professional portfolio and applied geospatial AI prototype.
 
-TerraGuard is developed as a Smart India Hackathon solution for **Problem Statement 26001**.
+---
 
-Core project contribution areas include:
+## Repository
 
-- Dataset Engineering
-- GIS Processing
-- Machine Learning
-- Backend Development
-- Frontend Development
-- API Integration
-- Application Development
-- System Testing.
+GitHub:
+
+```text
+https://github.com/supernovadevssihproject-team/landslide-ai
+```
 
 ---
 
 ## License
 
-This project is developed for the Smart India Hackathon solution and academic innovation purposes. Licensing and deployment terms may be defined separately by the project team.
+Add the project's final license here before public production distribution.
