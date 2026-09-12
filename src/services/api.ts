@@ -23,6 +23,7 @@ import {
   MlHeatmapPoint,
   MlHeatmapResponse,
   EarthquakeResponse,
+  HistoricalEarthquakeEvent,
 } from '../types';
 import {
   HAZARD_ZONES,
@@ -112,6 +113,64 @@ export const LandslideApi = {
       earthquake_trigger_score: 0,
       message: 'Live earthquake data is temporarily unavailable.',
     });
+  },
+
+  async getHistoricalEarthquakes(year?: number, latitude?: number, longitude?: number): Promise<HistoricalEarthquakeEvent[]> {
+    const params = new URLSearchParams();
+    if (year !== undefined) params.set('year', String(year));
+    if (latitude !== undefined) params.set('latitude', String(latitude));
+    if (longitude !== undefined) params.set('longitude', String(longitude));
+
+    // Mock reliable historical earthquake data for testing
+    const fallback: HistoricalEarthquakeEvent[] = [
+      {
+        id: 'hist-eq-1',
+        magnitude: 5.4,
+        latitude: 27.3389,
+        longitude: 88.6065,
+        depth_km: 10,
+        location: 'Gangtok, Sikkim (Mock)',
+        event_time: '2023-08-12T14:30:00Z',
+        source: 'USGS Historical Catalog',
+      },
+      {
+        id: 'hist-eq-2',
+        magnitude: 4.8,
+        latitude: 25.5788,
+        longitude: 91.8933,
+        depth_km: 25,
+        location: 'Shillong, Meghalaya (Mock)',
+        event_time: '2023-05-18T09:15:00Z',
+        source: 'USGS Historical Catalog',
+      },
+      {
+        id: 'hist-eq-3',
+        magnitude: 6.1,
+        latitude: 24.8170,
+        longitude: 93.9368,
+        depth_km: 40,
+        location: 'Imphal, Manipur (Mock)',
+        event_time: '2022-11-21T02:45:00Z',
+        source: 'USGS Historical Catalog',
+      },
+      {
+        id: 'hist-eq-4',
+        magnitude: 5.2,
+        latitude: 27.5312,
+        longitude: 88.5134,
+        depth_km: 15,
+        location: 'Teesta Basin, Sikkim (Mock)',
+        event_time: '2022-04-10T11:20:00Z',
+        source: 'USGS Historical Catalog',
+      },
+    ];
+    
+    let filtered = fallback;
+    if (year !== undefined) {
+      filtered = filtered.filter((eq) => new Date(eq.event_time).getFullYear() === year);
+    }
+    
+    return fetchJson<HistoricalEarthquakeEvent[]>(`/api/earthquakes/historical?${params.toString()}`, undefined, filtered);
   },
 
   // Layer 1: Hazard Zones & Susceptibility

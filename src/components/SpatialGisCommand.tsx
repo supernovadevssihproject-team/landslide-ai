@@ -3,10 +3,10 @@ import {
   HazardZone,
   SensorNode,
   NerState,
-  HistoricalLandslideEvent,
   ZoneMlRiskEvaluation,
   MlHeatmapPoint,
   EarthquakeEvent,
+  HistoricalEarthquakeEvent,
 } from '../types';
 import { HAZARD_ZONES, SENSOR_NODES, ASSET_URLS } from '../data/mockData';
 import { LandslideApi } from '../services/api';
@@ -100,13 +100,18 @@ export const SpatialGisCommand: React.FC<SpatialGisCommandProps> = ({
     trainingEvents: true,
     mlHeatmap: true,
     earthquakeEvents: true,
+    historicalEarthquakeEvents: true,
   });
+
+  const [mapMode, setMapMode] = useState<'LIVE' | 'HISTORICAL'>('LIVE');
+  const [selectedYear, setSelectedYear] = useState<number>(2023);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [is3DMode, setIs3DMode] = useState(false);
   const [mapZoom, setMapZoom] = useState(1);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isDispatching, setIsDispatching] = useState(false);
+  const [localFocusCoords, setLocalFocusCoords] = useState<{latitude: number; longitude: number; zoom?: number} | undefined>(undefined);
 
   const [zones, setZones] = useState<HazardZone[]>(HAZARD_ZONES);
   const [sensors, setSensors] = useState<SensorNode[]>(SENSOR_NODES);
@@ -120,6 +125,7 @@ export const SpatialGisCommand: React.FC<SpatialGisCommandProps> = ({
   const [heatmapPoints, setHeatmapPoints] = useState<MlHeatmapPoint[]>([]);
   const [earthquakes, setEarthquakes] = useState<EarthquakeEvent[]>([]);
   const [earthquakeStatus, setEarthquakeStatus] = useState('Loading NCS feed...');
+  const [historicalEarthquakes, setHistoricalEarthquakes] = useState<HistoricalEarthquakeEvent[]>([]);
 
   useEffect(() => {
     let active = true;
@@ -193,6 +199,21 @@ export const SpatialGisCommand: React.FC<SpatialGisCommandProps> = ({
     });
   }, [selectedZone.coords]);
 
+  // Fetch historical earthquakes based on selected year
+  useEffect(() => {
+    let active = true;
+    const match = selectedZone.coords.match(/(-?\d+(?:\.\d+)?)[^,]*,\s*(-?\d+(?:\.\d+)?)/);
+    const latitude = match ? Number(match[1]) : undefined;
+    const longitude = match ? Number(match[2]) : undefined;
+    
+    LandslideApi.getHistoricalEarthquakes(selectedYear, latitude, longitude).then((res) => {
+      if (active) {
+        setHistoricalEarthquakes(res);
+      }
+    });
+    return () => { active = false; };
+  }, [selectedYear, selectedZone.coords]);
+
   // Filter hazard zones according to state, search query, and risk level toggles
   const normalizedSearchQuery = searchQuery.trim().toLowerCase();
   const filteredZones = useMemo(
@@ -221,21 +242,57 @@ export const SpatialGisCommand: React.FC<SpatialGisCommandProps> = ({
     [sensors, selectedState]
   );
 
-  // Filter historical events based on pastEvents checkbox
-  const visibleTrainingEvents = useMemo(
-    () => {
-      if (!riskFilters.pastEvents) return [];
-      if (!historicalTimelineRange) return trainingEvents;
+  // Derived Visible Data Pipelines
+  const visibleTrainingEvents = useMemo(() => {
+    if (mapMode !== 'HISTORICAL' || !activeLayers.trainingEvents) return [];
+    return trainingEvents.filter((event) => {
+      const yearMatch = event.event_date.match(/^(\d{4})/);
+      if (!yearMatch) return false;
+      const year = Number(yearMatch[1]);
+      return year === selectedYear;
+    });
+  }, [trainingEvents, mapMode, selectedYear, activeLayers.trainingEvents]);
 
-      return trainingEvents.filter((event) => {
-        const yearMatch = event.event_date.match(/^(\d{4})/);
-        if (!yearMatch) return false;
-        const year = Number(yearMatch[1]);
-        return year >= historicalTimelineRange.from && year <= historicalTimelineRange.to;
-      });
-    },
-    [historicalTimelineRange, riskFilters.pastEvents, trainingEvents]
-  );
+  const visibleHistoricalEarthquakes = useMemo(() => {
+    if (mapMode !== 'HISTORICAL' || !activeLayers.historicalEarthquakeEvents) return [];
+    return historicalEarthquakes.filter((event) => {
+      const year = new Date(event.event_time).getFullYear();
+      return year === selectedYear;
+    });
+  }, [historicalEarthquakes, mapMode, selectedYear, activeLayers.historicalEarthquakeEvents]);
+
+  const visibleHeatmapPoints = useMemo(() => {
+    if (!activeLayers.mlHeatmap) return [];
+    // In HISTORICAL mode, it requires the multi-hazard overlay checkbox to be checked (which sets mlHeatmap to true)
+    return heatmapPoints;
+  }, [heatmapPoints, activeLayers.mlHeatmap]);
+
+  const visibleEarthquakes = useMemo(() => {
+    if (mapMode !== 'LIVE' || !activeLayers.earthquakeEvents) return [];
+    return earthquakes;
+  }, [earthquakes, mapMode, activeLayers.earthquakeEvents]);
+
+  // Unified Search Derived State
+  const unifiedSearchResults = useMemo(() => {
+    const q = normalizedSearchQuery;
+    if (!q) return { zones: filteredZones, events: [], earthquakes: [] };
+
+    const matchingEvents = trainingEvents.filter((e) =>
+      e.event_date.toLowerCase().includes(q) ||
+      e.state.toLowerCase().includes(q)
+    );
+
+    const matchingEarthquakes = historicalEarthquakes.filter((e) =>
+      e.location.toLowerCase().includes(q) ||
+      e.source.toLowerCase().includes(q)
+    );
+
+    return {
+      zones: filteredZones,
+      events: matchingEvents,
+      earthquakes: matchingEarthquakes,
+    };
+  }, [normalizedSearchQuery, filteredZones, trainingEvents, historicalEarthquakes]);
 
   const timelineMinYear = yearCounts[0]?.year ?? 2009;
   const timelineMaxYear = yearCounts[yearCounts.length - 1]?.year ?? 2022;
@@ -521,118 +578,187 @@ export const SpatialGisCommand: React.FC<SpatialGisCommandProps> = ({
                   />
                   <span className="w-3 h-3 rounded-sm bg-purple-500 shrink-0" />
                   <span className={isDark ? 'group-hover:text-white' : 'group-hover:text-slate-900'}>
-                    Past Events ({trainingEvents.length})
+                    Past Events ({visibleTrainingEvents.length})
                   </span>
                 </label>
               </div>
             </div>
 
-            {/* Section 2: Map Layers Checkboxes (Screen 3 Mockup) */}
+            {/* Section 2: Map Modes & Layers */}
             <div className="pt-4 border-t border-slate-200 dark:border-slate-800 mb-5">
+              
+              {/* Map Mode Toggle */}
+              <div className="flex items-center gap-2 mb-4 bg-slate-900/30 p-1.5 rounded-lg border border-slate-700/50">
+                <button
+                  type="button"
+                  onClick={() => setMapMode('LIVE')}
+                  className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all ${
+                    mapMode === 'LIVE'
+                      ? 'bg-cyan-500 text-slate-950 shadow-sm'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  LIVE RISK
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMapMode('HISTORICAL')}
+                  className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all ${
+                    mapMode === 'HISTORICAL'
+                      ? 'bg-purple-500 text-white shadow-sm'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  HISTORICAL DATA
+                </button>
+              </div>
+
+              {mapMode === 'HISTORICAL' && (
+                <div className="mb-4">
+                  <label className="text-[10px] font-bold uppercase text-slate-400 block mb-1">Select Year</label>
+                  <select 
+                    value={selectedYear} 
+                    onChange={(e) => setSelectedYear(Number(e.target.value))}
+                    className="w-full bg-slate-800/80 text-white border border-slate-700 rounded-md py-1.5 text-xs px-2 outline-none"
+                  >
+                    {[2024, 2023, 2022, 2021, 2020].map(y => (
+                      <option key={y} value={y}>{y}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
               <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">
-                Map Layers
+                {mapMode === 'LIVE' ? 'Live Layers' : 'Historical Layers'}
               </h3>
               <div className="space-y-2.5">
-                <label className="flex items-center gap-2.5 cursor-pointer text-xs font-medium group">
-                  <input
-                    type="checkbox"
-                    checked={activeLayers.imdRadar}
-                    onChange={() =>
-                      setActiveLayers((p) => ({ ...p, imdRadar: !p.imdRadar }))
-                    }
-                    className="w-4 h-4 rounded text-blue-500 focus:ring-blue-400 cursor-pointer accent-blue-500"
-                  />
-                  <CloudRain className="w-3.5 h-3.5 text-blue-500" />
-                  <span>Rainfall (IMD Radar)</span>
-                </label>
+                {mapMode === 'LIVE' && (
+                  <>
+                    <label className="flex items-center gap-2.5 cursor-pointer text-xs font-medium group">
+                      <input
+                        type="checkbox"
+                        checked={activeLayers.imdRadar}
+                        onChange={() =>
+                          setActiveLayers((p) => ({ ...p, imdRadar: !p.imdRadar }))
+                        }
+                        className="w-4 h-4 rounded text-blue-500 focus:ring-blue-400 cursor-pointer accent-blue-500"
+                      />
+                      <CloudRain className="w-3.5 h-3.5 text-blue-500" />
+                      <span>Rainfall (IMD Radar)</span>
+                    </label>
 
-                <label className="flex items-center gap-2.5 cursor-pointer text-xs font-medium group">
-                  <input
-                    type="checkbox"
-                    checked={activeLayers.soilSaturation}
-                    onChange={() =>
-                      setActiveLayers((p) => ({ ...p, soilSaturation: !p.soilSaturation }))
-                    }
-                    className="w-4 h-4 rounded text-cyan-500 focus:ring-cyan-400 cursor-pointer accent-cyan-500"
-                  />
-                  <Droplets className="w-3.5 h-3.5 text-cyan-500" />
-                  <span>Soil Moisture Saturation</span>
-                </label>
+                    <label className="flex items-center gap-2.5 cursor-pointer text-xs font-medium group">
+                      <input
+                        type="checkbox"
+                        checked={activeLayers.soilSaturation}
+                        onChange={() =>
+                          setActiveLayers((p) => ({ ...p, soilSaturation: !p.soilSaturation }))
+                        }
+                        className="w-4 h-4 rounded text-cyan-500 focus:ring-cyan-400 cursor-pointer accent-cyan-500"
+                      />
+                      <Droplets className="w-3.5 h-3.5 text-cyan-500" />
+                      <span>Soil Moisture Saturation</span>
+                    </label>
 
-                <label className="flex items-center gap-2.5 cursor-pointer text-xs font-medium group">
-                  <input
-                    type="checkbox"
-                    checked={activeLayers.demContours}
-                    onChange={() =>
-                      setActiveLayers((p) => ({ ...p, demContours: !p.demContours }))
-                    }
-                    className="w-4 h-4 rounded text-amber-500 focus:ring-amber-400 cursor-pointer accent-amber-500"
-                  />
-                  <TrendingUp className="w-3.5 h-3.5 text-amber-500" />
-                  <span>Slope (DEM Contours)</span>
-                </label>
+                    <label className="flex items-center gap-2.5 cursor-pointer text-xs font-medium group">
+                      <input
+                        type="checkbox"
+                        checked={activeLayers.demContours}
+                        onChange={() =>
+                          setActiveLayers((p) => ({ ...p, demContours: !p.demContours }))
+                        }
+                        className="w-4 h-4 rounded text-amber-500 focus:ring-amber-400 cursor-pointer accent-amber-500"
+                      />
+                      <TrendingUp className="w-3.5 h-3.5 text-amber-500" />
+                      <span>Slope (DEM Contours)</span>
+                    </label>
 
-                <label className="flex items-center gap-2.5 cursor-pointer text-xs font-medium group">
-                  <input
-                    type="checkbox"
-                    checked={activeLayers.trainingEvents}
-                    onChange={() =>
-                      setActiveLayers((p) => ({ ...p, trainingEvents: !p.trainingEvents }))
-                    }
-                    className="w-4 h-4 rounded text-purple-500 focus:ring-purple-400 cursor-pointer accent-purple-500"
-                  />
-                  <MapPin className="w-3.5 h-3.5 text-purple-500" />
-                  <span>Historical Data (Events)</span>
-                </label>
+                    <label className="flex items-center gap-2.5 cursor-pointer text-xs font-medium group">
+                      <input
+                        type="checkbox"
+                        checked={activeLayers.mlHeatmap}
+                        onChange={() =>
+                          setActiveLayers((p) => ({ ...p, mlHeatmap: !p.mlHeatmap }))
+                        }
+                        className="w-4 h-4 rounded text-red-500 focus:ring-red-400 cursor-pointer accent-red-500"
+                      />
+                      <Flame className="w-3.5 h-3.5 text-red-500" />
+                      <span>ML Pattern Heatmap ({visibleHeatmapPoints.length})</span>
+                    </label>
 
-                {activeLayers.trainingEvents && (
-                  <HistoricalReplayTimeline
-                    minYear={timelineMinYear}
-                    maxYear={timelineMaxYear}
-                    yearCounts={yearCounts}
-                    value={historicalTimelineRange}
-                    onChange={setHistoricalTimelineRange}
-                  />
+                    <label className="flex items-center gap-2.5 cursor-pointer text-xs font-medium group">
+                      <input
+                        type="checkbox"
+                        checked={activeLayers.sensorNodes}
+                        onChange={() =>
+                          setActiveLayers((p) => ({ ...p, sensorNodes: !p.sensorNodes }))
+                        }
+                        className="w-4 h-4 rounded text-emerald-500 focus:ring-emerald-400 cursor-pointer accent-emerald-500"
+                      />
+                      <Radio className="w-3.5 h-3.5 text-emerald-500" />
+                      <span>IoT Sensor Nodes (148)</span>
+                    </label>
+
+                    <label className="flex items-center gap-2.5 cursor-pointer text-xs font-medium group">
+                      <input
+                        type="checkbox"
+                        checked={activeLayers.earthquakeEvents}
+                        onChange={() =>
+                          setActiveLayers((p) => ({ ...p, earthquakeEvents: !p.earthquakeEvents }))
+                        }
+                        className="w-4 h-4 rounded text-orange-500 focus:ring-orange-400 cursor-pointer accent-orange-500"
+                      />
+                      <span className="w-3.5 h-3.5 rounded-full border-2 border-orange-400 bg-orange-500/30" />
+                      <span>Live NCS Earthquakes ({visibleEarthquakes.length})</span>
+                    </label>
+                  </>
                 )}
 
-                <label className="flex items-center gap-2.5 cursor-pointer text-xs font-medium group">
-                  <input
-                    type="checkbox"
-                    checked={activeLayers.mlHeatmap}
-                    onChange={() =>
-                      setActiveLayers((p) => ({ ...p, mlHeatmap: !p.mlHeatmap }))
-                    }
-                    className="w-4 h-4 rounded text-red-500 focus:ring-red-400 cursor-pointer accent-red-500"
-                  />
-                  <Flame className="w-3.5 h-3.5 text-red-500" />
-                  <span>ML Pattern Heatmap ({heatmapPoints.length})</span>
-                </label>
+                {mapMode === 'HISTORICAL' && (
+                  <>
+                    <label className="flex items-center gap-2.5 cursor-pointer text-xs font-medium group">
+                      <input
+                        type="checkbox"
+                        checked={activeLayers.trainingEvents}
+                        onChange={() =>
+                          setActiveLayers((p) => ({ ...p, trainingEvents: !p.trainingEvents }))
+                        }
+                        className="w-4 h-4 rounded text-purple-500 focus:ring-purple-400 cursor-pointer accent-purple-500"
+                      />
+                      <MapPin className="w-3.5 h-3.5 text-purple-500" />
+                      <span>Historical Landslides ({visibleTrainingEvents.length})</span>
+                    </label>
 
-                <label className="flex items-center gap-2.5 cursor-pointer text-xs font-medium group">
-                  <input
-                    type="checkbox"
-                    checked={activeLayers.sensorNodes}
-                    onChange={() =>
-                      setActiveLayers((p) => ({ ...p, sensorNodes: !p.sensorNodes }))
-                    }
-                    className="w-4 h-4 rounded text-emerald-500 focus:ring-emerald-400 cursor-pointer accent-emerald-500"
-                  />
-                  <Radio className="w-3.5 h-3.5 text-emerald-500" />
-                  <span>IoT Sensor Nodes (148)</span>
-                </label>
-
-                <label className="flex items-center gap-2.5 cursor-pointer text-xs font-medium group">
-                  <input
-                    type="checkbox"
-                    checked={activeLayers.earthquakeEvents}
-                    onChange={() =>
-                      setActiveLayers((p) => ({ ...p, earthquakeEvents: !p.earthquakeEvents }))
-                    }
-                    className="w-4 h-4 rounded text-orange-500 focus:ring-orange-400 cursor-pointer accent-orange-500"
-                  />
-                  <span className="w-3.5 h-3.5 rounded-full border-2 border-orange-400 bg-orange-500/30" />
-                  <span>Live NCS Earthquakes ({earthquakes.length})</span>
-                </label>
+                    <label className="flex items-center gap-2.5 cursor-pointer text-xs font-medium group">
+                      <input
+                        type="checkbox"
+                        checked={activeLayers.historicalEarthquakeEvents}
+                        onChange={() =>
+                          setActiveLayers((p) => ({ ...p, historicalEarthquakeEvents: !p.historicalEarthquakeEvents }))
+                        }
+                        className="w-4 h-4 rounded text-purple-500 focus:ring-purple-400 cursor-pointer accent-purple-500"
+                      />
+                      <span className="w-3.5 h-3.5 rounded-full border border-purple-400 bg-purple-500/30" />
+                      <span>Historical Earthquakes ({visibleHistoricalEarthquakes.length})</span>
+                    </label>
+                    
+                    {/* Multi-hazard toggle to allow blending live ML risk over historical data */}
+                    <div className="pt-2 mt-2 border-t border-slate-700/50">
+                      <label className="flex items-center gap-2.5 cursor-pointer text-xs font-medium group opacity-80">
+                        <input
+                          type="checkbox"
+                          checked={activeLayers.mlHeatmap}
+                          onChange={() =>
+                            setActiveLayers((p) => ({ ...p, mlHeatmap: !p.mlHeatmap }))
+                          }
+                          className="w-4 h-4 rounded text-red-500 focus:ring-red-400 cursor-pointer accent-red-500"
+                        />
+                        <Flame className="w-3.5 h-3.5 text-red-500" />
+                        <span>Show Live ML Risk (Multi-Hazard Overlay)</span>
+                      </label>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 
@@ -690,36 +816,97 @@ export const SpatialGisCommand: React.FC<SpatialGisCommandProps> = ({
               )}
             </div>
 
-            {/* Quick Zone Switcher List */}
+            {/* Search Results & Quick Switcher List */}
             <div className="mt-4 pt-3 border-t border-slate-200 dark:border-slate-800">
               <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block mb-2">
-                Available Corridors:
+                {searchQuery ? 'Search Results:' : 'Available Corridors:'}
               </span>
-              <div className="max-h-36 overflow-y-auto space-y-1.5 pr-1">
-                {filteredZones.map((z) => (
-                  <button
-                    key={z.id}
-                    onClick={() => handleSelectZone(z)}
-                    className={`w-full text-left p-2 rounded-lg text-xs transition-all flex items-center justify-between ${
-                      selectedZone.id === z.id
-                        ? 'bg-emerald-600 text-white font-semibold shadow-sm'
-                        : isDark
-                        ? 'hover:bg-slate-800/80 text-slate-300'
-                        : 'hover:bg-slate-100 text-slate-700'
-                    }`}
-                  >
-                    <span className="truncate max-w-[160px]">{z.name}</span>
-                    <span
-                      className={`text-[9px] px-1.5 py-0.5 rounded ${
-                        z.riskStatus.includes('CRITICAL')
-                          ? 'bg-red-500/20 text-red-400'
-                          : 'bg-amber-500/20 text-amber-400'
-                      }`}
-                    >
-                      {z.riskStatus.includes('CRITICAL') ? 'HIGH' : 'MED'}
-                    </span>
-                  </button>
-                ))}
+              <div className="max-h-52 overflow-y-auto space-y-3 pr-1">
+                {/* Zones */}
+                {(unifiedSearchResults.zones.length > 0 || !searchQuery) && (
+                  <div className="space-y-1.5">
+                    {searchQuery && <div className="text-[10px] text-slate-500 font-bold uppercase pl-1">Risk Zones</div>}
+                    {unifiedSearchResults.zones.map((z) => (
+                      <button
+                        key={z.id}
+                        onClick={() => handleSelectZone(z)}
+                        className={`w-full text-left p-2 rounded-lg text-xs transition-all flex items-center justify-between ${
+                          selectedZone.id === z.id
+                            ? 'bg-emerald-600 text-white font-semibold shadow-sm'
+                            : isDark
+                            ? 'hover:bg-slate-800/80 text-slate-300'
+                            : 'hover:bg-slate-100 text-slate-700'
+                        }`}
+                      >
+                        <span className="truncate max-w-[160px]">{z.name}</span>
+                        <span
+                          className={`text-[9px] px-1.5 py-0.5 rounded ${
+                            z.riskStatus.includes('CRITICAL')
+                              ? 'bg-red-500/20 text-red-400'
+                              : 'bg-amber-500/20 text-amber-400'
+                          }`}
+                        >
+                          {z.riskStatus.includes('CRITICAL') ? 'HIGH' : 'MED'}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* Historical Events */}
+                {searchQuery && unifiedSearchResults.events.length > 0 && (
+                  <div className="space-y-1.5">
+                    <div className="text-[10px] text-slate-500 font-bold uppercase pl-1">Historical Landslides</div>
+                    {unifiedSearchResults.events.map((e) => (
+                      <button
+                        key={e.id}
+                        onClick={() => {
+                          setLocalFocusCoords({ latitude: e.latitude, longitude: e.longitude, zoom: 12 });
+                          setMapMode('HISTORICAL');
+                          setSelectedYear(Number(e.event_date.substring(0, 4)));
+                        }}
+                        className={`w-full text-left p-2 rounded-lg text-xs transition-all flex items-center justify-between ${
+                          isDark ? 'hover:bg-slate-800/80 text-slate-300' : 'hover:bg-slate-100 text-slate-700'
+                        }`}
+                      >
+                        <span className="truncate max-w-[160px]">{e.state} - {e.event_date}</span>
+                        <MapPin className="w-3 h-3 text-purple-400" />
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* Earthquakes */}
+                {searchQuery && unifiedSearchResults.earthquakes.length > 0 && (
+                  <div className="space-y-1.5">
+                    <div className="text-[10px] text-slate-500 font-bold uppercase pl-1">Historical Earthquakes</div>
+                    {unifiedSearchResults.earthquakes.map((eq) => (
+                      <button
+                        key={eq.id}
+                        onClick={() => {
+                          setLocalFocusCoords({ latitude: eq.latitude, longitude: eq.longitude, zoom: 10 });
+                          setMapMode('HISTORICAL');
+                          setSelectedYear(new Date(eq.event_time).getFullYear());
+                        }}
+                        className={`w-full text-left p-2 rounded-lg text-xs transition-all flex items-center justify-between ${
+                          isDark ? 'hover:bg-slate-800/80 text-slate-300' : 'hover:bg-slate-100 text-slate-700'
+                        }`}
+                      >
+                        <span className="truncate max-w-[160px]">M{eq.magnitude.toFixed(1)} - {eq.location}</span>
+                        <span className="w-2 h-2 rounded-full border border-purple-400 bg-purple-500/30" />
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {searchQuery && 
+                 unifiedSearchResults.zones.length === 0 && 
+                 unifiedSearchResults.events.length === 0 && 
+                 unifiedSearchResults.earthquakes.length === 0 && (
+                  <div className="text-center py-4 text-xs text-slate-500">
+                    No results found for "{searchQuery}"
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -783,8 +970,9 @@ export const SpatialGisCommand: React.FC<SpatialGisCommandProps> = ({
               selectedEvent={selectedEvent}
               onSelectEvent={(evt) => setSelectedEvent(evt)}
               zoneMlRisk={zoneMlRisk}
-              heatmapPoints={heatmapPoints}
-              earthquakes={earthquakes}
+              heatmapPoints={visibleHeatmapPoints}
+              earthquakes={visibleEarthquakes}
+              historicalEarthquakes={visibleHistoricalEarthquakes}
               earthquakeStatus={earthquakeStatus}
               stressRainfall={stressRainfall}
               activeLayers={activeLayers}
@@ -796,7 +984,7 @@ export const SpatialGisCommand: React.FC<SpatialGisCommandProps> = ({
               onToggle3D={() => setIs3DMode((previous) => !previous)}
               selectedHillRegion={selectedHillRegion}
               focusCoordinates={
-                selectedHillRegion?.coordinatesVerified &&
+                localFocusCoords || (selectedHillRegion?.coordinatesVerified &&
                 selectedHillRegion.latitude !== undefined &&
                 selectedHillRegion.longitude !== undefined
                   ? {
@@ -804,7 +992,7 @@ export const SpatialGisCommand: React.FC<SpatialGisCommandProps> = ({
                       longitude: selectedHillRegion.longitude,
                       zoom: 10,
                     }
-                  : undefined
+                  : undefined)
               }
             />
 

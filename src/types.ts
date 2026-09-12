@@ -338,6 +338,17 @@ export interface EarthquakeResponse {
   message: string;
 }
 
+export interface HistoricalEarthquakeEvent {
+  id: string;
+  magnitude: number;
+  latitude: number;
+  longitude: number;
+  depth_km: number;
+  location: string;
+  event_time: string;
+  source: string;
+}
+
 export interface MonthlyMetricComparison {
   month: string;
   historicalAvg: number;
