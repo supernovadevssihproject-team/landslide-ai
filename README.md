@@ -1483,6 +1483,15 @@ TerraGuard is currently a prototype and can be deployed as a demonstration appli
 # Team
 
 **Supernova Devs — SIH Project Team**
+## Team Members
+
+- B NITHIN CHANDRA — https://github.com/bnithinchandra-dotcom
+- B DHANUSH — https://github.com/bondidhanush01-bit
+- B Kedar Sharma — https://github.com/frostblack548-stack
+- Ch Naga Manaswini — https://github.com/chnagamanaswini
+- D Prajnasree — https://prajnasree.github.io
+- Hasini chappidi — https://github.com/hasini-ch-7
+
 
 TerraGuard was developed as a collaborative Smart India Hackathon project and is being further developed as a professional portfolio and applied geospatial AI prototype.
 
@@ -1498,6 +1507,7 @@ https://github.com/supernovadevssihproject-team/landslide-ai
 
 ---
 
-## License
+# License
 
-Add the project's final license here before public production distribution.
+This project is free to use by anyone.
+For licensing or usage-related questions, please contact the TerraGuard team.
