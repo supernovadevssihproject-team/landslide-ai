@@ -10,6 +10,7 @@ from backend.database.database import get_db
 from backend.database.models import HazardZoneModel
 from backend.ml.susceptibility import susceptibility_engine
 from backend.routers.ml_model import ml_model, ml_preprocessor
+from backend.services.earthquake_service import earthquake_service
 
 router = APIRouter(prefix="/api/zones", tags=["Susceptibility & Hazard Zones"])
 
@@ -352,24 +353,44 @@ def get_zone_ml_risk(
         except Exception as e:
             print(f"[GIS ML] Error during inference: {e}")
             probability = min(0.99, max(0.1, sat_val / 100.0 * 0.6 + slope_val / 60.0 * 0.4))
-            pred_class = 1 if probability >= 0.5 else 0
-    else:
-        probability = min(0.99, max(0.1, sat_val / 100.0 * 0.6 + slope_val / 60.0 * 0.4))
-        pred_class = 1 if probability >= 0.5 else 0
+    # Parse zone centroid coordinates
+    try:
+        coord_clean = zone.coords.replace("°", "").replace("N", "").replace("E", "").replace("S", "").replace("W", "")
+        lat_s, lon_s = coord_clean.split(",")
+        zone_lat, zone_lon = float(lat_s.strip()), float(lon_s.strip())
+    except Exception:
+        zone_lat, zone_lon = 27.5312, 88.5134
 
-    # Classify Risk Tier
-    if probability >= 0.75:
+    # Seismic trigger integration via live NCS feed
+    seismic_trigger_score = 0.0
+    try:
+        eq_res = earthquake_service.get_earthquakes(latitude=zone_lat, longitude=zone_lon, radius_km=500.0, limit=20)
+        seismic_trigger_score = float(eq_res.get("earthquake_trigger_score", 0.0))
+    except Exception as e:
+        print(f"[GIS ML] Seismic evaluation fallback: {e}")
+
+    # Bounded Post-Model Seismic Adjustment Layer
+    # Formula: delta_seismic = S_seismic * 0.20 * (1.0 - P_base)
+    base_probability = round(probability, 4)
+    seismic_adj = round(seismic_trigger_score * 0.20 * (1.0 - base_probability), 4)
+    final_prob = min(1.0, max(0.0, base_probability + seismic_adj))
+    final_score = int(round(final_prob * 100.0))
+
+    # Classify Risk Tier based on final score
+    if final_prob >= 0.75:
         risk_tier = "VERY_HIGH"
         action_code = "RED_EVACUATION_MANDATE"
-    elif probability >= 0.50:
+    elif final_prob >= 0.50:
         risk_tier = "HIGH"
         action_code = "ORANGE_FIELD_PATROL"
-    elif probability >= 0.25:
+    elif final_prob >= 0.25:
         risk_tier = "MODERATE"
         action_code = "YELLOW_SENSOR_WATCH"
     else:
         risk_tier = "LOW"
         action_code = "GREEN_NOMINAL"
+
+    pred_class = 1 if final_prob >= 0.50 else 0
 
     # Count nearby historical events from training dataset
     training_events = load_training_events()
@@ -381,23 +402,27 @@ def get_zone_ml_risk(
         "state": zone.state,
         "prediction": pred_class,
         "prediction_label": "LANDSLIDE" if pred_class == 1 else "NO_LANDSLIDE",
-        "landslide_probability": round(probability, 4),
-        "probability_percentage": round(probability * 100, 1),
+        "base_ml_probability": base_probability,
+        "seismic_adjustment": seismic_adj,
+        "final_risk_score": final_score,
+        "landslide_probability": round(final_prob, 4),
+        "probability_percentage": round(final_prob * 100, 1),
         "risk_tier": risk_tier,
         "action_code": action_code,
-        "model_name": "Random Forest Ensemble (ROC-AUC: 0.896)",
+        "model_name": "Random Forest Ensemble with Bounded Seismic Adjustment Layer",
         "feature_summary": {
             "elevation_m": elev_val,
             "slope_deg": slope_val,
             "soil_saturation_pct": sat_val,
             "rainfall_3d_mm": r3,
             "rainfall_30d_mm": r30,
+            "seismic_trigger_score": seismic_trigger_score,
         },
         "primary_features": [
             {"name": "Slope Gradient", "value": f"{slope_val}°", "impact": "High Gini Weight (11.4%)"},
             {"name": "Elevation", "value": f"{int(elev_val)} m", "impact": "Primary Discriminator (12.7%)"},
             {"name": "3-Day Cumulative Rain", "value": f"{r3} mm", "impact": "Trigger Driver (8.0%)"},
-            {"name": "30-Day Antecedent Rain", "value": f"{r30} mm", "impact": "PWP Builder (7.8%)"},
+            {"name": "Seismic Trigger Score", "value": f"{seismic_trigger_score:.2f}", "impact": f"Co-Trigger (+{(seismic_adj * 100):.1f}%)"},
         ],
         "historical_precedents_count": max(3, nearby_count),
     }

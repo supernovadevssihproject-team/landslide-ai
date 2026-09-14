@@ -8,6 +8,7 @@ import {
   MlHeatmapPoint,
   EarthquakeEvent,
   HistoricalEarthquakeEvent,
+  LocationRiskEvaluation,
 } from '../types';
 import { HAZARD_ZONES, SENSOR_NODES, ASSET_URLS } from '../data/mockData';
 import { LandslideApi } from '../services/api';
@@ -18,6 +19,8 @@ import {
   HistoricalReplayTimeline,
   HistoricalReplayRange,
 } from './HistoricalReplayTimeline';
+import { fetchLocationRisk } from '../services/locationRiskService';
+import { MlRiskScoreCard } from './MlRiskScoreCard';
 import {
   Layers,
   Crosshair,
@@ -140,6 +143,8 @@ export const SpatialGisCommand: React.FC<SpatialGisCommandProps> = ({
   const [earthquakes, setEarthquakes] = useState<EarthquakeEvent[]>([]);
   const [earthquakeStatus, setEarthquakeStatus] = useState('Loading NCS feed...');
   const [historicalEarthquakes, setHistoricalEarthquakes] = useState<HistoricalEarthquakeEvent[]>([]);
+  const [riskEvaluation, setRiskEvaluation] = useState<LocationRiskEvaluation | null>(null);
+  const [isEvaluatingRisk, setIsEvaluatingRisk] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -182,11 +187,44 @@ export const SpatialGisCommand: React.FC<SpatialGisCommandProps> = ({
           setZoneMlRisk(res);
         }
       });
+
+      setIsEvaluatingRisk(true);
+      setRiskEvaluation(null); // Clear stale state when location changes
+
+      const match = selectedZone.coords.match(/(-?\d+(?:\.\d+)?)[^,]*,\s*(-?\d+(?:\.\d+)?)/);
+      const lat = match ? Number(match[1]) : 0;
+      const lon = match ? Number(match[2]) : 0;
+
+      const rawElev = selectedZone.elevation ? parseFloat(selectedZone.elevation.replace(/,/g, '')) : NaN;
+      const elevation = Number.isFinite(rawElev) ? rawElev : undefined;
+
+      const rawSlope = selectedZone.slopeGradient ? parseFloat(selectedZone.slopeGradient.replace(/[^0-9.]/g, '')) : undefined;
+      const slope = Number.isFinite(rawSlope) ? rawSlope : undefined;
+
+      fetchLocationRisk({
+        name: selectedZone.name,
+        locationType: 'region',
+        latitude: lat,
+        longitude: lon,
+        state: selectedZone.state,
+        elevation,
+        slope,
+        extraRainfall: stressRainfall,
+      }).then(res => {
+        if (active) {
+          console.log(`[RISK DEBUG] React state updated for "${selectedZone.name}": final_risk_score = ${res.final_risk_score}`);
+          setRiskEvaluation(res);
+        }
+      }).catch(err => {
+        console.warn("Failed to get location risk", err);
+      }).finally(() => {
+        if (active) setIsEvaluatingRisk(false);
+      });
     }
     return () => {
       active = false;
     };
-  }, [selectedZone?.id, stressRainfall]);
+  }, [selectedZone?.id, stressRainfall, selectedZone?.name, selectedZone?.coords, selectedZone?.elevation, selectedZone?.slopeGradient, selectedZone?.state]);
 
   // Live ML Heatmap points synthesized from model patterns
   useEffect(() => {
@@ -1204,6 +1242,15 @@ export const SpatialGisCommand: React.FC<SpatialGisCommandProps> = ({
                 <span className="text-[10px] font-mono text-slate-400 block uppercase">Evac Window</span>
                 <span className="text-sm sm:text-base font-bold font-mono text-emerald-500">{selectedZone.lstmEvac}</span>
               </div>
+            </div>
+
+            {/* ML Risk Evaluation Scorecard */}
+            <div className="mt-4">
+              <MlRiskScoreCard
+                evaluation={riskEvaluation}
+                isLoading={isEvaluatingRisk}
+                theme={theme}
+              />
             </div>
 
             {/* Action buttons */}

@@ -19,9 +19,11 @@ import {
   calculateHaversineDistanceKm,
 } from '../data/hillsData';
 import { LandslideApi, LiveWeather } from '../services/api';
-import { EarthquakeResponse } from '../types';
+import { EarthquakeResponse, LocationRiskEvaluation } from '../types';
 import { useMapContext } from '../context/MapContext';
 import { evaluateEventMetrics } from '../utils/seismicMetrics';
+import { fetchLocationRisk } from '../services/locationRiskService';
+import { MlRiskScoreCard } from './MlRiskScoreCard';
 
 interface HillsMountainRegionsProps {
   theme?: 'dark' | 'light';
@@ -75,6 +77,8 @@ export const HillsMountainRegions: React.FC<HillsMountainRegionsProps> = ({
   const [weatherLoading, setWeatherLoading] = useState(false);
   const [earthquakeData, setEarthquakeData] = useState<EarthquakeResponse | null>(null);
   const [earthquakeLoading, setEarthquakeLoading] = useState(false);
+  const [riskEvaluation, setRiskEvaluation] = useState<LocationRiskEvaluation | null>(null);
+  const [isEvaluatingRisk, setIsEvaluatingRisk] = useState(false);
 
   const normalizedSearch = searchQuery.trim().toLowerCase();
   const groupedRegions = useMemo(() => {
@@ -326,6 +330,72 @@ export const HillsMountainRegions: React.FC<HillsMountainRegionsProps> = ({
       badgeClass: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300',
     };
   }, [earthquakeData, latestDistanceKm, latestEarthquake]);
+
+  // Fetch ML Location Risk Score safely
+  useEffect(() => {
+    let active = true;
+
+    // Reset stale risk state when switching hills or clearing selection
+    setRiskEvaluation(null);
+
+    // Ensure it cannot execute with no selected hill or missing/unverified coordinates
+    if (
+      !selectedRegion ||
+      selectedRegion.latitude === undefined ||
+      selectedRegion.longitude === undefined ||
+      !selectedRegion.coordinatesVerified ||
+      !Number.isFinite(selectedRegion.latitude) ||
+      !Number.isFinite(selectedRegion.longitude)
+    ) {
+      setIsEvaluatingRisk(false);
+      return () => {
+        active = false;
+      };
+    }
+
+    setIsEvaluatingRisk(true);
+
+    fetchLocationRisk({
+      name: selectedRegion.name || 'Selected Hill Region',
+      locationType: 'hill',
+      latitude: selectedRegion.latitude,
+      longitude: selectedRegion.longitude,
+      state: selectedRegion.state || 'NER',
+      slope: 35, // default slope for hill regions
+      extraRainfall: 0.0, // Live meteorological precipitation is fetched automatically by location coordinates
+    })
+      .then((res) => {
+        if (active) {
+          setRiskEvaluation(res);
+        }
+      })
+      .catch((err) => {
+        console.warn('Failed to evaluate location risk:', err);
+        if (active) {
+          setRiskEvaluation(null);
+        }
+      })
+      .finally(() => {
+        if (active) {
+          setIsEvaluatingRisk(false);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [
+    selectedRegion?.id,
+    selectedRegion?.latitude,
+    selectedRegion?.longitude,
+    selectedRegion?.coordinatesVerified,
+    selectedRegion?.name,
+    selectedRegion?.state,
+    weather?.antecedent_72h_rainfall_mm,
+    weather?.soil_saturation_pct,
+    latestEarthquake?.magnitude,
+    latestDistanceKm,
+  ]);
 
   const formatEventTime = (isoTime: string) => {
     const d = new Date(isoTime);
@@ -757,6 +827,15 @@ export const HillsMountainRegions: React.FC<HillsMountainRegionsProps> = ({
                       </p>
                     </>
                   )}
+                </div>
+
+                {/* ML Risk Evaluation Scorecard */}
+                <div className="mt-5">
+                  <MlRiskScoreCard
+                    evaluation={riskEvaluation}
+                    isLoading={isEvaluatingRisk}
+                    theme={theme}
+                  />
                 </div>
               </div>
             ) : (

@@ -87,7 +87,8 @@ def root():
             "crowdsource_reports": "/api/reports",
             "sensors": "/api/sensors",
             "alerts": "/api/alerts/cap",
-            "earthquakes": "/api/earthquakes"
+            "earthquakes": "/api/earthquakes",
+            "location_risk": "/api/ml/location-risk"
         }
     }
 

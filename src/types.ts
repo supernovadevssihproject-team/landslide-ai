@@ -364,5 +364,70 @@ export interface HelplineEntry {
   icon?: string;
 }
 
+export interface LocationRiskParams {
+  name: string;
+  locationType: 'region' | 'hill';
+  latitude: number;
+  longitude: number;
+  state?: string;
+  elevation?: number;
+  slope?: number;
+  aspect?: number;
+  soilId?: string;
+  landcoverClass?: string;
+  extraRainfall?: number;
+}
+
+export interface LocationRiskEvaluation {
+  location: {
+    name: string;
+    type: 'region' | 'hill';
+    latitude: number;
+    longitude: number;
+    state: string;
+  };
+  base_ml_probability: number;
+  seismic_adjustment: number;
+  final_risk_score: number;
+  probability_percentage: number;
+  risk_level: 'LOW' | 'MODERATE' | 'HIGH' | 'VERY_HIGH';
+  prediction: number;
+  prediction_label: 'LANDSLIDE' | 'NO_LANDSLIDE';
+  action_code: string;
+  calculation_method: string;
+  inputs: {
+    elevation_m: number;
+    slope_deg: number;
+    soil_id: string;
+    landcover_class: string;
+    rainfall: {
+      rainfall_1d_mm: number;
+      rainfall_3d_mm: number;
+      rainfall_7d_mm: number;
+      rainfall_15d_mm: number;
+      rainfall_30d_mm: number;
+      extra_rainfall_applied_mm: number;
+      source: string;
+      is_live: boolean;
+    };
+    seismic: {
+      events_in_range_500km: number;
+      nearest_event_distance_km: number | null;
+      max_magnitude: number | null;
+      seismic_trigger_score: number;
+      source: string;
+      is_live: boolean;
+    };
+  };
+  model_details?: {
+    terrain_probability?: number | null;
+    rainfall_probability?: number | null;
+    terrain_weight?: number;
+    rainfall_weight?: number;
+    seismic_alpha?: number;
+  };
+  updated_at: string;
+}
+
 
 
