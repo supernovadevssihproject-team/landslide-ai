@@ -80,8 +80,8 @@ const defaultContext: MapContextProps = {
 const MapContext = createContext<MapContextProps>(defaultContext);
 
 export const MapProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [selectedRegion, setSelectedRegion] = useState<HillsRegion | null>(null);
-  const [selectedZone, setSelectedZone] = useState<any>(null);
+  const [selectedRegion, setSelectedRegionState] = useState<HillsRegion | null>(null);
+  const [selectedZone, setSelectedZoneState] = useState<any>(null);
   const [focusCoordinates, setFocusCoordinates] = useState<FocusCoordinates | null>(null);
   const [mapMode, setMapMode] = useState<MapMode>('LIVE');
   const [selectedYear, setSelectedYear] = useState<number>(2023);
@@ -94,8 +94,8 @@ export const MapProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       const saved = sessionStorage.getItem('mapContext');
       if (saved) {
         const data = JSON.parse(saved);
-        if (data.selectedRegion !== undefined) setSelectedRegion(data.selectedRegion);
-        if (data.selectedZone !== undefined) setSelectedZone(data.selectedZone);
+        if (data.selectedRegion !== undefined) setSelectedRegionState(data.selectedRegion);
+        if (data.selectedZone !== undefined) setSelectedZoneState(data.selectedZone);
         if (data.focusCoordinates !== undefined) setFocusCoordinates(data.focusCoordinates);
         if (data.mapMode) setMapMode(data.mapMode);
         if (data.selectedYear) setSelectedYear(data.selectedYear);
@@ -126,6 +126,20 @@ export const MapProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   }, [selectedRegion, selectedZone, focusCoordinates, mapMode, selectedYear, searchQuery, enabledLayers]);
 
+  const handleSetSelectedRegion = (r?: HillsRegion | null) => {
+    setSelectedRegionState(r || null);
+    if (r) {
+      setSelectedZoneState(null);
+    }
+  };
+
+  const handleSetSelectedZone = (z?: any) => {
+    setSelectedZoneState(z || null);
+    if (z) {
+      setSelectedRegionState(null);
+    }
+  };
+
   const setEnabledLayers = (l: Partial<EnabledLayers>) => {
     setEnabledLayersState((prev) => ({ ...prev, ...l }));
   };
@@ -140,8 +154,8 @@ export const MapProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         selectedYear,
         searchQuery,
         enabledLayers,
-        setSelectedRegion,
-        setSelectedZone,
+        setSelectedRegion: handleSetSelectedRegion,
+        setSelectedZone: handleSetSelectedZone,
         setFocusCoordinates,
         setMapMode,
         setSelectedYear,
@@ -156,4 +170,3 @@ export const MapProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
 export const useMap = () => useContext(MapContext);
 export const useMapContext = useMap;
-

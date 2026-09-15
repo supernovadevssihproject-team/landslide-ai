@@ -111,7 +111,7 @@ class WeatherService:
         station_name = f"{region_name} Observatory (IMD Telemetry)" if region_name else station["name"]
         district_name = region_name if region_name else station["district"]
 
-        cache_key = f"{state_key}_{query_lat:.3f}_{query_lon:.3f}"
+        cache_key = f"{state_key}_{query_lat:.4f}_{query_lon:.4f}"
 
         # Return cached if valid
         if cache_key in self._cache:

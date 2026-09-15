@@ -63,14 +63,28 @@ export default function App() {
     }
   });
 
-  // Fetch zones from API while maintaining default fallback
+  // Fetch zones from API while maintaining state-aware fallback
   useEffect(() => {
     let active = true;
     const controller = new AbortController();
     LandslideApi.getHazardZones(selectedState, controller.signal).then((data) => {
-      if (active && data && data.length > 0) {
-        setZones(data);
-        setSelectedZone(data[0]);
+      if (active) {
+        if (data && data.length > 0) {
+          setZones(data);
+          const stateKey = selectedState.toLowerCase();
+          setSelectedZone((prev) => {
+            if (stateKey !== 'all' && prev && prev.state?.toLowerCase() !== stateKey) {
+              return data[0];
+            }
+            return prev && data.some((z) => z.id === prev.id) ? prev : data[0];
+          });
+          setContextSelectedZone((prev: any) => {
+            if (stateKey !== 'all' && prev && prev.state?.toLowerCase() !== stateKey) {
+              return data[0];
+            }
+            return prev && data.some((z) => z.id === prev.id) ? prev : data[0];
+          });
+        }
       }
     });
     return () => {
@@ -185,6 +199,16 @@ export default function App() {
       window.location.href
     );
     setSelectedRegion(region);
+
+    // Synchronize hazard zone to matching state if available
+    const matchingZone = zones.find(
+      (z) => z.state?.toLowerCase() === region.state?.toLowerCase() || z.name?.toLowerCase().includes(region.name?.toLowerCase())
+    );
+    if (matchingZone) {
+      setSelectedZone(matchingZone);
+      setContextSelectedZone(matchingZone);
+    }
+
     if (region.coordinatesVerified && region.latitude !== undefined && region.longitude !== undefined) {
       setFocusCoordinates({
         latitude: region.latitude,

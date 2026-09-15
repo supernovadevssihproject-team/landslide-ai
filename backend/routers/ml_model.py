@@ -18,6 +18,7 @@ from pydantic import BaseModel, Field
 
 from backend.services.weather_service import weather_service
 from backend.services.earthquake_service import earthquake_service
+from backend.services.soil_service import soil_service
 
 warnings.filterwarnings("ignore")
 
@@ -276,7 +277,20 @@ def compute_location_risk(data: LocationRiskRequest) -> Dict[str, Any]:
     else:
         slope = min(52.0, max(28.0, 32.0 + (elev / 3500.0) * 8.0))
     aspect = float(data.aspect) if data.aspect is not None else 180.0
-    soil_id = str(data.soil_id) if data.soil_id else "4276.0"
+    
+    # Resolve soil ID: explicit request parameter vs real geographic HWSD2 lookup
+    if data.soil_id:
+        soil_id = str(data.soil_id)
+        soil_lookup_info = {
+            "soil_id": soil_id,
+            "soil_name": f"Soil ID {soil_id}",
+            "lookup_source": "EXPLICIT_REQUEST_PARAM",
+            "fallback_used": False,
+        }
+    else:
+        soil_lookup_info = soil_service.resolve_soil_by_coordinates(data.latitude, data.longitude)
+        soil_id = soil_lookup_info["soil_id"]
+
     landcover_class = str(data.landcover_class) if data.landcover_class else ("50.0" if elev >= 1000.0 else "40.0")
 
     # Antecedent rainfall windows (strictly non-decreasing r1 <= r3 <= r7 <= r15 <= r30)
@@ -403,6 +417,7 @@ def compute_location_risk(data: LocationRiskRequest) -> Dict[str, Any]:
             "elevation_m": round(elev, 1),
             "slope_deg": round(slope, 1),
             "soil_id": soil_id,
+            "soil_details": soil_lookup_info,
             "landcover_class": landcover_class,
             "rainfall": {
                 "rainfall_1d_mm": r1,

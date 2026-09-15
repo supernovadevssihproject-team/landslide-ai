@@ -140,12 +140,22 @@ export const LandslideApi = {
 
   // Layer 1: Hazard Zones & Susceptibility
   async getHazardZones(state?: NerState, signal?: AbortSignal): Promise<HazardZone[]> {
-    const query = state && state !== 'all' ? `?state=${encodeURIComponent(state)}` : '';
+    const stateKey = state ? state.toLowerCase() : 'all';
+    const query = stateKey !== 'all' ? `?state=${encodeURIComponent(stateKey)}` : '';
     const fallback =
-      state && state !== 'all'
-        ? HAZARD_ZONES.filter((z) => z.state === state)
+      stateKey !== 'all'
+        ? HAZARD_ZONES.filter((z) => z.state.toLowerCase() === stateKey)
         : HAZARD_ZONES;
-    return fetchJson<HazardZone[]>(`/api/zones${query}`, { signal }, fallback);
+    const res = await fetchJson<HazardZone[]>(`/api/zones${query}`, { signal }, fallback);
+    if (res && res.length > 0) {
+      if (stateKey !== 'all') {
+        const matching = res.filter((z) => z.state.toLowerCase() === stateKey);
+        if (matching.length > 0) return matching;
+        return fallback;
+      }
+      return res;
+    }
+    return fallback;
   },
 
   // Layer 2: Temporal LSTM Prediction
@@ -516,8 +526,8 @@ export const LandslideApi = {
       { feature: 'numeric__rainfall_7d', display_name: 'Rainfall 7D Cumulative', importance: 0.07525, importance_percentage: 7.52 },
       { feature: 'numeric__rainfall_15d', display_name: 'Rainfall 15D Antecedent', importance: 0.07239, importance_percentage: 7.24 },
       { feature: 'numeric__aspect', display_name: 'Aspect', importance: 0.07235, importance_percentage: 7.24 },
-      { feature: 'categorical__landcover_class_50.0', display_name: 'Landcover Deciduous Forest', importance: 0.05939, importance_percentage: 5.94 },
-      { feature: 'categorical__soil_id_4276.0', display_name: 'Soil Clay Loam 4276', importance: 0.04691, importance_percentage: 4.69 },
+      { feature: 'categorical__landcover_class_50.0', display_name: 'Built-up (Class 50.0)', importance: 0.05939, importance_percentage: 5.94 },
+      { feature: 'categorical__soil_id_4276.0', display_name: 'Haplic Acrisols (ID 4276.0)', importance: 0.04691, importance_percentage: 4.69 },
     ];
     return fetchJson<MlFeatureImportance[]>('/api/ml/feature-importance', undefined, fallback);
   },

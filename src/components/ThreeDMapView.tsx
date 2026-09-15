@@ -11,7 +11,8 @@ interface ThreeDMapViewProps {
   onClose: () => void;
 }
 
-function parseCoordinates(coordStr: string): [number, number] {
+function parseCoordinates(coordStr?: string): [number, number] {
+  if (!coordStr) return [27.5312, 88.5134];
   const parts = coordStr.replace(/[°NSEW]/g, '').split(',');
   const latitude = Number.parseFloat(parts[0]?.trim() ?? '');
   const longitude = Number.parseFloat(parts[1]?.trim() ?? '');
@@ -52,8 +53,8 @@ export const ThreeDMapView: React.FC<ThreeDMapViewProps> = ({
     ) {
       return [selectedHillRegion.latitude, selectedHillRegion.longitude] as [number, number];
     }
-    return parseCoordinates(selectedZone.coords);
-  }, [selectedHillRegion, selectedZone.coords]);
+    return parseCoordinates(selectedZone?.coords);
+  }, [selectedHillRegion, selectedZone?.coords]);
 
   const filteredZones = useMemo(
     () => selectedHillRegion

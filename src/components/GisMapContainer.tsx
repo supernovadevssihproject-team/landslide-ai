@@ -75,7 +75,7 @@ function parseZoneCoordinates(coordStr: string): [number, number] {
       const lon = parseFloat(parts[1].trim());
       if (!isNaN(lat) && !isNaN(lon)) return [lat, lon];
     }
-  } catch {}
+  } catch { }
   return [27.5312, 88.5134];
 }
 
@@ -154,8 +154,8 @@ export const GisMapContainer: React.FC<GisMapContainerProps> = ({
     const initialCoords = (focusCoordinates && Number.isFinite(focusCoordinates.latitude) && Number.isFinite(focusCoordinates.longitude))
       ? [focusCoordinates.latitude, focusCoordinates.longitude] as [number, number]
       : (selectedHillRegion?.coordinatesVerified && selectedHillRegion.latitude !== undefined && selectedHillRegion.longitude !== undefined)
-      ? [selectedHillRegion.latitude, selectedHillRegion.longitude] as [number, number]
-      : activeZoneCoords;
+        ? [selectedHillRegion.latitude, selectedHillRegion.longitude] as [number, number]
+        : activeZoneCoords;
     const initialZoom = focusCoordinates?.zoom ?? 9;
 
     const map = L.map(mapContainerRef.current, {
@@ -345,24 +345,21 @@ export const GisMapContainer: React.FC<GisMapContainerProps> = ({
       // Custom DivIcon with radar pulse and RF badge
       const iconHtml = `
         <div class="relative cursor-pointer group flex flex-col items-center">
-          ${
-            activeLayers.mlInference
-              ? `<div class="absolute -top-6 px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-emerald-950/95 text-emerald-300 border border-emerald-400 shadow whitespace-nowrap">
+          ${activeLayers.mlInference
+          ? `<div class="absolute -top-6 px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-emerald-950/95 text-emerald-300 border border-emerald-400 shadow whitespace-nowrap">
                   RF ${rfProb}
                 </div>`
-              : ''
-          }
+          : ''
+        }
           <div class="relative flex items-center justify-center">
-            <span class="animate-ping absolute inline-flex h-8 w-8 rounded-full ${
-              zone.isCritical ? 'bg-red-400' : 'bg-amber-400'
-            } opacity-70"></span>
-            <div class="relative w-8 h-8 rounded-full flex items-center justify-center border-2 shadow-xl transition-transform transform group-hover:scale-125 ${
-              isSelected
-                ? 'bg-white text-slate-950 border-cyan-400 scale-110 ring-4 ring-cyan-400/40'
-                : zone.isCritical
-                ? 'bg-[#93000a] text-white border-red-300'
-                : 'bg-[#7d4800] text-white border-amber-300'
-            }">
+            <span class="animate-ping absolute inline-flex h-8 w-8 rounded-full ${zone.isCritical ? 'bg-red-400' : 'bg-amber-400'
+        } opacity-70"></span>
+            <div class="relative w-8 h-8 rounded-full flex items-center justify-center border-2 shadow-xl transition-transform transform group-hover:scale-125 ${isSelected
+          ? 'bg-white text-slate-950 border-cyan-400 scale-110 ring-4 ring-cyan-400/40'
+          : zone.isCritical
+            ? 'bg-[#93000a] text-white border-red-300'
+            : 'bg-[#7d4800] text-white border-amber-300'
+        }">
               <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
                 <line x1="12" y1="9" x2="12" y2="13"/>
@@ -370,11 +367,10 @@ export const GisMapContainer: React.FC<GisMapContainerProps> = ({
               </svg>
             </div>
           </div>
-          <div class="mt-1 px-1.5 py-0.5 rounded text-[10px] font-mono font-bold tracking-tight shadow-md border ${
-            isSelected
-              ? 'bg-[#122131] text-cyan-300 border-cyan-400'
-              : 'bg-[#051424]/90 text-white border-slate-700'
-          } whitespace-nowrap">
+          <div class="mt-1 px-1.5 py-0.5 rounded text-[10px] font-mono font-bold tracking-tight shadow-md border ${isSelected
+          ? 'bg-[#122131] text-cyan-300 border-cyan-400'
+          : 'bg-[#051424]/90 text-white border-slate-700'
+        } whitespace-nowrap">
             ${zone.name.split('(')[0].trim()}
           </div>
         </div>
@@ -424,9 +420,8 @@ export const GisMapContainer: React.FC<GisMapContainerProps> = ({
       const isSelected = selectedEvent?.id === evt.id;
       const dotHtml = `
         <div class="group relative cursor-pointer flex items-center justify-center">
-          <div class="w-3 h-3 rounded-full ${
-            isSelected ? 'bg-cyan-300 ring-4 ring-cyan-400' : 'bg-amber-400 border border-black shadow'
-          } flex items-center justify-center transition-transform group-hover:scale-150">
+          <div class="w-3 h-3 rounded-full ${isSelected ? 'bg-cyan-300 ring-4 ring-cyan-400' : 'bg-amber-400 border border-black shadow'
+        } flex items-center justify-center transition-transform group-hover:scale-150">
             <div class="w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-cyan-900' : 'bg-red-600'}"></div>
           </div>
         </div>
@@ -473,9 +468,8 @@ export const GisMapContainer: React.FC<GisMapContainerProps> = ({
 
       const sensorHtml = `
         <div class="cursor-pointer group flex flex-col items-center">
-          <div class="w-4 h-4 rounded-full ${
-            isCrit ? 'bg-red-500 animate-bounce' : 'bg-cyan-500'
-          } border-2 border-white shadow-lg flex items-center justify-center">
+          <div class="w-4 h-4 rounded-full ${isCrit ? 'bg-red-500 animate-bounce' : 'bg-cyan-500'
+        } border-2 border-white shadow-lg flex items-center justify-center">
             <div class="w-1.5 h-1.5 rounded-full bg-white"></div>
           </div>
           <span class="text-[8px] font-mono font-bold px-1 bg-black/80 text-cyan-300 rounded mt-0.5">
@@ -711,9 +705,8 @@ export const GisMapContainer: React.FC<GisMapContainerProps> = ({
 
   return (
     <div
-      className={`relative w-full rounded-xl overflow-hidden border border-[#1c2b3c] shadow-2xl transition-all ${
-        isFullscreen ? 'fixed inset-0 z-50 rounded-none' : 'h-[440px] sm:h-[500px]'
-      }`}
+      className={`relative w-full rounded-xl overflow-hidden border border-[#1c2b3c] shadow-2xl transition-all ${isFullscreen ? 'fixed inset-0 z-50 rounded-none' : 'h-[440px] sm:h-[500px]'
+        }`}
     >
       {/* Main Leaflet GIS Map Container */}
       <div ref={mapContainerRef} className="w-full h-full z-0" />
@@ -739,11 +732,10 @@ export const GisMapContainer: React.FC<GisMapContainerProps> = ({
       <div className="absolute top-3 left-3 z-20 flex flex-wrap items-center gap-1 bg-[#051424]/90 backdrop-blur-md p-1.5 rounded-lg border border-[#1c2b3c] shadow-xl">
         <button
           onClick={() => setBasemap('satellite')}
-          className={`flex items-center gap-1 px-2.5 py-1 rounded text-xs font-mono font-medium transition-all cursor-pointer ${
-            basemap === 'satellite'
+          className={`flex items-center gap-1 px-2.5 py-1 rounded text-xs font-mono font-medium transition-all cursor-pointer ${basemap === 'satellite'
               ? 'bg-cyan-500 text-[#00363e] font-bold shadow'
               : 'text-slate-300 hover:bg-[#122131] hover:text-white'
-          }`}
+            }`}
           title="Google Earth Satellite High-Resolution Imagery"
         >
           <Satellite className="w-3.5 h-3.5" />
@@ -752,11 +744,10 @@ export const GisMapContainer: React.FC<GisMapContainerProps> = ({
 
         <button
           onClick={() => setBasemap('hybrid')}
-          className={`flex items-center gap-1 px-2.5 py-1 rounded text-xs font-mono font-medium transition-all cursor-pointer ${
-            basemap === 'hybrid'
+          className={`flex items-center gap-1 px-2.5 py-1 rounded text-xs font-mono font-medium transition-all cursor-pointer ${basemap === 'hybrid'
               ? 'bg-cyan-500 text-[#00363e] font-bold shadow'
               : 'text-slate-300 hover:bg-[#122131] hover:text-white'
-          }`}
+            }`}
           title="Google Earth Hybrid (Satellite + Road Vectors & Labels)"
         >
           <Globe className="w-3.5 h-3.5" />
@@ -765,11 +756,10 @@ export const GisMapContainer: React.FC<GisMapContainerProps> = ({
 
         <button
           onClick={() => setBasemap('terrain')}
-          className={`flex items-center gap-1 px-2.5 py-1 rounded text-xs font-mono font-medium transition-all cursor-pointer ${
-            basemap === 'terrain'
+          className={`flex items-center gap-1 px-2.5 py-1 rounded text-xs font-mono font-medium transition-all cursor-pointer ${basemap === 'terrain'
               ? 'bg-cyan-500 text-[#00363e] font-bold shadow'
               : 'text-slate-300 hover:bg-[#122131] hover:text-white'
-          }`}
+            }`}
           title="Google Earth Topography & Elevation Contours"
         >
           <Mountain className="w-3.5 h-3.5" />
@@ -778,11 +768,10 @@ export const GisMapContainer: React.FC<GisMapContainerProps> = ({
 
         <button
           onClick={onToggle3D}
-          className={`flex items-center gap-1 px-2.5 py-1 rounded text-xs font-mono font-bold transition-all cursor-pointer ${
-            basemap === '3d_earth'
+          className={`flex items-center gap-1 px-2.5 py-1 rounded text-xs font-mono font-bold transition-all cursor-pointer ${basemap === '3d_earth'
               ? 'bg-amber-400 text-slate-950 shadow ring-2 ring-amber-300'
               : 'text-amber-300 hover:bg-amber-950/40'
-          }`}
+            }`}
           title="Google Earth Photorealistic 3D Web View"
         >
           <Sparkles className="w-3.5 h-3.5 text-amber-300" />
@@ -795,11 +784,10 @@ export const GisMapContainer: React.FC<GisMapContainerProps> = ({
         {/* ML Heatmap Quick Toggle */}
         <button
           onClick={() => onToggleLayer('mlHeatmap')}
-          className={`px-2.5 py-1.5 rounded-lg text-xs font-mono font-bold flex items-center gap-1.5 shadow-xl border transition-all cursor-pointer ${
-            activeLayers.mlHeatmap
+          className={`px-2.5 py-1.5 rounded-lg text-xs font-mono font-bold flex items-center gap-1.5 shadow-xl border transition-all cursor-pointer ${activeLayers.mlHeatmap
               ? 'bg-gradient-to-r from-amber-500 to-red-600 text-white border-amber-300 shadow-red-950'
               : 'bg-[#051424]/90 text-slate-400 border-[#1c2b3c] hover:text-white'
-          }`}
+            }`}
           title="Toggle Machine Learning Susceptibility Heatmap"
         >
           <Flame className={`w-4 h-4 ${activeLayers.mlHeatmap ? 'animate-pulse text-amber-200' : ''}`} />
@@ -812,11 +800,10 @@ export const GisMapContainer: React.FC<GisMapContainerProps> = ({
         {/* Heatmap Settings Slider Toggle */}
         <button
           onClick={() => setShowSettingsPanel(!showSettingsPanel)}
-          className={`p-1.5 rounded-lg border text-xs shadow-xl transition-all cursor-pointer ${
-            showSettingsPanel
+          className={`p-1.5 rounded-lg border text-xs shadow-xl transition-all cursor-pointer ${showSettingsPanel
               ? 'bg-cyan-500 text-slate-950 border-cyan-400'
               : 'bg-[#051424]/90 text-slate-300 border-[#1c2b3c] hover:text-white'
-          }`}
+            }`}
           title="Heatmap Settings (Radius & Opacity)"
         >
           <Sliders className="w-4 h-4" />
