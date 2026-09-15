@@ -13,7 +13,7 @@ import { sirenPlayer } from './utils/audioSiren';
 import { HAZARD_ZONES, ASSET_URLS } from './data/mockData';
 import { HILLS_AND_MOUNTAIN_REGIONS, HillsRegion } from './data/hillsData';
 import { LandslideApi } from './services/api';
-import { PlusCircle, VolumeX, Zap } from 'lucide-react';
+import { VolumeX, Zap } from 'lucide-react';
 import { useMapContext } from './context/MapContext';
 
 const TerraDashboard = lazy(() => import('./components/TerraDashboard').then((module) => ({ default: module.TerraDashboard })));
@@ -236,6 +236,7 @@ export default function App() {
         selectedState={selectedState}
         onSelectState={setSelectedState}
         onOpenQuickEvac={() => setActiveModule('emergency-broadcast-and-dispatch')}
+        onOpenReportHazard={() => setIsFieldModalOpen(true)}
         theme={theme}
         onToggleTheme={toggleTheme}
       />
@@ -419,17 +420,6 @@ export default function App() {
         )}
         </Suspense>
       </main>
-
-      {/* Floating Action Button: Citizen Field Report Upload */}
-      <div className="fixed bottom-4 right-4 z-40">
-        <button
-          onClick={() => setIsFieldModalOpen(true)}
-          className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-4 py-2.5 rounded-full shadow-2xl transition-all transform hover:scale-105 active:scale-95 cursor-pointer border border-white/20 text-xs sm:text-sm"
-        >
-          <PlusCircle className="w-4 h-4" />
-          <span>Report Hazard</span>
-        </button>
-      </div>
 
       {/* Active Siren Emergency Silence Bar */}
       {isSirenActive && (

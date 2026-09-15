@@ -1,179 +1,186 @@
-import os
+"""Grounded chat responses backed by the Risk Map location-risk pipeline."""
 import re
-import math
 import requests
-from typing import Dict, Any, List, Optional
+from typing import Any, Dict, List, Optional
 from backend.config import GEMINI_API_KEY
+from backend.database.database import SessionLocal
+from backend.database.models import HazardZoneModel
 from backend.routers.ml_model import compute_location_risk, LocationRiskRequest
-from backend.services.weather_service import weather_service
-from backend.services.earthquake_service import earthquake_service
-from backend.services.soil_service import soil_service
-
-
-KNOWN_LOCATIONS = {
-    "teesta": {"name": "Teesta Basin", "lat": 27.12, "lon": 88.50, "zone_id": "zone-sk-01", "region_id": "teesta_basin"},
-    "teesta basin": {"name": "Teesta Basin", "lat": 27.12, "lon": 88.50, "zone_id": "zone-sk-01", "region_id": "teesta_basin"},
-    "sohra": {"name": "Sohra (Cherrapunji)", "lat": 25.27, "lon": 91.73, "zone_id": "zone-mg-01", "region_id": "cherrapunji"},
-    "cherrapunji": {"name": "Sohra (Cherrapunji)", "lat": 25.27, "lon": 91.73, "zone_id": "zone-mg-01", "region_id": "cherrapunji"},
-    "gangtok": {"name": "Gangtok Ridge", "lat": 27.33, "lon": 88.61, "zone_id": "zone-sk-01", "region_id": "gangtok"},
-    "dima hasao": {"name": "Dima Hasao", "lat": 25.17, "lon": 93.01, "zone_id": "zone-as-01", "region_id": "dima_hasao"},
-    "uttarkashi": {"name": "Uttarkashi", "lat": 30.73, "lon": 78.44, "zone_id": "zone-uk-01", "region_id": "uttarkashi"},
-    "wayanad": {"name": "Wayanad Hills", "lat": 11.69, "lon": 76.13, "zone_id": "zone-kl-01", "region_id": "wayanad"},
-    "shimla": {"name": "Shimla Ridge", "lat": 31.10, "lon": 77.17, "zone_id": "zone-hp-01", "region_id": "shimla"},
-    "darjeeling": {"name": "Darjeeling Hills", "lat": 27.04, "lon": 88.26, "zone_id": "zone-wb-01", "region_id": "darjeeling"},
-    "munnar": {"name": "Munnar Hills", "lat": 10.08, "lon": 77.06, "zone_id": "zone-kl-02", "region_id": "munnar"},
-    "chamoli": {"name": "Chamoli", "lat": 30.41, "lon": 79.33, "zone_id": "zone-uk-02", "region_id": "chamoli"},
-    "guwahati": {"name": "Guwahati Hills", "lat": 26.14, "lon": 91.73, "zone_id": "zone-as-02", "region_id": "guwahati"},
-}
 
 FAQ_DATABASE = [
     {
+        "keywords": ["current risk", "risk information", "current status"],
+        "answer": "Current location-specific risk is available from the TerraGuard Risk Map. Choose a monitored region or ask about a named place to receive the shared location-risk evaluation.",
+        "action": {"type": "NAVIGATE", "module": "risk-map"},
+    },
+    {
         "keywords": ["sos", "emergency", "help", "call", "ndma", "1078", "rescue"],
-        "answer": "🚨 **Emergency SOS Notice**:\nTerraGuard is an AI early warning system, not an official emergency dispatcher.\n\n- Press the **Emergency SOS button** in the top navigation bar to access tactical dispatch.\n- **National Disaster Management Authority (NDMA) Helpline**: Call **1078** or **1077**.\n- Move to designated high-ground shelters immediately if you observe slope movement, sudden water turbidity, or deep ground cracks.",
-        "action": {"type": "NAVIGATE", "module": "emergency-sos"}
+        "answer": "Emergency & Safety:\nTerraGuard is a decision-support and information system, not an official emergency dispatcher.\n\n- Call NDMA at 1078 or 1077.\n- Move to designated high ground if you observe slope movement, sudden water turbidity, or deep ground cracks.\n- Follow official SDMA, district administration, rescue, and evacuation instructions for actual emergency response.",
+        "action": {"type": "NAVIGATE", "module": "emergency-sos"},
     },
     {
         "keywords": ["map", "risk map", "gis", "spatial", "visualize"],
-        "answer": "🗺️ You can view the real-time spatial risk heatmap on the **Risk Map** module. It renders multi-layered slope angle, soil saturation, and ML susceptibility grids across North East India and major mountain ranges.",
-        "action": {"type": "NAVIGATE", "module": "risk-map"}
+        "answer": "The TerraGuard Risk Map shows the live spatial risk view for monitored locations.",
+        "action": {"type": "NAVIGATE", "module": "risk-map"},
     },
     {
         "keywords": ["score", "meaning", "ml score", "calculated", "formula", "how does terraguard work"],
-        "answer": "🧠 **TerraGuard ML Risk Architecture**:\n- **Random Forest Model**: Trained on historic GSI & satellite inventory (ROC-AUC 1.0, 96.5% Precision).\n- **Factors Evaluated**: Slope Angle, Elevation, HWSD2 Soil WRB Class, ESA WorldCover Land Use, 3-Day Cumulative Rainfall (Open-Meteo), and Seismic Triggering (USGS M4.5+ events).\n- **Formula**: `Risk Score (0-10) = ML Base Score (0-10) × Rainfall Multiplier × Seismic Multiplier`.",
-        "action": {"type": "NAVIGATE", "module": "ml-pipeline"}
+        "answer": "TerraGuard evaluates slope, elevation, soil, rainfall, and seismic context through its existing ML location-risk pipeline. Location answers use the same 0-100 score shown on the Risk Map.",
+        "action": {"type": "NAVIGATE", "module": "ml-pipeline"},
     },
     {
         "keywords": ["safety", "do during", "what to do", "landslide warning", "precautions"],
-        "answer": "🛡️ **Landslide Safety Guidelines**:\n1. **Before**: Monitor TerraGuard alerts and 3-day rainfall forecasts. Identify evacuation routes.\n2. **During**: If you hear loud rumble noises or tree snapping, evacuate immediately up-slope, away from debris paths. Never cross flooded gullies.\n3. **After**: Avoid the slide area as secondary slides may occur. Report hazard locations via TerraGuard Crowdsource Reporting.",
-        "action": {"type": "NAVIGATE", "module": "crowdsource"}
+        "answer": "Landslide safety:\n1. Monitor TerraGuard alerts and identify evacuation routes.\n2. Evacuate away from debris paths when you hear rumbling or see ground cracks; never cross flooded gullies.\n3. Avoid slide areas afterward because secondary slides may occur.\n\nTerraGuard is decision support. Follow official emergency authorities for response instructions.",
+        "action": {"type": "NAVIGATE", "module": "crowdsource"},
     },
 ]
 
-def extract_location(message: str) -> Optional[Dict[str, Any]]:
-    msg_lower = message.lower()
-    for loc_key, loc_data in KNOWN_LOCATIONS.items():
-        if loc_key in msg_lower:
-            return loc_data
-    return None
 
-def fetch_live_location_context(loc: Dict[str, Any]) -> Dict[str, Any]:
-    req = LocationRiskRequest(name=loc["name"], latitude=loc["lat"], longitude=loc["lon"])
-    risk_res = compute_location_risk(req)
+def _number(value: Optional[str]) -> Optional[float]:
+    match = re.search(r"-?\d+(?:\.\d+)?", (value or "").replace(",", ""))
+    return float(match.group()) if match else None
+
+
+def extract_location(message: str) -> Optional[Dict[str, Any]]:
+    """Resolve user language against the database records used by the Risk Map."""
+    db = SessionLocal()
+    try:
+        zones = db.query(HazardZoneModel).all()
+    finally:
+        db.close()
+
+    text = message.lower()
+    best, best_score = None, 0
+    for zone in zones:
+        name = zone.name.lower()
+        state = (zone.state or "").lower()
+        aliases = (
+            [name, name.split("(")[0].strip(), state]
+            + [token for token in re.split(r"[^a-z0-9]+", name) if len(token) >= 5]
+        )
+        score = max((len(alias) for alias in aliases if alias in text), default=0)
+        if score > best_score:
+            best, best_score = zone, score
+
+    if not best:
+        return None
+    coords = re.findall(r"-?\d+(?:\.\d+)?", best.coords or "")
+    if len(coords) < 2:
+        return None
     return {
-        "location": loc,
-        "risk_details": risk_res
+        "name": best.name,
+        "lat": float(coords[0]),
+        "lon": float(coords[1]),
+        "state": best.state,
+        "elevation": _number(best.elevation),
+        "slope": _number(best.slopeGradient),
+        "zone_id": best.id,
     }
 
+
+def fetch_live_location_context(loc: Dict[str, Any]) -> Dict[str, Any]:
+    request = LocationRiskRequest(
+        name=loc["name"],
+        location_type="region",
+        latitude=loc["lat"],
+        longitude=loc["lon"],
+        state=loc["state"],
+        elevation=loc["elevation"],
+        slope=loc["slope"],
+    )
+    return {"location": loc, "risk_details": compute_location_risk(request)}
+
+
 def generate_offline_response(message: str, loc_context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-    msg_lower = message.lower()
     if loc_context:
         details = loc_context["risk_details"]
         loc_info = loc_context["location"]
-        loc_name = details.get("location_name", loc_info["name"])
-        risk_score = details.get("final_risk_score", 0.0)
-        tier = details.get("risk_tier", "LOW")
-        ml_base = details.get("ml_susceptibility_score", 0.0)
-        rain_3d = details.get("rainfall_3d_mm", 0.0)
-        rain_mult = details.get("rainfall_multiplier", 1.0)
-        seis_score = details.get("seismic_trigger_score", 0.0)
-        seis_mult = details.get("seismic_multiplier", 1.0)
-        soil_name = details.get("soil_name", "HWSD2 Soil")
-        landcover = details.get("landcover_name", "Landcover")
-        slope = details.get("slope_degrees", 0.0)
-        
-        reply = (
-            f"📍 **TerraGuard Live Analysis for {loc_name}**\n\n"
-            f"• **Overall Landslide Risk Score**: **{risk_score:.2f} / 10.0** (`{tier}`)\n"
-            f"• **ML Susceptibility Base**: `{ml_base:.2f} / 10.0`\n"
-            f"• **Terrain & Soil**: Slope `{slope:.1f}°`, Soil: *{soil_name}*, Cover: *{landcover}*\n"
-            f"• **3-Day Cumulative Rainfall**: `{rain_3d:.1f} mm` (Multiplier: `×{rain_mult:.2f}`)\n"
-            f"• **Seismic Factor**: Activity score `{seis_score:.2f}` (Multiplier: `×{seis_mult:.2f}`)\n\n"
-            f"*Data derived dynamically from HWSD2 soil lookup, Open-Meteo precipitation, USGS seismic monitoring, and TerraGuard Random Forest ML engine.*"
+        inputs = details.get("inputs", {})
+        rainfall = inputs.get("rainfall", {})
+        seismic = inputs.get("seismic", {})
+        soil = inputs.get("soil_details", {})
+        location = details.get("location", {})
+
+        def display(value: Any, suffix: str = "") -> str:
+            return "Unavailable" if value is None else f"{value}{suffix}"
+
+        base_probability = details.get("base_ml_probability")
+        base_probability_text = (
+            "Unavailable" if base_probability is None else f"{float(base_probability) * 100:.1f}%"
+        )
+        coordinates = (
+            f"{location.get('latitude')}, {location.get('longitude')}"
+            if location.get("latitude") is not None and location.get("longitude") is not None
+            else "Unavailable"
         )
         return {
-            "reply": reply,
+            "reply": (
+                f"TerraGuard Risk Map analysis: **{loc_info['name']}**\n\n"
+                f"• **Overall Landslide Risk Score:** **{display(details.get('final_risk_score'), ' / 100')}** ({details.get('risk_level', 'Unavailable')})\n"
+                f"• **Base ML probability:** {base_probability_text}\n"
+                f"• **3-day rainfall:** {display(rainfall.get('rainfall_3d_mm'), ' mm')}\n"
+                f"• **Slope:** {display(inputs.get('slope_deg'), '°')}\n"
+                f"• **Elevation:** {display(inputs.get('elevation_m'), ' m')}\n"
+                f"• **Coordinates:** {coordinates}\n"
+                f"• **Soil:** {soil.get('soil_name') or 'Unavailable'}\n"
+                f"• **Seismic trigger score:** {display(seismic.get('seismic_trigger_score'))}\n\n"
+                "TerraGuard is decision support, not an official warning or evacuation order. Follow SDMA/NDMA and local authority instructions."
+            ),
             "source": "terraguard-live-ml",
             "action": {
                 "type": "SELECT_REGION",
-                "region_id": loc_info.get("region_id"),
-                "zone_id": loc_info.get("zone_id"),
-                "coordinates": {"lat": loc_info["lat"], "lon": loc_info["lon"]}
-            }
+                "module": "risk-map",
+                "zone_id": loc_info["zone_id"],
+                "coordinates": {"lat": loc_info["lat"], "lon": loc_info["lon"]},
+            },
         }
 
+    msg_lower = message.lower()
     for faq in FAQ_DATABASE:
-        if any(kw in msg_lower for kw in faq["keywords"]):
-            return {
-                "reply": faq["answer"],
-                "source": "terraguard-rule-engine",
-                "action": faq.get("action")
-            }
-
+        if any(keyword in msg_lower for keyword in faq["keywords"]):
+            return {"reply": faq["answer"], "source": "terraguard-rule-engine", "action": faq.get("action")}
     return {
         "reply": (
-            "🤖 **TerraGuard Assistant**:\n"
-            "I can analyze real-time landslide risks, terrain features, rainfall, and seismic activity across North East India and mountain regions.\n\n"
-            "**Try asking me**:\n"
-            "- *'What is the landslide risk at Teesta Basin?'*\n"
-            "- *'What is the rainfall at Sohra?'*\n"
-            "- *'Why is this location high risk?'*\n"
-            "- *'How does the ML score work?'*\n"
-            "- *'Show me the risk map.'*"
+            "TerraGuard Assistant can analyze real-time landslide risk, terrain, rainfall, and seismic activity.\n\n"
+            "Try asking about Teesta Basin, a Risk Map location, rainfall, or emergency safety."
         ),
-        "source": "terraguard-rule-engine"
+        "source": "terraguard-rule-engine",
     }
 
-def generate_gemini_response(message: str, history: List[Dict[str, str]], loc_context: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+
+def generate_gemini_response(
+    message: str, history: List[Dict[str, str]], loc_context: Optional[Dict[str, Any]]
+) -> Optional[Dict[str, Any]]:
     if not GEMINI_API_KEY:
         return None
     try:
         system_instruction = (
-            "You are TerraGuard Assistant, an AI safety & geotechnical expert integrated into the TerraGuard Landslide Early Warning System (SIH Problem Statement 26001).\n"
-            "RULES:\n"
-            "1. NEVER invent risk scores, rainfall figures, soil types, earthquake events, or official warnings.\n"
-            "2. Rely ONLY on provided TerraGuard live context or general geotechnical/landslide safety knowledge.\n"
-            "3. For emergency inquiries, direct users to call 1078/1077 (NDMA) and use the Emergency SOS tab.\n"
-            "4. Keep responses concise, authoritative, and structured with markdown bullet points."
+            "You are TerraGuard Assistant. Use only general geotechnical and safety knowledge. "
+            "Never invent numerical risk, rainfall, soil, seismic, or warning data."
         )
-        context_str = ""
-        if loc_context:
-            details = loc_context["risk_details"]
-            context_str = f"\nLIVE TERRAGUARD GROUNDED DATA:\n{details}\n"
-
-        prompt_content = f"{system_instruction}\n{context_str}\nUser Question: {message}"
-        
+        prompt_content = f"{system_instruction}\nUser Question: {message}"
         url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
-        payload = {
-            "contents": [{"parts": [{"text": prompt_content}]}]
-        }
-        res = requests.post(url, json=payload, timeout=8)
-        if res.status_code == 200:
-            data = res.json()
-            reply_text = data["candidates"][0]["content"]["parts"][0]["text"]
-            action = None
-            if loc_context:
-                action = {
-                    "type": "SELECT_REGION",
-                    "region_id": loc_context["location"].get("region_id"),
-                    "zone_id": loc_context["location"].get("zone_id"),
-                    "coordinates": {"lat": loc_context["location"]["lat"], "lon": loc_context["location"]["lon"]}
-                }
+        response = requests.post(
+            url,
+            json={"contents": [{"parts": [{"text": prompt_content}]}]},
+            timeout=8,
+        )
+        if response.status_code == 200:
+            data = response.json()
             return {
-                "reply": reply_text,
+                "reply": data["candidates"][0]["content"]["parts"][0]["text"],
                 "source": "gemini-1.5-flash",
-                "action": action
             }
-    except Exception as e:
-        print(f"Gemini API fallback to offline rule engine: {e}")
+    except Exception as error:
+        print(f"Gemini API fallback to offline rule engine: {error}")
     return None
 
-def process_chat_message(message: str, history: List[Dict[str, str]] = []) -> Dict[str, Any]:
+
+def process_chat_message(message: str, history: Optional[List[Dict[str, str]]] = None) -> Dict[str, Any]:
     loc = extract_location(message)
     loc_context = fetch_live_location_context(loc) if loc else None
-    
-    if GEMINI_API_KEY:
-        gemini_res = generate_gemini_response(message, history, loc_context)
-        if gemini_res:
-            return gemini_res
-            
+    if GEMINI_API_KEY and not loc_context:
+        gemini_response = generate_gemini_response(message, history or [], None)
+        if gemini_response:
+            return gemini_response
     return generate_offline_response(message, loc_context)
