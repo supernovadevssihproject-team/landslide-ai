@@ -81,27 +81,73 @@ export interface WeatherRequestOptions {
 }
 
 const BASE_URL = '';
+const REQUEST_TIMEOUT_MS = 12000;
+const inFlightGets = new Map<string, Promise<unknown>>();
 
 async function fetchJson<T>(url: string, options?: RequestInit, fallback?: T): Promise<T> {
-  try {
-    const res = await fetch(`${BASE_URL}${url}`, {
-      ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        ...(options?.headers || {}),
-      },
-    });
-    if (!res.ok) {
-      throw new Error(`API error ${res.status}: ${res.statusText}`);
-    }
-    return (await res.json()) as T;
-  } catch (err) {
-    if (fallback !== undefined) {
-      console.warn(`Backend offline or unreachable for ${url}, using offline cache.`, err);
-      return fallback;
-    }
-    throw err;
+  const method = (options?.method || 'GET').toUpperCase();
+  const requestKey = `${method}:${BASE_URL}${url}`;
+  if (method === 'GET' && !options?.signal) {
+    const existing = inFlightGets.get(requestKey);
+    if (existing) return existing as Promise<T>;
   }
+
+  const request = (async () => {
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    const signal = options?.signal
+      ? combineSignals(options.signal, controller.signal)
+      : controller.signal;
+
+    try {
+      const res = await fetch(`${BASE_URL}${url}`, {
+        ...options,
+        signal,
+        headers: {
+          'Content-Type': 'application/json',
+          ...(options?.headers || {}),
+        },
+      });
+      if (!res.ok) {
+        throw new Error(`API error ${res.status}: ${res.statusText}`);
+      }
+      return (await res.json()) as T;
+    } catch (err) {
+      if (fallback !== undefined) {
+        console.warn(`Backend unavailable for ${url}; using cached/local fallback.`, err);
+        return fallback;
+      }
+      throw err;
+    } finally {
+      window.clearTimeout(timeoutId);
+    }
+  })();
+
+  if (method === 'GET' && !options?.signal) {
+    inFlightGets.set(requestKey, request);
+    request.then(
+      () => {
+        if (inFlightGets.get(requestKey) === request) inFlightGets.delete(requestKey);
+      },
+      () => {
+        if (inFlightGets.get(requestKey) === request) inFlightGets.delete(requestKey);
+      },
+    );
+  }
+
+  return request;
+}
+
+function combineSignals(first: AbortSignal, second: AbortSignal): AbortSignal {
+  const controller = new AbortController();
+  const abort = () => controller.abort();
+  if (first.aborted || second.aborted) {
+    controller.abort();
+  } else {
+    first.addEventListener('abort', abort, { once: true });
+    second.addEventListener('abort', abort, { once: true });
+  }
+  return controller.signal;
 }
 
 export const LandslideApi = {
@@ -708,6 +754,4 @@ export const LandslideApi = {
     }
   },
 };
-
-
 

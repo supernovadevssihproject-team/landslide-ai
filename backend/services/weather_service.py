@@ -8,6 +8,7 @@ across the 8 North Eastern Region (NER) state corridors.
 import time
 import requests
 from typing import Dict, Any, Optional
+from backend.services.http_resilience import request_with_retry
 
 # Centroid coordinates for NER meteorological telemetry hubs
 NER_WEATHER_STATIONS = {
@@ -130,7 +131,13 @@ class WeatherService:
                 f"&timezone=auto"
                 f"&forecast_days=3"
             )
-            resp = requests.get(url, timeout=5)
+            resp = request_with_retry(
+                requests.get,
+                service="Open-Meteo weather",
+                method="GET",
+                url=url,
+                timeout=(3.0, 5.0),
+            )
             if resp.status_code == 200:
                 json_data = resp.json()
                 current = json_data.get("current", {})

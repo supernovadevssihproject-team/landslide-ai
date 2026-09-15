@@ -14,6 +14,7 @@ import { calculateSeismicRiskAssessment } from '../utils/seismicMetrics';
 
 const RAW_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').trim();
 const BASE_URL = RAW_BASE_URL.replace(/\/+$/, '');
+const LOCATION_RISK_TIMEOUT_MS = 15000;
 
 /**
  * Executes location risk inference via FastAPI or offline fallback.
@@ -41,14 +42,23 @@ export async function fetchLocationRisk(
   console.log(`[RISK DEBUG] Request URL: ${targetUrl}`);
   console.log(`[RISK DEBUG] Request payload:`, payload);
 
+  const timeoutController = new AbortController();
+  let timedOut = false;
+  let timeoutId: number | undefined;
   try {
+    timeoutId = window.setTimeout(() => {
+      timedOut = true;
+      timeoutController.abort();
+    }, LOCATION_RISK_TIMEOUT_MS);
+    const requestSignal = signal
+      ? combineSignals(signal, timeoutController.signal)
+      : timeoutController.signal;
     const response = await fetch(targetUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
-      signal,
+      signal: requestSignal,
     });
-
     if (response.ok) {
       const data = (await response.json()) as LocationRiskEvaluation;
       console.log(`[RISK DEBUG] API response for "${params.name}":`, data);
@@ -59,11 +69,25 @@ export async function fetchLocationRisk(
       console.warn(`[RISK DEBUG] Backend HTTP ${response.status} (${response.statusText}) for "${params.name}":`, errText);
     }
   } catch (err: any) {
-    if (err?.name === 'AbortError') {
+    if (err?.name === 'AbortError' && !timedOut) {
       console.log(`[RISK DEBUG] Request aborted for "${params.name}"`);
       throw err;
     }
     console.warn(`[RISK DEBUG] Network error connecting to backend for "${params.name}":`, err);
+  } finally {
+    if (timeoutId !== undefined) window.clearTimeout(timeoutId);
+  }
+
+  function combineSignals(first: AbortSignal, second: AbortSignal): AbortSignal {
+    const controller = new AbortController();
+    const abort = () => controller.abort();
+    if (first.aborted || second.aborted) {
+      controller.abort();
+    } else {
+      first.addEventListener('abort', abort, { once: true });
+      second.addEventListener('abort', abort, { once: true });
+    }
+    return controller.signal;
   }
 
   console.warn(`[RISK DEBUG] Data source: FALLBACK (Offline model for "${params.name}")`);

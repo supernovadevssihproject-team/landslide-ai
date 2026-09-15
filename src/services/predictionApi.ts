@@ -17,6 +17,17 @@ import { VERIFIED_LANDCOVER_MAP, getLandcoverLabel } from '../data/landcoverMapp
 const RAW_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').trim();
 
 const BASE_URL = RAW_BASE_URL.replace(/\/+$/, '');
+const PREDICTION_TIMEOUT_MS = 15000;
+
+async function fetchWithTimeout(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), PREDICTION_TIMEOUT_MS);
+  try {
+    return await fetch(input, { ...init, signal: controller.signal });
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
+}
 
 /* ============================================================
    VERIFIED DATASET METADATA
@@ -77,7 +88,7 @@ export async function predictLandslideRisk(
 ): Promise<PredictionResponse> {
   const url = `${BASE_URL}/predict`;
 
-  const response = await fetch(url, {
+  const response = await fetchWithTimeout(url, {
     method: 'POST',
 
     headers: {
@@ -141,7 +152,7 @@ export async function getModelInfo(): Promise<
 > {
   const url = `${BASE_URL}/model-info`;
 
-  const response = await fetch(url);
+  const response = await fetchWithTimeout(url);
 
   if (!response.ok) {
     throw new Error(
@@ -168,7 +179,7 @@ export async function getHealth(): Promise<{
 }> {
   const url = `${BASE_URL}/health`;
 
-  const response = await fetch(url);
+  const response = await fetchWithTimeout(url);
 
   if (!response.ok) {
     throw new Error(

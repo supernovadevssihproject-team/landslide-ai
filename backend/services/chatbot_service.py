@@ -1,6 +1,7 @@
 """Grounded chat responses backed by the Risk Map location-risk pipeline."""
 import re
 import requests
+from backend.services.http_resilience import request_with_retry
 from typing import Any, Dict, List, Optional
 from backend.config import GEMINI_API_KEY
 from backend.database.database import SessionLocal
@@ -160,10 +161,13 @@ def generate_gemini_response(
         )
         prompt_content = f"{system_instruction}\nUser Question: {message}"
         url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
-        response = requests.post(
-            url,
+        response = request_with_retry(
+            requests.post,
+            service="Gemini chatbot",
+            method="POST",
+            url=url,
+            timeout=(3.0, 8.0),
             json={"contents": [{"parts": [{"text": prompt_content}]}]},
-            timeout=8,
         )
         if response.status_code == 200:
             data = response.json()

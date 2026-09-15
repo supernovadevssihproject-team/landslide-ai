@@ -70,6 +70,118 @@
     margin: 0;
     padding: 0;
     overflow-x: hidden;
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+  }
+
+  button {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  button:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+    outline: 2px solid var(--color-secondary);
+    outline-offset: 2px;
+  }
+}
+
+.app-main {
+  isolation: isolate;
+  overflow: clip;
+  background:
+    radial-gradient(circle at 12% 0%, rgba(0, 188, 212, 0.055), transparent 28rem),
+    radial-gradient(circle at 92% 18%, rgba(144, 207, 236, 0.045), transparent 24rem);
+  background-size: 100% 100%, 100% 100%;
+  animation: terra-ambient-drift 18s ease-in-out infinite alternate;
+}
+
+.app-main::before {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  content: '';
+  opacity: 0.18;
+  background-image:
+    linear-gradient(rgba(144, 207, 236, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(144, 207, 236, 0.035) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: linear-gradient(to bottom, black, transparent 68%);
+  animation: terra-grid-drift 26s linear infinite;
+}
+
+.module-stage {
+  animation: terra-module-enter 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  will-change: opacity, transform;
+}
+
+@keyframes terra-ambient-drift {
+  0% {
+    background-position: 0% 0%, 100% 18%;
+  }
+  100% {
+    background-position: 5% 3%, 95% 22%;
+  }
+}
+
+@keyframes terra-grid-drift {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(48px, 48px, 0);
+  }
+}
+
+@keyframes terra-module-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.theme-light .app-main {
+  background:
+    radial-gradient(circle at 12% 0%, rgba(2, 132, 199, 0.045), transparent 28rem),
+    radial-gradient(circle at 92% 18%, rgba(14, 116, 144, 0.035), transparent 24rem);
+}
+
+.theme-light .app-main::before {
+  opacity: 0.3;
+  background-image:
+    linear-gradient(rgba(2, 132, 199, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(2, 132, 199, 0.04) 1px, transparent 1px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .app-main,
+  .app-main::before,
+  .module-stage {
+    animation: none !important;
   }
 }
 
@@ -249,4 +361,3 @@
 .theme-light ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
-

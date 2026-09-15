@@ -250,8 +250,9 @@ export default function App() {
       />
 
       {/* Main Operational Screen Views */}
-      <main className="flex-1 w-full">
+      <main className="app-main relative flex-1 w-full">
         <Suspense fallback={<ModuleLoadingFallback />}>
+        <div key={activeModule} className="module-stage">
         {/* Screen 1: Home Landing Page */}
         {activeModule === 'home' && (
           <TerraHome
@@ -418,6 +419,7 @@ export default function App() {
             onNavigateToMap={navigateFromHillsToRiskMap}
           />
         )}
+        </div>
         </Suspense>
       </main>
 

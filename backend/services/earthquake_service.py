@@ -11,6 +11,7 @@ import time
 from typing import Any, Dict, List, Optional
 
 import requests
+from backend.services.http_resilience import request_with_retry
 
 NCS_EARTHQUAKE_URL = "https://riseq.seismo.gov.in/riseq/earthquake"
 NCS_SOURCE_NAME = "National Center for Seismology"
@@ -74,7 +75,13 @@ class EarthquakeService:
         if self._cache and now - self._cache["timestamp"] < CACHE_TTL_SECONDS:
             return self._cache["events"]
 
-        response = requests.get(NCS_EARTHQUAKE_URL, timeout=8)
+        response = request_with_retry(
+            requests.get,
+            service="NCS earthquake feed",
+            method="GET",
+            url=NCS_EARTHQUAKE_URL,
+            timeout=(3.0, 8.0),
+        )
         response.raise_for_status()
         events = self._parse_ncs_html(response.text)
         if not events:
