@@ -87,7 +87,7 @@ export const TerraHome: React.FC<TerraHomeProps> = ({
               poster="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=2000&q=80"
               aria-hidden="true"
             >
-              <source src="/assets/mountain-sunrise.webm" type="video/webm" />
+              <source src="/assets/mountain-sunset.mp4" type="video/mp4" />
             </video>
           )}
         </div>
