@@ -2,12 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { NerState } from '../types';
 import { ASSET_URLS } from '../data/mockData';
 import { sirenPlayer } from '../utils/audioSiren';
-import { Volume2, VolumeX, ShieldAlert, Radio, Clock, PhoneCall, Sun, Moon, Shield } from 'lucide-react';
+import { Volume2, VolumeX, ShieldAlert, Radio, Clock, PhoneCall, Sun, Moon, Shield, PlusCircle } from 'lucide-react';
 
 interface HeaderProps {
   selectedState: NerState;
   onSelectState: (state: NerState) => void;
   onOpenQuickEvac?: () => void;
+  onOpenReportHazard?: () => void;
   theme: 'dark' | 'light';
   onToggleTheme: () => void;
 }
@@ -16,6 +17,7 @@ export const Header: React.FC<HeaderProps> = ({
   selectedState,
   onSelectState,
   onOpenQuickEvac,
+  onOpenReportHazard,
   theme,
   onToggleTheme,
 }) => {
@@ -214,6 +216,20 @@ export const Header: React.FC<HeaderProps> = ({
                 <span className="text-[11px] font-mono tracking-tight hidden sm:inline">TEST SIREN</span>
               </>
             )}
+          </button>
+
+          <button
+            onClick={onOpenReportHazard}
+            aria-label="Report Hazard"
+            title="Report Hazard"
+            className={`flex shrink-0 items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg border transition-all ${
+              isDark
+                ? 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 border-emerald-400'
+                : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 border-emerald-400'
+            }`}
+          >
+            <PlusCircle className="w-3.5 h-3.5" />
+            <span className="hidden text-[11px] font-mono tracking-tight sm:inline">REPORT HAZARD</span>
           </button>
         </div>
       </div>
