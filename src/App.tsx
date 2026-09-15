@@ -29,6 +29,7 @@ const MlPipelineCommand = lazy(() => import('./components/MlPipelineCommand').th
 const LandslideRiskSimulator = lazy(() => import('./components/LandslideRiskSimulator'));
 const EarthquakeMonitor = lazy(() => import('./components/EarthquakeMonitor').then((module) => ({ default: module.EarthquakeMonitor })));
 const HillsMountainRegions = lazy(() => import('./components/HillsMountainRegions'));
+const ChatWidget = lazy(() => import('./components/ChatWidget').then((module) => ({ default: module.ChatWidget })));
 
 const ModuleLoadingFallback = () => (
   <div className="flex min-h-[240px] items-center justify-center text-xs font-mono text-slate-400">
@@ -507,6 +508,22 @@ export default function App() {
           </div>
         </div>
       </footer>
+
+      <Suspense fallback={null}>
+        <ChatWidget
+          theme={theme}
+          onNavigate={(mod) => setActiveModule(mod)}
+          onSelectZone={(zone) => {
+            setSelectedZone(zone);
+            setContextSelectedZone(zone);
+            setActiveModule('risk-map');
+          }}
+          onSelectRegion={(reg) => {
+            setSelectedRegion(reg);
+            setActiveModule('hills-regions');
+          }}
+        />
+      </Suspense>
     </div>
   );
 }

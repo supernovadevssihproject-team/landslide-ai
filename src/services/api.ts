@@ -687,6 +687,27 @@ export const LandslideApi = {
       return fallbackPoints;
     }
   },
+
+  async sendChatMessage(message: string, history: Array<{ role: 'user' | 'assistant'; content: string }> = []): Promise<{ reply: string; source: string; action?: any }> {
+    const fallbackResponse = {
+      reply: `🤖 **TerraGuard Assistant (Offline Mode)**:\nI received your query: "${message}". Backend API is currently unreachable. You can still navigate between Risk Map, Sensor Telemetry, and Emergency SOS using the main navigation bar.`,
+      source: 'offline-fallback-client'
+    };
+    try {
+      return await fetchJson<{ reply: string; source: string; action?: any }>(
+        '/api/chat',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message, history }),
+        },
+        fallbackResponse
+      );
+    } catch {
+      return fallbackResponse;
+    }
+  },
 };
+
 
 

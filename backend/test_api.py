@@ -264,6 +264,29 @@ def test_earthquake_parser_and_safe_fallback():
         earthquake_module.earthquake_service._cache = None
     print("[PASS] Earthquake deduplication, validation, and unavailable fallback passed")
 
+def test_chatbot():
+    res = client.post("/api/chat", json={"message": "What is the landslide risk at Teesta Basin?"})
+    assert res.status_code == 200
+    data = res.json()
+    assert "Teesta Basin" in data["reply"]
+    assert "final_risk_score" in data["reply"] or "Score" in data["reply"]
+    assert data["source"] in ["terraguard-live-ml", "gemini-1.5-flash"]
+    assert data["action"]["type"] == "SELECT_REGION"
+
+    # Test offline FAQ answer
+    res2 = client.post("/api/chat", json={"message": "Show me the risk map"})
+    assert res2.status_code == 200
+    data2 = res2.json()
+    assert data2["action"]["type"] == "NAVIGATE"
+    assert data2["action"]["module"] == "risk-map"
+
+    # Test emergency SOS question
+    res3 = client.post("/api/chat", json={"message": "What is the emergency helpline number?"})
+    assert res3.status_code == 200
+    data3 = res3.json()
+    assert "1078" in data3["reply"]
+    print("[PASS] Chatbot /api/chat grounded location risk, FAQ, and Emergency SOS tests passed")
+
 if __name__ == "__main__":
     print("\nRunning LandslideGuard Backend API Tests...\n")
     test_health()
@@ -287,4 +310,6 @@ if __name__ == "__main__":
     test_gis_ml_heatmap_points()
     test_official_earthquake_contract()
     test_earthquake_parser_and_safe_fallback()
-    print("\nAll 21 Backend API tests passed successfully!\n")
+    test_chatbot()
+    print("\nAll 22 Backend API tests passed successfully!\n")
+

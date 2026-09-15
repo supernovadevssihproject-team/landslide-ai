@@ -6,7 +6,10 @@ and HWSD2 database (HWSD2.mdb).
 
 import os
 import struct
-import pyodbc
+try:
+    import pyodbc
+except ImportError:
+    pyodbc = None
 from pathlib import Path
 from typing import Dict, Any, Optional
 
