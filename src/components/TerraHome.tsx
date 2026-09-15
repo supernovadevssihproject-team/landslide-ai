@@ -30,10 +30,19 @@ export const TerraHome: React.FC<TerraHomeProps> = ({
 }) => {
   const [searchQuery, setSearchQuery] = useState(selectedZone.name);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
 
   useEffect(() => {
     setSearchQuery(selectedZone.name);
   }, [selectedZone.id, selectedZone.name]);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const updateMotionPreference = () => setPrefersReducedMotion(mediaQuery.matches);
+    updateMotionPreference();
+    mediaQuery.addEventListener('change', updateMotionPreference);
+    return () => mediaQuery.removeEventListener('change', updateMotionPreference);
+  }, []);
 
   const matchingZones = zones.filter(
     (z) =>
@@ -60,62 +69,81 @@ export const TerraHome: React.FC<TerraHomeProps> = ({
   return (
     <div className="space-y-8 pb-16 font-sans">
       {/* Hero Section */}
-      <div className="relative rounded-3xl overflow-hidden border border-emerald-500/20 shadow-2xl">
-        {/* Background Mountain Photo with Overlay */}
+      <div className="relative min-h-[560px] overflow-hidden rounded-3xl border border-emerald-500/20 shadow-2xl shadow-black/30 sm:min-h-[620px]">
+        {/* Local mountain video with the existing mountain image as a static fallback. */}
         <div
-          className="absolute inset-0 bg-cover bg-center"
+          className="absolute inset-0 bg-cover bg-center transition-transform duration-1000 motion-reduce:transition-none"
           style={{
             backgroundImage: `url('https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=2000&q=80')`,
           }}
-        />
+        >
+          {!prefersReducedMotion && (
+            <video
+              className="h-full w-full object-cover object-center"
+              autoPlay
+              muted
+              loop
+              playsInline
+              poster="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=2000&q=80"
+              aria-hidden="true"
+            >
+              <source src="/assets/mountain-sunrise.webm" type="video/webm" />
+            </video>
+          )}
+        </div>
         <div
           className={`absolute inset-0 ${
             theme === 'light'
-              ? 'bg-gradient-to-r from-slate-900/90 via-slate-900/80 to-slate-900/60'
-              : 'bg-gradient-to-r from-[#030d18]/95 via-[#051424]/90 to-[#051424]/75'
+              ? 'bg-gradient-to-r from-slate-950/95 via-[#051424]/85 to-[#051424]/65'
+              : 'bg-gradient-to-r from-[#030d18]/95 via-[#051424]/88 to-[#051424]/72'
           }`}
         />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#030d18]/90 via-transparent to-[#051424]/25" />
 
         {/* Content Container */}
-        <div className="relative z-10 max-w-4xl px-6 sm:px-12 py-16 sm:py-24 text-white">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 text-xs font-mono font-bold uppercase tracking-wider mb-4">
+        <div className="relative z-10 flex min-h-[560px] max-w-5xl flex-col justify-center px-5 py-12 text-white sm:min-h-[620px] sm:px-12 sm:py-20">
+          <div className="mb-5 inline-flex w-fit items-center gap-2 rounded-full border border-emerald-400/40 bg-emerald-500/15 px-3 py-1 text-xs font-mono font-bold uppercase tracking-wider text-emerald-300 shadow-lg shadow-emerald-950/20">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            SAFER PLACES. STRONGER TOMORROWS.
+            <span className="sr-only">Live status:</span>
+            LIVE MONITORING
           </div>
 
-          <h1 className="text-4xl sm:text-6xl font-black tracking-tight leading-tight">
-            Early Warnings <br />
-            <span className="text-emerald-400">Save Lives</span>
+          <h1 className="max-w-3xl text-4xl font-black leading-[0.98] tracking-tight sm:text-6xl lg:text-7xl">
+            Landslide <br />
+            <span className="text-emerald-400">Intelligence</span>
           </h1>
 
-          <p className="mt-4 text-base sm:text-lg text-slate-200 max-w-2xl leading-relaxed">
+          <p className="mt-5 max-w-2xl text-base leading-relaxed text-slate-200 sm:text-lg">
             AI-powered disaster monitoring and emergency support for safer mountain communities.
             Fusing satellite earth observation, in-situ subsurface telemetry, and neural risk models.
           </p>
 
           {/* Search Bar */}
-          <form onSubmit={handleSearchSubmit} className="mt-8 relative max-w-xl">
-            <div className="flex items-center bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-1.5 shadow-2xl focus-within:border-emerald-400 transition-all">
-              <div className="pl-3 pr-2 text-emerald-400">
+          <form onSubmit={handleSearchSubmit} className="relative mt-8 max-w-2xl">
+            <div className="rounded-2xl border border-white/20 bg-[#051424]/55 p-2 shadow-2xl shadow-black/30 backdrop-blur-xl transition-all focus-within:border-emerald-400/80 focus-within:ring-2 focus-within:ring-emerald-400/20">
+              <div className="flex items-center">
+                <div className="pl-3 pr-2 text-emerald-400">
                 <Search className="w-5 h-5" />
+                </div>
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setShowSuggestions(true);
+                  }}
+                  onFocus={() => setShowSuggestions(true)}
+                  placeholder="Search a monitored location..."
+                  aria-label="Search monitored location"
+                  className="w-full bg-transparent px-2 py-2 text-sm font-medium text-white placeholder-slate-300 focus:outline-none sm:text-base"
+                />
+                <button
+                  type="submit"
+                  className="flex-shrink-0 cursor-pointer rounded-xl bg-emerald-500 px-4 py-2.5 text-xs font-bold tracking-wide text-slate-950 shadow-lg shadow-emerald-950/40 transition-all hover:bg-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-300 sm:px-6 sm:py-3 sm:text-sm"
+                >
+                  Check Risk
+                </button>
               </div>
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setShowSuggestions(true);
-                }}
-                onFocus={() => setShowSuggestions(true)}
-                placeholder="Enter location (e.g. Uttarkashi, Teesta Basin, Sohra, Tupul...)"
-                className="w-full bg-transparent text-white placeholder-slate-300 text-sm sm:text-base font-medium focus:outline-none px-2 py-2"
-              />
-              <button
-                type="submit"
-                className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-5 sm:px-6 py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm tracking-wide transition-all shadow-lg shadow-emerald-950/40 cursor-pointer flex-shrink-0"
-              >
-                Check Risk
-              </button>
             </div>
 
             {/* Suggestions Dropdown */}
@@ -177,14 +205,14 @@ export const TerraHome: React.FC<TerraHomeProps> = ({
       </div>
 
       {/* 4 Feature Cards (Screen 1 Mockup) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {/* Card 1: Real-time Monitoring */}
         <div
           onClick={() => onNavigate('dashboard')}
-          className={`p-6 rounded-2xl border transition-all cursor-pointer group hover:-translate-y-1 shadow-lg ${
+          className={`group cursor-pointer rounded-2xl border p-6 shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl ${
             theme === 'light'
-              ? 'bg-white hover:bg-slate-50 border-slate-200 text-slate-900 shadow-slate-200/50'
-              : 'bg-[#0d1c2d] hover:bg-[#122131] border-[#1c2b3c] text-white shadow-black/40'
+              ? 'border-slate-200/90 bg-white/90 text-slate-900 shadow-slate-200/60 backdrop-blur-sm hover:border-emerald-300 hover:bg-white'
+              : 'border-[#1c2b3c] bg-[#0d1c2d]/90 text-white shadow-black/40 backdrop-blur-sm hover:border-emerald-500/40 hover:bg-[#122131]'
           }`}
         >
           <div className="w-12 h-12 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
@@ -203,10 +231,10 @@ export const TerraHome: React.FC<TerraHomeProps> = ({
         {/* Card 2: AI Risk Prediction */}
         <div
           onClick={() => onNavigate('risk-details')}
-          className={`p-6 rounded-2xl border transition-all cursor-pointer group hover:-translate-y-1 shadow-lg ${
+          className={`group cursor-pointer rounded-2xl border p-6 shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl ${
             theme === 'light'
-              ? 'bg-white hover:bg-slate-50 border-slate-200 text-slate-900 shadow-slate-200/50'
-              : 'bg-[#0d1c2d] hover:bg-[#122131] border-[#1c2b3c] text-white shadow-black/40'
+              ? 'border-slate-200/90 bg-white/90 text-slate-900 shadow-slate-200/60 backdrop-blur-sm hover:border-cyan-300 hover:bg-white'
+              : 'border-[#1c2b3c] bg-[#0d1c2d]/90 text-white shadow-black/40 backdrop-blur-sm hover:border-cyan-500/40 hover:bg-[#122131]'
           }`}
         >
           <div className="w-12 h-12 rounded-xl bg-cyan-500/10 text-cyan-500 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
@@ -225,10 +253,10 @@ export const TerraHome: React.FC<TerraHomeProps> = ({
         {/* Card 3: Instant Alerts */}
         <div
           onClick={() => onNavigate('alerts')}
-          className={`p-6 rounded-2xl border transition-all cursor-pointer group hover:-translate-y-1 shadow-lg ${
+          className={`group cursor-pointer rounded-2xl border p-6 shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl ${
             theme === 'light'
-              ? 'bg-white hover:bg-slate-50 border-slate-200 text-slate-900 shadow-slate-200/50'
-              : 'bg-[#0d1c2d] hover:bg-[#122131] border-[#1c2b3c] text-white shadow-black/40'
+              ? 'border-slate-200/90 bg-white/90 text-slate-900 shadow-slate-200/60 backdrop-blur-sm hover:border-amber-300 hover:bg-white'
+              : 'border-[#1c2b3c] bg-[#0d1c2d]/90 text-white shadow-black/40 backdrop-blur-sm hover:border-amber-500/40 hover:bg-[#122131]'
           }`}
         >
           <div className="w-12 h-12 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
@@ -247,10 +275,10 @@ export const TerraHome: React.FC<TerraHomeProps> = ({
         {/* Card 4: Emergency Support */}
         <div
           onClick={() => onNavigate('emergency-sos')}
-          className={`p-6 rounded-2xl border transition-all cursor-pointer group hover:-translate-y-1 shadow-lg ${
+          className={`group cursor-pointer rounded-2xl border p-6 shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl ${
             theme === 'light'
-              ? 'bg-white hover:bg-slate-50 border-slate-200 text-slate-900 shadow-slate-200/50'
-              : 'bg-[#0d1c2d] hover:bg-[#122131] border-[#1c2b3c] text-white shadow-black/40'
+              ? 'border-slate-200/90 bg-white/90 text-slate-900 shadow-slate-200/60 backdrop-blur-sm hover:border-red-300 hover:bg-white'
+              : 'border-[#1c2b3c] bg-[#0d1c2d]/90 text-white shadow-black/40 backdrop-blur-sm hover:border-red-500/40 hover:bg-[#122131]'
           }`}
         >
           <div className="w-12 h-12 rounded-xl bg-red-500/10 text-red-500 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
