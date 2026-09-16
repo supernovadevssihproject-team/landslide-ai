@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { OperationalModule, HazardZone } from '../types';
+import { useI18n } from '../i18n/index.tsx';
 import {
   Search,
   Activity,
@@ -19,6 +20,7 @@ interface TerraHomeProps {
   zones: HazardZone[];
   theme: 'dark' | 'light';
   selectedZone: HazardZone;
+  language?: 'en' | 'hi';
 }
 
 export const TerraHome: React.FC<TerraHomeProps> = ({
@@ -27,7 +29,9 @@ export const TerraHome: React.FC<TerraHomeProps> = ({
   zones,
   theme,
   selectedZone,
+  language,
 }) => {
+  const { t } = useI18n();
   const [searchQuery, setSearchQuery] = useState(selectedZone.name);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
@@ -87,7 +91,7 @@ export const TerraHome: React.FC<TerraHomeProps> = ({
               poster="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=2000&q=80"
               aria-hidden="true"
             >
-              <source src="/assets/mountain-sunrise.webm" type="video/webm" />
+              <source src="/assets/mountain-sunset.mp4" type="video/mp4" />
             </video>
           )}
         </div>
@@ -104,18 +108,17 @@ export const TerraHome: React.FC<TerraHomeProps> = ({
         <div className="relative z-10 flex min-h-[560px] max-w-5xl flex-col justify-center px-5 py-12 text-white sm:min-h-[620px] sm:px-12 sm:py-20">
           <div className="mb-5 inline-flex w-fit items-center gap-2 rounded-full border border-emerald-400/40 bg-emerald-500/15 px-3 py-1 text-xs font-mono font-bold uppercase tracking-wider text-emerald-300 shadow-lg shadow-emerald-950/20">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="sr-only">Live status:</span>
-            LIVE MONITORING
+            <span className="sr-only">{t('home.liveStatus')}</span>
+            {t('home.liveMonitoring')}
           </div>
 
           <h1 className="max-w-3xl text-4xl font-black leading-[0.98] tracking-tight sm:text-6xl lg:text-7xl">
-            Landslide <br />
-            <span className="text-emerald-400">Intelligence</span>
+            {t('home.heroTitlePart1')} <br />
+            <span className="text-emerald-400">{t('home.heroTitlePart2')}</span>
           </h1>
 
           <p className="mt-5 max-w-2xl text-base leading-relaxed text-slate-200 sm:text-lg">
-            AI-powered disaster monitoring and emergency support for safer mountain communities.
-            Fusing satellite earth observation, in-situ subsurface telemetry, and neural risk models.
+            {t('home.heroDescription')}
           </p>
 
           {/* Search Bar */}
@@ -133,15 +136,15 @@ export const TerraHome: React.FC<TerraHomeProps> = ({
                     setShowSuggestions(true);
                   }}
                   onFocus={() => setShowSuggestions(true)}
-                  placeholder="Search a monitored location..."
-                  aria-label="Search monitored location"
+                  placeholder={t('home.searchPlaceholder')}
+                  aria-label={t('home.searchLabel')}
                   className="w-full bg-transparent px-2 py-2 text-sm font-medium text-white placeholder-slate-300 focus:outline-none sm:text-base"
                 />
                 <button
                   type="submit"
                   className="flex-shrink-0 cursor-pointer rounded-xl bg-emerald-500 px-4 py-2.5 text-xs font-bold tracking-wide text-slate-950 shadow-lg shadow-emerald-950/40 transition-all hover:bg-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-300 sm:px-6 sm:py-3 sm:text-sm"
                 >
-                  Check Risk
+                  {t('home.checkRisk')}
                 </button>
               </div>
             </div>
@@ -177,7 +180,7 @@ export const TerraHome: React.FC<TerraHomeProps> = ({
                   ))
                 ) : (
                   <div className="px-4 py-3 text-xs text-slate-400">
-                    No exact match found. Click "Check Risk" to inspect standard monitoring sectors.
+                    {t('home.noMatch')}
                   </div>
                 )}
               </div>
@@ -186,7 +189,7 @@ export const TerraHome: React.FC<TerraHomeProps> = ({
 
           {/* Quick Location Pills */}
           <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-slate-300">
-            <span className="font-mono text-slate-400">Popular Corridors:</span>
+            <span className="font-mono text-slate-400">{t('home.popularCorridors')}</span>
             {zones.slice(0, 4).map((z) => (
               <button
                 key={z.id}
@@ -218,12 +221,12 @@ export const TerraHome: React.FC<TerraHomeProps> = ({
           <div className="w-12 h-12 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
             <Activity className="w-6 h-6" />
           </div>
-          <h3 className="text-base font-bold tracking-tight">Real-time Monitoring</h3>
+          <h3 className="text-base font-bold tracking-tight">{t('home.monitoringTitle')}</h3>
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-            Live environmental sensor data, 148 IoT borehole telemetry feeds, and IMD radar rainfall tracking.
+            {t('home.monitoringDescription')}
           </p>
           <div className="mt-4 flex items-center gap-1 text-xs font-semibold text-emerald-500">
-            <span>Explore live data</span>
+            <span>{t('home.exploreLive')}</span>
             <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
           </div>
         </div>
@@ -240,12 +243,12 @@ export const TerraHome: React.FC<TerraHomeProps> = ({
           <div className="w-12 h-12 rounded-xl bg-cyan-500/10 text-cyan-500 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
             <Cpu className="w-6 h-6" />
           </div>
-          <h3 className="text-base font-bold tracking-tight">AI Risk Prediction</h3>
+          <h3 className="text-base font-bold tracking-tight">{t('home.predictionTitle')}</h3>
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-            Random Forest &amp; Temporal LSTM neural networks trained on 654 verified ground truth landslide events.
+            {t('home.predictionDescription')}
           </p>
           <div className="mt-4 flex items-center gap-1 text-xs font-semibold text-cyan-500">
-            <span>Analyze risk factors</span>
+            <span>{t('home.analyzeFactors')}</span>
             <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
           </div>
         </div>
@@ -262,12 +265,12 @@ export const TerraHome: React.FC<TerraHomeProps> = ({
           <div className="w-12 h-12 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
             <BellRing className="w-6 h-6" />
           </div>
-          <h3 className="text-base font-bold tracking-tight">Instant Alerts</h3>
+          <h3 className="text-base font-bold tracking-tight">{t('home.alertsTitle')}</h3>
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-            Stay informed with Common Alerting Protocol (CAP-CMSP) geo-fenced cell broadcasts in 7 local languages.
+            {t('home.alertsDescription')}
           </p>
           <div className="mt-4 flex items-center gap-1 text-xs font-semibold text-amber-500">
-            <span>Check active warnings</span>
+            <span>{t('home.checkWarnings')}</span>
             <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
           </div>
         </div>
@@ -284,12 +287,12 @@ export const TerraHome: React.FC<TerraHomeProps> = ({
           <div className="w-12 h-12 rounded-xl bg-red-500/10 text-red-500 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
             <Shield className="w-6 h-6" />
           </div>
-          <h3 className="text-base font-bold tracking-tight">Emergency Support</h3>
+          <h3 className="text-base font-bold tracking-tight">{t('home.supportTitle')}</h3>
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-            One-touch SOS dispatch, offline mesh location sharing, and direct verified helpline directory.
+            {t('home.supportDescription')}
           </p>
           <div className="mt-4 flex items-center gap-1 text-xs font-semibold text-red-500">
-            <span>Access emergency tools</span>
+            <span>{t('home.accessTools')}</span>
             <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
           </div>
         </div>

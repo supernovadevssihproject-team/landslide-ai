@@ -80,7 +80,7 @@ export interface WeatherRequestOptions {
   regionName?: string;
 }
 
-const BASE_URL = '';
+const BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/+$/, '');
 
 async function fetchJson<T>(url: string, options?: RequestInit, fallback?: T): Promise<T> {
   try {
@@ -96,6 +96,9 @@ async function fetchJson<T>(url: string, options?: RequestInit, fallback?: T): P
     }
     return (await res.json()) as T;
   } catch (err) {
+    if (err instanceof DOMException && err.name === 'AbortError') {
+      throw err;
+    }
     if (fallback !== undefined) {
       console.warn(`Backend offline or unreachable for ${url}, using offline cache.`, err);
       return fallback;
@@ -105,13 +108,13 @@ async function fetchJson<T>(url: string, options?: RequestInit, fallback?: T): P
 }
 
 export const LandslideApi = {
-  async getEarthquakes(latitude?: number, longitude?: number): Promise<EarthquakeResponse> {
+  async getEarthquakes(latitude?: number, longitude?: number, signal?: AbortSignal): Promise<EarthquakeResponse> {
     const params = new URLSearchParams({ radius_km: '500', limit: '100' });
     if (latitude !== undefined && longitude !== undefined) {
       params.set('latitude', String(latitude));
       params.set('longitude', String(longitude));
     }
-    return fetchJson<EarthquakeResponse>(`/api/earthquakes?${params.toString()}`, undefined, {
+    return fetchJson<EarthquakeResponse>(`/api/earthquakes?${params.toString()}`, { signal }, {
       earthquake_data_available: false,
       source_status: 'temporarily_unavailable',
       source: 'National Center for Seismology',
@@ -359,7 +362,8 @@ export const LandslideApi = {
 
   // Real-Time Meteorological Telemetry (IMD / Open-Meteo)
   async getLiveWeather(
-    options: string | WeatherRequestOptions = 'sikkim'
+    options: string | WeatherRequestOptions = 'sikkim',
+    signal?: AbortSignal
   ): Promise<LiveWeather> {
     const opts: WeatherRequestOptions =
       typeof options === 'string' ? { state: options } : options;
@@ -388,7 +392,7 @@ export const LandslideApi = {
       last_updated: 'Cached Offline Data',
       forecast: [],
     };
-    return fetchJson(`/api/weather/live?${params.toString()}`, undefined, fallback);
+    return fetchJson(`/api/weather/live?${params.toString()}`, { signal }, fallback);
   },
 
   // Emergency SMS Broadcast (Twilio / Fast2SMS)
@@ -688,9 +692,24 @@ export const LandslideApi = {
     }
   },
 
-  async sendChatMessage(message: string, history: Array<{ role: 'user' | 'assistant'; content: string }> = []): Promise<{ reply: string; source: string; action?: any }> {
+  async sendChatMessage(
+    message: string,
+    history: Array<{ role: 'user' | 'assistant'; content: string }> = [],
+    language: string = 'en',
+    signal?: AbortSignal
+  ): Promise<{ reply: string; source: string; action?: any }> {
+    const offlineMessages: Record<string, string> = {
+      hi: `🤖 **TerraGuard सहायक (ऑफलाइन मोड)**:\nआपका प्रश्न प्राप्त हुआ: "${message}"। बैकएंड उपलब्ध नहीं है। आप मुख्य नेविगेशन से Risk Map, Sensor Telemetry और Emergency SOS खोल सकते हैं।`,
+      as: `🤖 **TerraGuard সহায়ক (অফলাইন মোড)**:\nআপোনাৰ প্ৰশ্ন পোৱা গৈছে: "${message}"। বেকএণ্ড উপলব্ধ নহয়।`,
+      bn: `🤖 **TerraGuard সহায়ক (অফলাইন মোড)**:\nআপনার প্রশ্ন পাওয়া গেছে: "${message}"। ব্যাকএন্ড বর্তমানে পাওয়া যাচ্ছে না।`,
+      brx: `🤖 **TerraGuard सहायक (Offline Mode)**:\nनों प्रश्न मोनसे जाबाय: "${message}"। Backend दंनाय नङा।`,
+      ks: `🤖 **TerraGuard madadgar (Offline Mode)**:\nTohan sawal milyo: "${message}". Backend dastiyab na chu.`,
+      mni: `🤖 **TerraGuard assistant (offline mode)**:\nNanggi question phangjari: "${message}". Backend available nattre.`,
+      lus: `🤖 **TerraGuard puihna (offline mode)**:\nI zawhna dawng ta: "${message}". Backend hi available a ni lo.`,
+      ne: `🤖 **TerraGuard सहायक (अफलाइन मोड)**:\nतपाईंको प्रश्न प्राप्त भयो: "${message}"। ब्याकएन्ड उपलब्ध छैन।`,
+    };
     const fallbackResponse = {
-      reply: `🤖 **TerraGuard Assistant (Offline Mode)**:\nI received your query: "${message}". Backend API is currently unreachable. You can still navigate between Risk Map, Sensor Telemetry, and Emergency SOS using the main navigation bar.`,
+      reply: offlineMessages[language] || `🤖 **TerraGuard Assistant (Offline Mode)**:\nI received your query: "${message}". Backend API is currently unreachable. You can still navigate between Risk Map, Sensor Telemetry, and Emergency SOS using the main navigation bar.`,
       source: 'offline-fallback-client'
     };
     try {
@@ -698,8 +717,9 @@ export const LandslideApi = {
         '/api/chat',
         {
           method: 'POST',
+          signal,
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message, history }),
+          body: JSON.stringify({ message, history, language }),
         },
         fallbackResponse
       );

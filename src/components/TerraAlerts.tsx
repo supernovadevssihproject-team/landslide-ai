@@ -20,6 +20,7 @@ import {
   Volume2,
   VolumeX,
 } from 'lucide-react';
+import { useI18n } from '../i18n/index.tsx';
 
 interface TerraAlertsProps {
   zones: HazardZone[];
@@ -40,6 +41,7 @@ export const TerraAlerts: React.FC<TerraAlertsProps> = ({
   sirenActive,
   onToggleSiren,
 }) => {
+  const { t } = useI18n();
   const [severityFilter, setSeverityFilter] = useState<'all' | 'high' | 'moderate' | 'low'>('all');
   const [selectedRegion, setSelectedRegion] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -111,9 +113,9 @@ export const TerraAlerts: React.FC<TerraAlertsProps> = ({
                 <Bell className="w-7 h-7 animate-pulse" />
               </span>
               <div>
-                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Active Hazard Alerts</h1>
+                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{t('alerts.title')}</h1>
                 <p className={`text-xs sm:text-sm mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                  Real-time early warning bulletins triggered by predictive telemetry & machine learning
+                  {t('alerts.description')}
                 </p>
               </div>
             </div>
@@ -132,7 +134,7 @@ export const TerraAlerts: React.FC<TerraAlertsProps> = ({
                   }`}
                 >
                   {sirenActive ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-                  <span>{sirenActive ? 'Silence Acoustic Siren' : 'Test Warning Siren'}</span>
+                  <span>{sirenActive ? t('alerts.silenceSiren') : t('alerts.testSiren')}</span>
                 </button>
               )}
 
@@ -140,7 +142,7 @@ export const TerraAlerts: React.FC<TerraAlertsProps> = ({
                 onClick={() => onNavigate('emergency-sos')}
                 className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold transition-all shadow-md shadow-red-600/20"
               >
-                <span>Emergency SOS</span>
+                <span>{t('alerts.emergencySos')}</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>
@@ -153,7 +155,7 @@ export const TerraAlerts: React.FC<TerraAlertsProps> = ({
                 isDark ? 'bg-slate-800/40 border-slate-700/60' : 'bg-slate-50 border-slate-200'
               }`}
             >
-              <div className="text-[11px] text-slate-400 uppercase font-semibold">Total Monitored</div>
+              <div className="text-[11px] text-slate-400 uppercase font-semibold">{t('alerts.totalMonitored')}</div>
               <div className="text-xl font-bold mt-1">{zones.length} Zones</div>
             </div>
 
@@ -169,7 +171,7 @@ export const TerraAlerts: React.FC<TerraAlertsProps> = ({
             >
               <div className="text-[11px] text-red-500 uppercase font-bold flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" />
-                <span>High Warnings</span>
+                <span>{t('alerts.highWarnings')}</span>
               </div>
               <div className="text-xl font-bold text-red-500 mt-1">{highCount} Zones</div>
             </div>
@@ -186,7 +188,7 @@ export const TerraAlerts: React.FC<TerraAlertsProps> = ({
             >
               <div className="text-[11px] text-amber-500 uppercase font-bold flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-amber-500" />
-                <span>Medium Advisories</span>
+                <span>{t('alerts.mediumAdvisories')}</span>
               </div>
               <div className="text-xl font-bold text-amber-500 mt-1">{medCount} Zones</div>
             </div>
@@ -203,7 +205,7 @@ export const TerraAlerts: React.FC<TerraAlertsProps> = ({
             >
               <div className="text-[11px] text-emerald-500 uppercase font-bold flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                <span>Nominal / Low</span>
+                <span>{t('alerts.nominalLow')}</span>
               </div>
               <div className="text-xl font-bold text-emerald-500 mt-1">{lowCount} Zones</div>
             </div>
@@ -219,7 +221,7 @@ export const TerraAlerts: React.FC<TerraAlertsProps> = ({
           {/* Severity Pills */}
           <div className="flex flex-wrap items-center gap-2">
             <span className={`text-xs font-semibold uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-              Filter Severity:
+              {t('alerts.filterSeverity')}
             </span>
             <button
               onClick={() => setSeverityFilter('all')}
@@ -231,7 +233,7 @@ export const TerraAlerts: React.FC<TerraAlertsProps> = ({
                   : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'
               }`}
             >
-              All Severity ({zones.length})
+              {t('alerts.allSeverity')} ({zones.length})
             </button>
             <button
               onClick={() => setSeverityFilter('high')}
@@ -243,7 +245,7 @@ export const TerraAlerts: React.FC<TerraAlertsProps> = ({
                   : 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100'
               }`}
             >
-              High ({highCount})
+              {t('alerts.high')} ({highCount})
             </button>
             <button
               onClick={() => setSeverityFilter('moderate')}
@@ -255,7 +257,7 @@ export const TerraAlerts: React.FC<TerraAlertsProps> = ({
                   : 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'
               }`}
             >
-              Moderate ({medCount})
+              {t('alerts.moderate')} ({medCount})
             </button>
             <button
               onClick={() => setSeverityFilter('low')}
@@ -267,7 +269,7 @@ export const TerraAlerts: React.FC<TerraAlertsProps> = ({
                   : 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
               }`}
             >
-              Low ({lowCount})
+              {t('alerts.low')} ({lowCount})
             </button>
           </div>
 
@@ -296,7 +298,7 @@ export const TerraAlerts: React.FC<TerraAlertsProps> = ({
               <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
-                placeholder="Search alert by corridor or sector..."
+                placeholder={t('alerts.searchPlaceholder')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className={`pl-8 pr-3 py-1.5 rounded-xl text-xs border outline-none w-48 sm:w-60 ${
@@ -318,9 +320,9 @@ export const TerraAlerts: React.FC<TerraAlertsProps> = ({
               }`}
             >
               <ShieldCheck className="w-12 h-12 mx-auto text-emerald-500 mb-3" />
-              <h3 className="text-lg font-bold">No Alerts Found</h3>
+              <h3 className="text-lg font-bold">{t('alerts.noAlerts')}</h3>
               <p className="text-xs text-slate-400 mt-1">
-                No active landslide advisories match your selected severity and region criteria.
+                {t('alerts.noAlertsDescription')}
               </p>
             </div>
           ) : (
@@ -408,19 +410,19 @@ export const TerraAlerts: React.FC<TerraAlertsProps> = ({
                     {/* Right side telemetry tags */}
                     <div className="flex flex-wrap lg:flex-col lg:items-end gap-2 shrink-0">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs text-slate-400">Rainfall:</span>
+                        <span className="text-xs text-slate-400">{t('alerts.rainfall')}</span>
                         <span className="text-xs font-bold font-mono text-blue-500">120 mm / 24h</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-xs text-slate-400">Soil Saturation:</span>
+                        <span className="text-xs text-slate-400">{t('alerts.soilSaturation')}</span>
                         <span className="text-xs font-bold font-mono text-cyan-500">{zone.soilPoreSaturation}</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-xs text-slate-400">Slope Gradient:</span>
+                        <span className="text-xs text-slate-400">{t('alerts.slopeGradient')}</span>
                         <span className="text-xs font-bold font-mono text-amber-500">{zone.slopeGradient}</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-xs text-slate-400">Evac Lead Time:</span>
+                        <span className="text-xs text-slate-400">{t('alerts.evacLeadTime')}</span>
                         <span className="text-xs font-bold font-mono text-red-500">{zone.lstmEvac}</span>
                       </div>
                     </div>
@@ -448,7 +450,7 @@ export const TerraAlerts: React.FC<TerraAlertsProps> = ({
                             : 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-200'
                         }`}
                       >
-                        Risk Details
+                        {t('alerts.riskDetails')}
                       </button>
 
                       <button
@@ -459,7 +461,7 @@ export const TerraAlerts: React.FC<TerraAlertsProps> = ({
                         className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white transition-all flex items-center gap-1.5 shadow-sm"
                       >
                         <Layers className="w-3.5 h-3.5" />
-                        <span>View on Map</span>
+                        <span>{t('alerts.viewOnMap')}</span>
                       </button>
                     </div>
                   </div>

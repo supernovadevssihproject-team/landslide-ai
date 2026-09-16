@@ -67,7 +67,7 @@ export async function fetchLocationRisk(
   }
 
   console.warn(`[RISK DEBUG] Data source: FALLBACK (Offline model for "${params.name}")`);
-  return generateOfflineLocationRisk(params);
+  return generateOfflineLocationRisk(params, signal);
 }
 
 /**
@@ -75,7 +75,8 @@ export async function fetchLocationRisk(
  * and live NCS / IMD feeds where available.
  */
 async function generateOfflineLocationRisk(
-  params: LocationRiskParams
+  params: LocationRiskParams,
+  signal?: AbortSignal
 ): Promise<LocationRiskEvaluation> {
   const state = params.state?.toLowerCase() || 'sikkim';
   const elev = params.elevation ?? 1200.0;
@@ -97,7 +98,7 @@ async function generateOfflineLocationRisk(
       longitude: params.longitude,
       state,
       regionName: params.name,
-    });
+    }, signal);
     if (weather) {
       currentRain = weather.current_rainfall_mm_hr || 0.0;
       antecedent72h = weather.antecedent_72h_rainfall_mm || 95.0;
@@ -105,7 +106,9 @@ async function generateOfflineLocationRisk(
       weatherSource = weather.source;
       isLiveWeather = weather.is_live_feed;
     }
-  } catch {}
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') throw error;
+  }
 
   // 2. Derive rainfall windows
   const r1 = Math.max(10.0, Math.round(currentRain * 24.0 + extraRain * 0.4));
@@ -128,7 +131,7 @@ async function generateOfflineLocationRisk(
   let isLiveSeismic = false;
 
   try {
-    const eqResponse = await LandslideApi.getEarthquakes(params.latitude, params.longitude);
+    const eqResponse = await LandslideApi.getEarthquakes(params.latitude, params.longitude, signal);
     if (eqResponse && eqResponse.events) {
       isLiveSeismic = eqResponse.earthquake_data_available;
       const assessment = calculateSeismicRiskAssessment(
@@ -143,7 +146,9 @@ async function generateOfflineLocationRisk(
         maxMag = Math.max(...eqResponse.events.map((e) => e.magnitude));
       }
     }
-  } catch {}
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') throw error;
+  }
 
   // 5. Bounded Post-Model Seismic Adjustment Layer
   const alpha = 0.20;

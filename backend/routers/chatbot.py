@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
-from backend.services.chatbot_service import process_chat_message
+from backend.services.chatbot_service import normalize_chatbot_language, process_chat_message
 
 router = APIRouter(prefix="/api/chat", tags=["Chatbot"])
 
@@ -12,6 +12,7 @@ class ChatTurn(BaseModel):
 class ChatRequest(BaseModel):
     message: str = Field(..., description="Current user input text")
     history: List[ChatTurn] = Field(default_factory=list, description="Previous chat turn history")
+    language: str = Field(default="en", description="Chatbot response language code")
 
 class ChatAction(BaseModel):
     type: str = Field(..., description="Action type: NAVIGATE, SELECT_REGION, SELECT_ZONE")
@@ -30,7 +31,11 @@ class ChatResponse(BaseModel):
 def handle_chat_turn(request: ChatRequest):
     try:
         hist_dicts = [{"role": turn.role, "content": turn.content} for turn in request.history]
-        res = process_chat_message(request.message, hist_dicts)
+        res = process_chat_message(
+            request.message,
+            hist_dicts,
+            language=normalize_chatbot_language(request.language),
+        )
         
         action_obj = None
         if res.get("action"):

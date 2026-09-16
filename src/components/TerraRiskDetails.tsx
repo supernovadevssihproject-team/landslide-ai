@@ -22,6 +22,7 @@ import {
   Sparkles,
   ShieldAlert,
 } from 'lucide-react';
+import { useI18n } from '../i18n/index.tsx';
 
 interface TerraRiskDetailsProps {
   selectedZone: HazardZone;
@@ -48,6 +49,7 @@ export const TerraRiskDetails: React.FC<TerraRiskDetailsProps> = ({
   onNavigate,
   theme,
 }) => {
+  const { t } = useI18n();
   const [activeMetricTab, setActiveMetricTab] = useState<MetricCategory>('rainfall');
   const [hoveredMonth, setHoveredMonth] = useState<string | null>(null);
 
@@ -170,7 +172,7 @@ export const TerraRiskDetails: React.FC<TerraRiskDetailsProps> = ({
             }`}
           >
             <ArrowLeft className="w-4 h-4 text-emerald-500" />
-            <span>&lt; Back to Map</span>
+            <span>{t('riskDetails.backToMap')}</span>
           </button>
 
           {/* Quick Zone Picker Dropdown */}
@@ -180,7 +182,7 @@ export const TerraRiskDetails: React.FC<TerraRiskDetailsProps> = ({
                 isDark ? 'text-slate-400' : 'text-slate-500'
               }`}
             >
-              Inspecting Zone:
+              {t('riskDetails.inspectingZone')}
             </span>
             <select
               value={selectedZone.id}
@@ -219,7 +221,7 @@ export const TerraRiskDetails: React.FC<TerraRiskDetailsProps> = ({
                 </span>
                 <div>
                   <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
-                    Risk Details - {selectedZone.name}
+                    {t('riskDetails.title')} - {selectedZone.name}
                   </h1>
                   <p
                     className={`text-xs sm:text-sm mt-0.5 ${
@@ -258,7 +260,7 @@ export const TerraRiskDetails: React.FC<TerraRiskDetailsProps> = ({
                   isDark ? 'bg-slate-800 text-slate-400' : 'bg-slate-100 text-slate-600'
                 }`}
               >
-                Telemetry updated: 5 mins ago
+                {t('riskDetails.telemetryUpdated')}
               </span>
             </div>
           </div>
@@ -278,9 +280,9 @@ export const TerraRiskDetails: React.FC<TerraRiskDetailsProps> = ({
               <div className="flex items-center justify-between border-b pb-4 mb-5 border-slate-200 dark:border-slate-800">
                 <div className="flex items-center gap-2">
                   <Activity className="w-5 h-5 text-red-500" />
-                  <h2 className="text-lg font-bold">Current Risk Assessment</h2>
+                  <h2 className="text-lg font-bold">{t('riskDetails.assessment')}</h2>
                 </div>
-                <span className="text-xs text-slate-400 font-mono">ML Confidence: {selectedZone.rfConfidence}</span>
+                <span className="text-xs text-slate-400 font-mono">{t('riskDetails.mlConfidence')} {selectedZone.rfConfidence}</span>
               </div>
 
               {/* Circular Gauge / Radial Meter */}
@@ -339,7 +341,7 @@ export const TerraRiskDetails: React.FC<TerraRiskDetailsProps> = ({
               {/* "Why is the risk high?" Analysis List */}
               <div className="mt-6 pt-5 border-t border-slate-200 dark:border-slate-800">
                 <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-3">
-                  Why is the risk high?
+                  {t('riskDetails.whyRiskHigh')}
                 </h3>
                 <ul className="space-y-2.5 text-xs sm:text-sm">
                   <li className="flex items-start gap-2.5">
@@ -377,7 +379,7 @@ export const TerraRiskDetails: React.FC<TerraRiskDetailsProps> = ({
                 className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm transition-all shadow-md shadow-emerald-600/20"
               >
                 <Layers className="w-4 h-4" />
-                <span>Examine 3D Satellite Heatmap</span>
+                <span>{t('riskDetails.satelliteHeatmap')}</span>
               </button>
             </div>
           </div>
@@ -704,7 +706,7 @@ export const TerraRiskDetails: React.FC<TerraRiskDetailsProps> = ({
               <AlertTriangle className="w-4 h-4 text-amber-500" />
               <span>Current High & Medium Warning Corridors</span>
             </h3>
-            <span className="text-xs font-mono text-emerald-500">Live Satellite Feed</span>
+            <span className="text-xs font-mono text-emerald-500">{t('riskDetails.liveSatellite')}</span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">

@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { NerState } from '../types';
 import { ASSET_URLS } from '../data/mockData';
 import { sirenPlayer } from '../utils/audioSiren';
-import { Volume2, VolumeX, ShieldAlert, Radio, Clock, PhoneCall, Sun, Moon, Shield, PlusCircle } from 'lucide-react';
+import { appLanguageOptions, useI18n } from '../i18n/index.tsx';
+import { Volume2, VolumeX, ShieldAlert, Radio, Clock, PhoneCall, Sun, Moon, PlusCircle, Globe2 } from 'lucide-react';
 
 interface HeaderProps {
   selectedState: NerState;
@@ -11,6 +12,8 @@ interface HeaderProps {
   onOpenReportHazard?: () => void;
   theme: 'dark' | 'light';
   onToggleTheme: () => void;
+  language?: 'en' | 'hi';
+  setLanguage?: React.Dispatch<React.SetStateAction<'en' | 'hi'>>;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -20,7 +23,10 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenReportHazard,
   theme,
   onToggleTheme,
+  language,
+  setLanguage,
 }) => {
+  const { t } = useI18n();
   const [isSirenActive, setIsSirenActive] = useState(false);
   const [timeString, setTimeString] = useState('');
 
@@ -68,7 +74,7 @@ export const Header: React.FC<HeaderProps> = ({
             <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
           </span>
           <span className="font-bold uppercase tracking-wider text-[11px] text-white bg-red-600 px-1.5 py-0.5 rounded">
-            STAGE 3 CRITICAL
+            {t('header.criticalStage')}
           </span>
           <span className="truncate hidden sm:inline">
             UTTARKASHI (NH-34 KM 42) & MANGAN (NH-10) • PORE SATURATION 92.4% • SHEAR TRIGGER REACHED
@@ -91,7 +97,7 @@ export const Header: React.FC<HeaderProps> = ({
             className="text-[11px] font-bold text-white bg-red-600 hover:bg-red-700 px-2.5 py-0.5 rounded-lg transition-all flex items-center gap-1 shadow-sm"
           >
             <ShieldAlert className="w-3 h-3" />
-            <span>DISPATCH CAP</span>
+            <span>{t('header.dispatchCap')}</span>
           </button>
         </div>
       </div>
@@ -117,7 +123,7 @@ export const Header: React.FC<HeaderProps> = ({
             <p className={`text-[10px] sm:text-[11px] font-medium leading-none tracking-normal ${
               isDark ? 'text-slate-400' : 'text-slate-500'
             }`}>
-              AI & GIS Landslide Early Warning System • Govt of India
+              {t('header.govtLabel')}
             </p>
           </div>
         </div>
@@ -169,10 +175,30 @@ export const Header: React.FC<HeaderProps> = ({
             <span className="text-[11px]">{timeString || '11:46:20 IST'}</span>
           </div>
 
+          <div className="relative">
+            <label className="sr-only" htmlFor="terraguard-language-select">{t('header.languageSelector')}</label>
+            <div className={`flex items-center gap-1.5 rounded-lg border px-2 py-1.5 ${isDark ? 'bg-slate-800 border-slate-700 text-slate-100' : 'bg-slate-100 border-slate-300 text-slate-800'}`}>
+              <Globe2 className="h-3.5 w-3.5 text-emerald-500" />
+              <select
+                id="terraguard-language-select"
+                value={language ?? 'en'}
+                onChange={(e) => setLanguage?.(e.target.value as 'en' | 'hi')}
+                aria-label={t('header.languageSelector')}
+                className={`appearance-none bg-transparent pr-5 text-[11px] font-semibold outline-none ${isDark ? 'text-slate-100' : 'text-slate-800'}`}
+              >
+                {appLanguageOptions.map((option) => (
+                  <option key={option.id} value={option.id} className={isDark ? 'bg-slate-900 text-slate-100' : 'bg-white text-slate-900'}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
           {/* Theme Toggle Button (Dark / Light) */}
           <button
             onClick={onToggleTheme}
-            aria-label="Toggle visual theme mode"
+            aria-label={t('header.themeToggle')}
             title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
             className={`flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg border transition-all cursor-pointer shadow-sm ${
               theme === 'light'
@@ -183,12 +209,12 @@ export const Header: React.FC<HeaderProps> = ({
             {theme === 'light' ? (
               <>
                 <Sun className="w-3.5 h-3.5 text-amber-600 animate-spin-slow" />
-                <span className="text-[11px] font-mono tracking-tight font-bold text-amber-900">LIGHT</span>
+                <span className="text-[11px] font-mono tracking-tight font-bold text-amber-900">{t('header.lightMode')}</span>
               </>
             ) : (
               <>
                 <Moon className="w-3.5 h-3.5 text-cyan-400" />
-                <span className="text-[11px] font-mono tracking-tight text-slate-200">DARK</span>
+                <span className="text-[11px] font-mono tracking-tight text-slate-200">{t('header.darkMode')}</span>
               </>
             )}
           </button>
@@ -208,12 +234,12 @@ export const Header: React.FC<HeaderProps> = ({
             {isSirenActive ? (
               <>
                 <VolumeX className="w-3.5 h-3.5 text-white" />
-                <span className="text-[11px] font-mono tracking-tight font-bold">SIREN ON</span>
+                <span className="text-[11px] font-mono tracking-tight font-bold">{t('header.sirenOn')}</span>
               </>
             ) : (
               <>
                 <Volume2 className="w-3.5 h-3.5" />
-                <span className="text-[11px] font-mono tracking-tight hidden sm:inline">TEST SIREN</span>
+                <span className="text-[11px] font-mono tracking-tight hidden sm:inline">{t('header.testSiren')}</span>
               </>
             )}
           </button>
@@ -229,7 +255,7 @@ export const Header: React.FC<HeaderProps> = ({
             }`}
           >
             <PlusCircle className="w-3.5 h-3.5" />
-            <span className="hidden text-[11px] font-mono tracking-tight sm:inline">REPORT HAZARD</span>
+            <span className="hidden text-[11px] font-mono tracking-tight sm:inline">{t('header.reportHazard')}</span>
           </button>
         </div>
       </div>

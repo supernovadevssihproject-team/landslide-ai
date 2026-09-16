@@ -21,6 +21,7 @@ import {
   Waves,
   Zap,
 } from 'lucide-react';
+import { useI18n } from '../i18n/index.tsx';
 import { EarthquakeEvent, EarthquakeResponse, HazardZone } from '../types';
 import { LandslideApi } from '../services/api';
 import { useMapContext } from '../context/MapContext';
@@ -56,6 +57,7 @@ const formatEventTime = (isoTime: string) => {
 };
 
 export const EarthquakeMonitor: React.FC<EarthquakeMonitorProps> = ({ selectedZone, theme }) => {
+  const { t } = useI18n();
   const isDark = theme === 'dark';
   const { selectedRegion } = useMapContext();
 
@@ -171,9 +173,9 @@ export const EarthquakeMonitor: React.FC<EarthquakeMonitorProps> = ({ selectedZo
           <div>
             <div className="mb-2 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-orange-400">
               <span className="h-2 w-2 animate-pulse rounded-full bg-orange-400 shadow-[0_0_8px_rgba(251,146,60,0.8)]" />
-              Official NCS Seismic Intelligence • Calibrated Attenuation
+              {t('earthquakes.officialFeed')} • Calibrated Attenuation
             </div>
-            <h1 className="text-2xl font-black tracking-tight sm:text-3xl">Earthquake Monitor &amp; Ground Motion</h1>
+            <h1 className="text-2xl font-black tracking-tight sm:text-3xl">{t('earthquakes.title')}</h1>
             <p className={`mt-2 max-w-2xl text-xs sm:text-sm leading-relaxed ${mutedClass}`}>
               Calculates calibrated Peak Ground Acceleration (PGA), Arias Intensity ($I_a$), and Modified Mercalli Intensity (MMI) relative to your selected focal point.
             </p>
@@ -226,7 +228,7 @@ export const EarthquakeMonitor: React.FC<EarthquakeMonitorProps> = ({ selectedZo
                 }`}
             >
               <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin text-orange-400' : ''}`} />
-              <span>Refresh</span>
+              <span>{t('earthquakes.refresh')}</span>
             </button>
           </div>
         </div>
@@ -315,7 +317,7 @@ export const EarthquakeMonitor: React.FC<EarthquakeMonitorProps> = ({ selectedZo
             <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
-              placeholder="Filter location / epicenter..."
+              placeholder={t('earthquakes.filterPlaceholder')}
               value={locationSearch}
               onChange={(e) => setLocationSearch(e.target.value)}
               className={`w-full pl-8 pr-3 py-1.5 rounded-lg text-xs border outline-none font-mono ${isDark
@@ -365,7 +367,7 @@ export const EarthquakeMonitor: React.FC<EarthquakeMonitorProps> = ({ selectedZo
         {/* Sort Selector */}
         <div className="flex items-center gap-1.5 text-xs font-mono">
           <ArrowUpDown className="w-3.5 h-3.5 text-slate-400" />
-          <span className={mutedClass}>Sort:</span>
+            <span className={mutedClass}>{t('earthquakes.sort')}</span>
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as any)}
@@ -374,9 +376,9 @@ export const EarthquakeMonitor: React.FC<EarthquakeMonitorProps> = ({ selectedZo
               : 'bg-slate-50 text-slate-900 border-slate-300'
               }`}
           >
-            <option value="time">Most Recent</option>
-            <option value="magnitude">Highest Magnitude</option>
-            <option value="distance">Closest to Focus</option>
+            <option value="time">{t('earthquakes.mostRecent')}</option>
+            <option value="magnitude">{t('earthquakes.highestMagnitude')}</option>
+            <option value="distance">{t('earthquakes.closestFocus')}</option>
           </select>
         </div>
       </div>
@@ -387,7 +389,7 @@ export const EarthquakeMonitor: React.FC<EarthquakeMonitorProps> = ({ selectedZo
           <div>
             <h2 className="flex items-center gap-2 text-base font-bold">
               <Radio className="h-4 w-4 text-orange-400 animate-pulse" />
-              <span>Seismic Events Catalogue ({filteredEvents.length} in view)</span>
+              <span>{t('earthquakes.catalogue')} ({filteredEvents.length} in view)</span>
             </h2>
             <p className={`mt-1 text-xs ${mutedClass}`}>
               Calculated ground motion metrics relative to {activeFocus.name} ({activeFocus.latitude.toFixed(3)}° N, {activeFocus.longitude.toFixed(3)}° E)
@@ -399,7 +401,7 @@ export const EarthquakeMonitor: React.FC<EarthquakeMonitorProps> = ({ selectedZo
             target="_blank"
             rel="noreferrer"
           >
-            <span>Official NCS Portal</span>
+            <span>{t('earthquakes.officialPortal')}</span>
             <ExternalLink className="h-3.5 w-3.5" />
           </a>
         </div>

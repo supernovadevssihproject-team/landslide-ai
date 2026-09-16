@@ -21,6 +21,7 @@ import {
   ArrowUpRight,
   Radio,
 } from 'lucide-react';
+import { useI18n } from '../i18n/index.tsx';
 
 interface TerraDashboardProps {
   selectedZone: HazardZone;
@@ -37,6 +38,7 @@ export const TerraDashboard: React.FC<TerraDashboardProps> = ({
   onNavigate,
   theme,
 }) => {
+  const { t } = useI18n();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [searchLocation, setSearchLocation] = useState(selectedZone.name);
   const [currentTime, setCurrentTime] = useState('');
@@ -120,7 +122,7 @@ export const TerraDashboard: React.FC<TerraDashboardProps> = ({
             onClick={() => onNavigate('risk-details')}
             className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs sm:text-sm tracking-wide shadow cursor-pointer transition-all flex-shrink-0"
           >
-            Check
+            {t('dashboard.check')}
           </button>
         </div>
 
@@ -131,7 +133,7 @@ export const TerraDashboard: React.FC<TerraDashboardProps> = ({
           </span>
           <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-500 border border-emerald-500/30 font-bold text-[11px]">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            Live Data
+            {t('dashboard.liveData')}
           </span>
         </div>
       </div>
@@ -148,7 +150,7 @@ export const TerraDashboard: React.FC<TerraDashboardProps> = ({
         >
           <div>
             <span className="text-xs font-mono font-bold uppercase text-slate-400 tracking-wider">
-              Current Risk Level
+              {t('dashboard.currentRiskLevel')}
             </span>
 
             {/* Risk Badge Header */}
@@ -164,10 +166,10 @@ export const TerraDashboard: React.FC<TerraDashboardProps> = ({
               </div>
               <div>
                 <h2 className="text-2xl sm:text-3xl font-black text-red-500 tracking-tight">
-                  {selectedZone.riskStatus === 'CRITICAL RED' ? 'High Risk' : 'Moderate Risk'}
+                  {selectedZone.riskStatus === 'CRITICAL RED' ? t('dashboard.highRisk') : t('dashboard.moderateRisk')}
                 </h2>
                 <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium">
-                  Increased chance of landslide in the next 24-48 hours.
+                  {t('dashboard.riskWindow')}
                 </p>
               </div>
             </div>
@@ -184,7 +186,7 @@ export const TerraDashboard: React.FC<TerraDashboardProps> = ({
               >
                 <span className="flex items-center gap-1 text-[11px] font-mono text-slate-400">
                   <Zap className="w-3.5 h-3.5 text-red-400" />
-                  Risk Score
+                  {t('dashboard.riskScore')}
                 </span>
                 <span className="text-lg sm:text-xl font-bold font-mono text-red-500 block mt-1">
                   {selectedZone.rfConfidence || '78%'}
@@ -201,7 +203,7 @@ export const TerraDashboard: React.FC<TerraDashboardProps> = ({
               >
                 <span className="flex items-center gap-1 text-[11px] font-mono text-slate-400">
                   <CloudRain className="w-3.5 h-3.5 text-cyan-400" />
-                  Rainfall (24h)
+                  {t('dashboard.rainfall24h')}
                 </span>
                 <span className="text-lg sm:text-xl font-bold font-mono text-cyan-400 block mt-1">
                   120 mm
@@ -218,7 +220,7 @@ export const TerraDashboard: React.FC<TerraDashboardProps> = ({
               >
                 <span className="flex items-center gap-1 text-[11px] font-mono text-slate-400">
                   <Droplets className="w-3.5 h-3.5 text-amber-400" />
-                  Soil Moisture
+                  {t('dashboard.soilMoisture')}
                 </span>
                 <span className="text-lg sm:text-xl font-bold font-mono text-amber-400 block mt-1">
                   {selectedZone.soilPoreSaturation}
@@ -235,7 +237,7 @@ export const TerraDashboard: React.FC<TerraDashboardProps> = ({
               >
                 <span className="flex items-center gap-1 text-[11px] font-mono text-slate-400">
                   <TrendingUp className="w-3.5 h-3.5 text-red-400" />
-                  Slope Angle
+                  {t('dashboard.slopeAngle')}
                 </span>
                 <span className="text-lg sm:text-xl font-bold font-mono text-white block mt-1">
                   {selectedZone.slopeGradient}
@@ -265,7 +267,7 @@ export const TerraDashboard: React.FC<TerraDashboardProps> = ({
           <div>
             <div className="flex items-center justify-between">
               <span className="text-xs font-mono font-bold uppercase text-slate-400 tracking-wider">
-                Live View
+                {t('dashboard.liveView')}
               </span>
               <span className="text-[10px] font-mono text-cyan-400 flex items-center gap-1">
                 <Radio className="w-3 h-3 animate-pulse" />
@@ -338,8 +340,8 @@ export const TerraDashboard: React.FC<TerraDashboardProps> = ({
             <Map className="w-5 h-5" />
           </div>
           <div className="flex-1 min-w-0">
-            <h4 className="text-sm font-bold truncate">View Risk Map</h4>
-            <p className="text-[11px] text-slate-400 truncate">Explore risk zones</p>
+            <h4 className="text-sm font-bold truncate">{t('dashboard.viewRiskMap')}</h4>
+            <p className="text-[11px] text-slate-400 truncate">{t('dashboard.exploreRiskZones')}</p>
           </div>
           <ArrowUpRight className="w-4 h-4 text-slate-400 group-hover:text-emerald-500 transition-colors" />
         </div>
@@ -357,8 +359,8 @@ export const TerraDashboard: React.FC<TerraDashboardProps> = ({
             <BellRing className="w-5 h-5" />
           </div>
           <div className="flex-1 min-w-0">
-            <h4 className="text-sm font-bold truncate">Check Alerts</h4>
-            <p className="text-[11px] text-slate-400 truncate">Latest warnings</p>
+            <h4 className="text-sm font-bold truncate">{t('dashboard.checkAlerts')}</h4>
+            <p className="text-[11px] text-slate-400 truncate">{t('dashboard.latestWarnings')}</p>
           </div>
           <ArrowUpRight className="w-4 h-4 text-slate-400 group-hover:text-amber-500 transition-colors" />
         </div>
@@ -376,8 +378,8 @@ export const TerraDashboard: React.FC<TerraDashboardProps> = ({
             <ShieldAlert className="w-5 h-5" />
           </div>
           <div className="flex-1 min-w-0">
-            <h4 className="text-sm font-bold truncate">Emergency SOS</h4>
-            <p className="text-[11px] text-slate-400 truncate">Get help now</p>
+            <h4 className="text-sm font-bold truncate">{t('dashboard.emergencySos')}</h4>
+            <p className="text-[11px] text-slate-400 truncate">{t('dashboard.getHelpNow')}</p>
           </div>
           <ArrowUpRight className="w-4 h-4 text-slate-400 group-hover:text-red-500 transition-colors" />
         </div>
@@ -395,8 +397,8 @@ export const TerraDashboard: React.FC<TerraDashboardProps> = ({
             <PhoneCall className="w-5 h-5" />
           </div>
           <div className="flex-1 min-w-0">
-            <h4 className="text-sm font-bold truncate">Nearby Helplines</h4>
-            <p className="text-[11px] text-slate-400 truncate">Important contacts</p>
+            <h4 className="text-sm font-bold truncate">{t('dashboard.nearbyHelplines')}</h4>
+            <p className="text-[11px] text-slate-400 truncate">{t('dashboard.importantContacts')}</p>
           </div>
           <ArrowUpRight className="w-4 h-4 text-slate-400 group-hover:text-cyan-500 transition-colors" />
         </div>
@@ -414,14 +416,14 @@ export const TerraDashboard: React.FC<TerraDashboardProps> = ({
           <div>
             <h3 className="text-base font-bold flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 text-amber-500" />
-              <span>Current High &amp; Medium Warning Zones</span>
+              <span>{t('dashboard.warningZones')}</span>
             </h3>
             <p className="text-xs text-slate-400 mt-0.5">
-              Live hydrological, geological, and kinematic status across vulnerable corridors.
+              {t('dashboard.warningZonesDescription')}
             </p>
           </div>
           <span className="text-xs font-mono font-bold px-2.5 py-1 rounded bg-red-500/10 text-red-500 border border-red-500/30">
-            {warningZones.length} Corridors Active
+            {warningZones.length} {t('dashboard.corridorsActive')}
           </span>
         </div>
 
@@ -456,7 +458,7 @@ export const TerraDashboard: React.FC<TerraDashboardProps> = ({
               {/* Data metrics */}
               <div className="grid grid-cols-2 gap-2 mt-3 text-xs font-mono">
                 <div>
-                  <span className="text-slate-400 block text-[10px]">24H RAIN</span>
+                  <span className="text-slate-400 block text-[10px]">{t('dashboard.rain24h')}</span>
                   <span className="font-bold text-cyan-500">120 mm</span>
                 </div>
                 <div>
@@ -468,7 +470,7 @@ export const TerraDashboard: React.FC<TerraDashboardProps> = ({
                   <span className="font-bold text-slate-200 dark:text-white">{zone.slopeGradient}</span>
                 </div>
                 <div>
-                  <span className="text-slate-400 block text-[10px]">LEAD-TIME EVAC</span>
+                  <span className="text-slate-400 block text-[10px]">{t('dashboard.leadTimeEvac')}</span>
                   <span className="font-bold text-emerald-500">{zone.lstmEvac}</span>
                 </div>
               </div>
@@ -476,7 +478,7 @@ export const TerraDashboard: React.FC<TerraDashboardProps> = ({
               <div className="mt-3 pt-2.5 border-t border-slate-700/30 flex items-center justify-between text-[11px]">
                 <span className="text-slate-400 font-mono">{zone.populationRunout}</span>
                 <span className="text-emerald-500 font-bold flex items-center gap-0.5">
-                  Inspect <ChevronRight className="w-3 h-3" />
+                  {t('dashboard.inspect')} <ChevronRight className="w-3 h-3" />
                 </span>
               </div>
             </div>

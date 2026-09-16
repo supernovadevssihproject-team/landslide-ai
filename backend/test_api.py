@@ -9,6 +9,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from starlette.testclient import TestClient
 from backend.main import app
 from backend.services import earthquake_service as earthquake_module
+from backend.services.chatbot_service import generate_offline_response
 
 client = TestClient(app)
 
@@ -20,6 +21,94 @@ def test_health():
     assert res2.status_code == 200
     assert res2.json()["status"] == "healthy"
     print("[PASS] Health check endpoints (/health, /api/health) passed")
+
+
+def test_chatbot_language_support():
+    response = client.post("/api/chat", json={
+        "message": "What is the risk in Sikkim?",
+        "history": [],
+        "language": "hi"
+    })
+    assert response.status_code == 200
+    payload = response.json()
+    assert isinstance(payload["reply"], str)
+    assert "" != payload["reply"].strip()
+    print(f"[PASS] Chatbot language support passed: {payload['source']} in hi mode")
+
+
+def test_chatbot_all_language_responses():
+    language_markers = {
+        "en": "TerraGuard Assistant can analyze",
+        "hi": "TerraGuard सहायक",
+        "as": "TerraGuard সহায়কে",
+        "bn": "TerraGuard সহায়ক",
+        "brx": "TerraGuard सहायक",
+        "ks": "TerraGuard madadgar",
+        "mni": "TerraGuard assistant-na",
+        "lus": "TerraGuard assistant chuan",
+        "ne": "TerraGuard सहायकले",
+    }
+    english_reply = None
+    for language, marker in language_markers.items():
+        response = client.post("/api/chat", json={"message": "hello", "language": language})
+        assert response.status_code == 200
+        reply = response.json()["reply"]
+        assert marker in reply
+        if language == "en":
+            english_reply = reply
+        else:
+            assert reply != english_reply
+
+    structured = generate_offline_response(
+        "North Cachar Hills risk?",
+        loc_context={
+            "location": {"name": "North Cachar Hills", "zone_id": "zone-test", "lat": 25.2, "lon": 93.0},
+            "risk_details": {
+                "final_risk_score": 42,
+                "risk_level": "MODERATE",
+                "base_ml_probability": 0.42,
+                "inputs": {
+                    "rainfall": {"rainfall_3d_mm": 120},
+                    "slope_deg": 35,
+                    "elevation_m": 900,
+                    "seismic": {"seismic_trigger_score": 0.1},
+                    "soil_details": {"soil_name": "Loam"},
+                },
+                "location": {"latitude": 25.2, "longitude": 93.0},
+            },
+        },
+        language="hi",
+    )
+    assert "कुल भूस्खलन जोखिम स्कोर" in structured["reply"]
+    assert "42 / 100" in structured["reply"]
+    print("[PASS] Chatbot responses and structured location-risk localization passed for all 9 languages")
+
+
+def test_chatbot_navigation_commands():
+    commands = {
+        "Show me the risk map": "risk-map",
+        "Open earthquake monitor": "earthquake-monitor",
+        "Show weather": "dashboard",
+        "Open Hills": "hills-regions",
+        "Open Hills and Mountain Regions": "hills-regions",
+        "Show mountain regions": "hills-regions",
+        "Go to hills": "hills-regions",
+        "Open Regions": "hills-regions",
+        "Show regions": "hills-regions",
+        "Go to regions": "hills-regions",
+        "Show hills in Meghalaya": "hills-regions",
+        "Open alerts": "alerts",
+        "Report a hazard": "crowdsource-cv-verification",
+        "Go home": "home",
+    }
+    for message, module in commands.items():
+        response = client.post("/api/chat", json={"message": message, "language": "en"})
+        assert response.status_code == 200
+        action = response.json()["action"]
+        assert action["type"] == "NAVIGATE"
+        assert action["module"] == module
+    print("[PASS] Chatbot navigation commands preserved shared action routing")
+
 
 def test_hazard_zones():
     response = client.get("/api/zones")
@@ -311,5 +400,7 @@ if __name__ == "__main__":
     test_official_earthquake_contract()
     test_earthquake_parser_and_safe_fallback()
     test_chatbot()
-    print("\nAll 22 Backend API tests passed successfully!\n")
+    test_chatbot_all_language_responses()
+    test_chatbot_navigation_commands()
+    print("\nAll 24 Backend API tests passed successfully!\n")
 

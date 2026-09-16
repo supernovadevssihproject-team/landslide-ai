@@ -21,6 +21,7 @@ import {
   Flame,
   Building,
 } from 'lucide-react';
+import { useI18n } from '../i18n/index.tsx';
 
 interface TerraEmergencySosProps {
   selectedZone: HazardZone;
@@ -37,6 +38,7 @@ export const TerraEmergencySos: React.FC<TerraEmergencySosProps> = ({
   sirenActive,
   onToggleSiren,
 }) => {
+  const { t } = useI18n();
   const [activeCategory, setActiveCategory] = useState<'all' | 'government' | 'local' | 'medical' | 'rescue'>('all');
   const [sosSent, setSosSent] = useState(false);
   const [copiedCoords, setCopiedCoords] = useState(false);
@@ -93,9 +95,9 @@ export const TerraEmergencySos: React.FC<TerraEmergencySosProps> = ({
                 <AlertOctagon className="w-8 h-8 animate-pulse" />
               </span>
               <div>
-                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Emergency SOS Dispatch</h1>
+                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{t('emergencySos.title')}</h1>
                 <p className={`text-xs sm:text-sm mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                  Direct satellite uplink, offline beacon broadcasting, and official emergency helpline contacts
+                  {t('emergencySos.description')}
                 </p>
               </div>
             </div>
@@ -114,7 +116,7 @@ export const TerraEmergencySos: React.FC<TerraEmergencySosProps> = ({
                   }`}
                 >
                   {sirenActive ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-                  <span>{sirenActive ? 'Silence Acoustic Siren' : 'Sound Emergency Siren'}</span>
+                  <span>{sirenActive ? t('emergencySos.silenceSiren') : t('emergencySos.soundSiren')}</span>
                 </button>
               </div>
             )}
@@ -150,7 +152,7 @@ export const TerraEmergencySos: React.FC<TerraEmergencySosProps> = ({
               >
                 <span>SOS</span>
                 <span className="text-[10px] font-semibold tracking-wider mt-0.5 opacity-90">
-                  {sosSent ? 'TRANSMITTING' : 'PRESS TO ALERT'}
+                  {sosSent ? t('emergencySos.transmitting') : t('emergencySos.pressToAlert')}
                 </span>
               </button>
             </div>
@@ -160,16 +162,16 @@ export const TerraEmergencySos: React.FC<TerraEmergencySosProps> = ({
               <div className="mt-4 p-4 rounded-xl bg-red-500/15 border border-red-500/30 text-red-500 text-xs text-center space-y-1">
                 <div className="font-bold flex items-center justify-center gap-1.5 text-sm">
                   <Radio className="w-4 h-4 animate-spin" />
-                  <span>EMERGENCY DISPATCH TRANSMITTED</span>
+                  <span>{t('emergencySos.dispatchTransmitted')}</span>
                 </div>
                 <p className="text-[11px] text-slate-300">
-                  Coordinates sent via Satellite Telemetry & LoRa Emergency Mesh Relay to USDMA / NDRF Control.
+                  {t('emergencySos.coordinatesSent')}
                 </p>
                 <button
                   onClick={() => setSosSent(false)}
                   className="mt-2 text-[10px] underline font-medium hover:text-white"
                 >
-                  Reset SOS Beacon
+                  {t('emergencySos.resetBeacon')}
                 </button>
               </div>
             ) : (
@@ -178,7 +180,7 @@ export const TerraEmergencySos: React.FC<TerraEmergencySosProps> = ({
                   isDark ? 'text-slate-400' : 'text-slate-500'
                 }`}
               >
-                Tap to broadcast immediate rescue coordinates to state emergency response authorities and sound the sirens.
+                {t('emergencySos.broadcastDescription')}
               </p>
             )}
           </div>
@@ -193,10 +195,10 @@ export const TerraEmergencySos: React.FC<TerraEmergencySosProps> = ({
               <div className="flex items-center justify-between border-b pb-4 mb-4 border-slate-200 dark:border-slate-800">
                 <div className="flex items-center gap-2">
                   <MapPin className="w-5 h-5 text-emerald-500" />
-                  <h2 className="text-lg font-bold">Offline Location Sharing</h2>
+                  <h2 className="text-lg font-bold">{t('emergencySos.locationSharing')}</h2>
                 </div>
                 <span className="text-xs px-2.5 py-1 rounded-md bg-emerald-500/15 text-emerald-500 font-semibold">
-                  Dual GNSS Active
+                  {t('emergencySos.gnssActive')}
                 </span>
               </div>
 
@@ -206,21 +208,21 @@ export const TerraEmergencySos: React.FC<TerraEmergencySosProps> = ({
                     isDark ? 'bg-slate-800/40 border-slate-700/70' : 'bg-slate-50 border-slate-200'
                   }`}
                 >
-                  <div className="text-xs text-slate-400 font-medium">Selected Ground Station / Current Position:</div>
+                  <div className="text-xs text-slate-400 font-medium">{t('emergencySos.groundStation')}</div>
                   <div className="text-base sm:text-lg font-bold mt-1 text-emerald-500">
                     {selectedZone.name}
                   </div>
                   <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs font-mono">
                     <div>
-                      <span className="text-slate-400">Coords:</span>{' '}
+                      <span className="text-slate-400">{t('emergencySos.coords')}</span>{' '}
                       <span className="font-bold">{selectedZone.coords}</span>
                     </div>
                     <div>
-                      <span className="text-slate-400">Elevation:</span>{' '}
+                      <span className="text-slate-400">{t('emergencySos.elevation')}</span>{' '}
                       <span className="font-bold">{selectedZone.elevation}</span>
                     </div>
                     <div>
-                      <span className="text-slate-400">Precision:</span>{' '}
+                      <span className="text-slate-400">{t('emergencySos.precision')}</span>{' '}
                       <span className="font-bold text-emerald-500">±3.5 meters</span>
                     </div>
                   </div>
@@ -238,7 +240,7 @@ export const TerraEmergencySos: React.FC<TerraEmergencySosProps> = ({
                     }`}
                   >
                     {copiedCoords ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                    <span>{copiedCoords ? 'Coordinates Copied!' : 'Copy GPS Coordinates'}</span>
+                    <span>{copiedCoords ? t('emergencySos.coordinatesCopied') : t('emergencySos.copyCoordinates')}</span>
                   </button>
 
                   <a
@@ -246,7 +248,7 @@ export const TerraEmergencySos: React.FC<TerraEmergencySosProps> = ({
                     className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold transition-all shadow-md shadow-blue-600/20"
                   >
                     <Send className="w-4 h-4" />
-                    <span>Send SMS via Offline Carrier (1078)</span>
+                    <span>{t('emergencySos.sendSms')}</span>
                   </a>
 
                   <button
@@ -258,7 +260,7 @@ export const TerraEmergencySos: React.FC<TerraEmergencySosProps> = ({
                     }`}
                   >
                     <Navigation className="w-4 h-4" />
-                    <span>Open Safe Routes Map</span>
+                    <span>{t('emergencySos.safeRoutes')}</span>
                   </button>
                 </div>
               </div>
@@ -271,7 +273,7 @@ export const TerraEmergencySos: React.FC<TerraEmergencySosProps> = ({
             >
               <Radio className="w-4 h-4 text-emerald-500 shrink-0" />
               <span>
-                <strong>Offline Mesh Relay:</strong> If cell towers fail, TerraGuard automatically transmits beacon packets over 868MHz LoRa mesh repeaters to disaster authorities.
+                <strong>{t('emergencySos.offlineMesh')}</strong> If cell towers fail, TerraGuard automatically transmits beacon packets over 868MHz LoRa mesh repeaters to disaster authorities.
               </span>
             </div>
           </div>
@@ -285,9 +287,9 @@ export const TerraEmergencySos: React.FC<TerraEmergencySosProps> = ({
         >
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b pb-4 mb-6 border-slate-200 dark:border-slate-800">
             <div>
-              <h3 className="text-lg font-bold">Official Emergency Helpline Contacts</h3>
+              <h3 className="text-lg font-bold">{t('emergencySos.helplines')}</h3>
               <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                Verified 24x7 crisis desks across Government, Local District, Medical, and Search & Rescue
+                {t('emergencySos.helplinesDescription')}
               </p>
             </div>
 

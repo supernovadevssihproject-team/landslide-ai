@@ -15,6 +15,7 @@ import { HILLS_AND_MOUNTAIN_REGIONS, HillsRegion } from './data/hillsData';
 import { LandslideApi } from './services/api';
 import { VolumeX, Zap } from 'lucide-react';
 import { useMapContext } from './context/MapContext';
+import { useI18n } from './i18n/index.tsx';
 
 const TerraDashboard = lazy(() => import('./components/TerraDashboard').then((module) => ({ default: module.TerraDashboard })));
 const TerraRiskDetails = lazy(() => import('./components/TerraRiskDetails').then((module) => ({ default: module.TerraRiskDetails })));
@@ -38,6 +39,7 @@ const ModuleLoadingFallback = () => (
 );
 
 export default function App() {
+  const { language, setLanguage } = useI18n();
   const {
     selectedRegion,
     setSelectedRegion,
@@ -239,6 +241,8 @@ export default function App() {
         onOpenReportHazard={() => setIsFieldModalOpen(true)}
         theme={theme}
         onToggleTheme={toggleTheme}
+        language={language}
+        setLanguage={setLanguage}
       />
 
       {/* Main Navigation Tabs */}
@@ -247,6 +251,7 @@ export default function App() {
         onChangeModule={handleNavigateModule}
         reportCount={12}
         theme={theme}
+        language={language}
       />
 
       {/* Main Operational Screen Views */}
@@ -257,6 +262,7 @@ export default function App() {
           <TerraHome
             zones={zones}
             selectedZone={selectedZone}
+            language={language}
             onCheckLocationRisk={(zone) => {
               setSelectedZone(zone);
               handleNavigateModule('risk-map');

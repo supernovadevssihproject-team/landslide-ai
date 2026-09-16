@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { OperationalModule } from '../types';
+import { useI18n } from '../i18n/index.tsx';
 import {
   Home,
   LayoutDashboard,
@@ -21,6 +22,7 @@ interface NavigationProps {
   onChangeModule: (module: OperationalModule) => void;
   reportCount?: number;
   theme?: 'dark' | 'light';
+  language?: 'en' | 'hi';
 }
 
 export const Navigation: React.FC<NavigationProps> = ({
@@ -28,7 +30,9 @@ export const Navigation: React.FC<NavigationProps> = ({
   onChangeModule,
   reportCount = 12,
   theme = 'dark',
+  language,
 }) => {
+  const { t } = useI18n();
   const isDark = theme === 'dark';
   const scrollRef = useRef<HTMLDivElement>(null);
   const activeButtonRef = useRef<HTMLButtonElement>(null);
@@ -87,68 +91,68 @@ export const Navigation: React.FC<NavigationProps> = ({
   }[] = [
     {
       id: 'home',
-      title: 'Home',
+      title: t('navigation.home'),
       icon: Home,
     },
     {
       id: 'dashboard',
-      title: 'Dashboard',
+      title: t('navigation.dashboard'),
       icon: LayoutDashboard,
       badge: 'Live',
       badgeColor: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30',
     },
     {
       id: 'risk-map',
-      title: 'Risk Map',
+      title: t('navigation.riskMap'),
       icon: Map,
       badge: 'GIS 3D',
       badgeColor: 'text-cyan-400 bg-cyan-500/10 border-cyan-500/30',
     },
     {
       id: 'earthquake-monitor',
-      title: 'Earthquakes',
+      title: t('navigation.earthquakes'),
       icon: Activity,
       badge: 'NCS Live',
       badgeColor: 'text-orange-400 bg-orange-500/10 border-orange-500/30',
     },
     {
       id: 'risk-details',
-      title: 'Risk Details',
+      title: t('navigation.riskDetails'),
       icon: BarChart2,
       badge: 'Analytics',
       badgeColor: 'text-purple-400 bg-purple-500/10 border-purple-500/30',
     },
     {
       id: 'alerts',
-      title: 'Alerts',
+      title: t('navigation.alerts'),
       icon: Bell,
       badge: '4 High',
       badgeColor: 'text-red-400 bg-red-500/15 border-red-500/30 animate-pulse',
     },
     {
       id: 'emergency-sos',
-      title: 'Emergency SOS',
+      title: t('navigation.emergencySos'),
       icon: AlertOctagon,
       badge: '24x7',
       badgeColor: 'text-rose-400 bg-rose-500/15 border-rose-500/30',
     },
     {
       id: 'risk-simulator',
-      title: 'ML Simulator',
+      title: t('navigation.mlSimulator'),
       icon: PlayCircle,
       badge: 'Real ML',
       badgeColor: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30',
     },
     {
       id: 'hills-regions',
-      title: 'Hills & Mountain Regions',
+      title: t('navigation.hillsMountains'),
       icon: Mountain,
       badge: 'NER',
       badgeColor: 'text-cyan-400 bg-cyan-500/10 border-cyan-500/30',
     },
     {
       id: 'about',
-      title: 'About & ML',
+      title: t('navigation.about'),
       icon: Cpu,
     },
   ];
