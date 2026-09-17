@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, Minus, Send, Bot, User, Sparkles, MapPin, AlertTriangle, ArrowRight, Home, ChevronLeft, Mountain, ShieldAlert, Activity, Database, Droplets, Gauge, LocateFixed, Radio, Languages, Mic, Square, Volume2, VolumeX } from 'lucide-react';
+import { X, Minus, Send, Bot, User, Sparkles, MapPin, AlertTriangle, ArrowRight, Home, ChevronLeft, Mountain, ShieldAlert, Activity, Database, Droplets, Gauge, LocateFixed, Radio, Mic, Square, Volume2, VolumeX } from 'lucide-react';
 import { LandslideApi } from '../services/api';
 import { LocationRiskEvaluation, OperationalModule, HazardZone } from '../types';
 import { HillsRegion, HILLS_AND_MOUNTAIN_REGIONS } from '../data/hillsData';
@@ -182,13 +182,13 @@ const CHATBOT_COPY: Record<ChatbotLanguage, {
   evaluationError: string;
 }> = {
   en: {
-    welcome: 'Hello! Welcome to TerraGuard AI. 🌿\n\nPlease select your chatbot language.',
-    returningWelcome: 'How can I help you today?',
+    welcome: 'Hello! Welcome to TerraGuard AI. 🌿\n\nPlease choose your chatbot language.',
+    returningWelcome: 'Great! You\'re ready to explore TerraGuard. What would you like to explore?',
     error: '⚠️ Failed to connect to TerraGuard AI Assistant. Please check your network.',
-    hillsPrompt: 'Choose a hill or mountain to check its current risk.',
-    regionsPrompt: 'Choose a state to explore monitored regions and places.',
-    regionPrompt: (state) => `Choose a monitored region or place in ${state}.`,
-    hillPrompt: (state) => `Choose a hill or mountain in ${state}.`,
+    hillsPrompt: 'Great! Let\'s explore the hills and mountain regions. Which state would you like to explore?',
+    regionsPrompt: 'Great! Let\'s explore regions and places. Which state would you like to explore?',
+    regionPrompt: (state) => `${state} selected. Which region or place would you like to explore?`,
+    hillPrompt: (state) => `${state} selected. Which hill or mountain region would you like to explore?`,
     unavailable: (name) => `I don't have verified coordinates for ${name}, so a location-specific risk evaluation isn't available yet.`,
     evaluationError: 'Unable to evaluate this location through the TerraGuard location-risk service.',
   },
@@ -328,7 +328,6 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
   onSelectRegion,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [isExitPromptOpen, setIsExitPromptOpen] = useState(false);
   const { language, t } = useI18n();
   const { language: chatbotLanguage, setLanguage: setChatbotLanguage } = useChatbotLanguage(language);
   const chatbotCopy = CHATBOT_COPY[chatbotLanguage];
@@ -527,7 +526,6 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
     setSelectedGuideLocation(null);
     setInput('');
     setIsLoading(false);
-    setIsExitPromptOpen(false);
     setChatbotSession({
       flow: 'LANGUAGE_SELECTION',
       exploration: null,
@@ -558,32 +556,8 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
     stopSpeaking();
     setIsVoiceProcessing(false);
     setSessionExited(true);
-    setIsExitPromptOpen(false);
     setIsOpen(false);
     resetFreshChatSession();
-  };
-
-  const handleExitLanguageSelection = (nextLanguage: ChatbotLanguage) => {
-    cancelChatRequest();
-    cancelLocationRiskRequest();
-    stopListening();
-    stopSpeaking();
-    lastGuidedTransitionRef.current = null;
-    setChatbotLanguage(nextLanguage);
-    setMessages([{
-      id: `welcome-${Date.now()}`,
-      role: 'assistant',
-      content: CHATBOT_COPY[nextLanguage].welcome,
-      source: 'terraguard-engine',
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    }]);
-    setGuide('home');
-    setGuideState(null);
-    setSelectedGuideLocation(null);
-    setInput('');
-    setIsLoading(false);
-    setIsExitPromptOpen(false);
-    setIsOpen(false);
   };
 
   const handleChatbotLanguageChange = (nextLanguage: ChatbotLanguage) => {
@@ -594,16 +568,11 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
     setIsVoiceProcessing(false);
     setVoiceStatus(null);
     setChatbotLanguage(nextLanguage);
-    setMessages((previous) => [
-      ...previous.filter((msg) => msg.id !== 'welcome-msg'),
-      {
-        id: `welcome-${Date.now()}`,
-        role: 'assistant',
-        content: CHATBOT_COPY[nextLanguage].welcome,
-        source: 'terraguard-engine',
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      },
-    ]);
+    setMessages((previous) => previous.map((msg) => (
+      msg.id === 'welcome-msg'
+        ? { ...msg, content: CHATBOT_COPY[nextLanguage].welcome }
+        : msg
+    )));
     setChatbotSession((previous) => ({
       ...previous,
       flow: previous.flow === 'LANGUAGE_SELECTION' ? 'LANGUAGE_SELECTION' : previous.flow,
@@ -1170,26 +1139,11 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
                   {t('chatbot.title')}
                   <Sparkles className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
                 </h3>
-                <p className={`text-[11px] ${isDark ? 'text-slate-400' : 'text-emerald-100'}`}>
-                  <span className="inline-flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-emerald-300 shadow-[0_0_8px_currentColor]" />{t('chatbot.languageLabel')} · {chatbotLanguageOptions.find((o) => o.id === chatbotLanguage)?.label}</span>
-                </p>
               </div>
             </div>
             <div className="flex items-center gap-1.5">
-              <div className="relative">
-                <label className="sr-only" htmlFor="chatbot-language-select">{t('chatbot.selectLanguage')}</label>
-                <div className={`flex items-center gap-1 rounded-lg border px-2 py-1 ${isDark ? 'border-slate-600 bg-slate-800 text-slate-100' : 'border-slate-200 bg-white text-slate-700'}`}>
-                  <Languages className="h-3.5 w-3.5 text-emerald-500" />
-                  <select
-                    id="chatbot-language-select"
-                    value={chatbotLanguage}
-                    onChange={(e) => handleChatbotLanguageChange(e.target.value as ChatbotLanguage)}
-                    aria-label={t('chatbot.selectLanguage')}
-                    className={`appearance-none bg-transparent pr-5 text-[10px] font-medium outline-none ${isDark ? 'text-slate-100' : 'text-slate-700'}`}
-                  >
-                    {chatbotLanguageOptions.map((option) => <option key={option.id} value={option.id} className={isDark ? 'bg-slate-900 text-slate-100' : 'bg-white text-slate-900'}>{option.label}</option>)}
-                  </select>
-                </div>
+              <div className={`rounded-lg border px-2 py-1 text-[10px] font-medium ${isDark ? 'border-slate-600 bg-slate-800 text-slate-100' : 'border-slate-200 bg-white text-slate-700'}`}>
+                {t('chatbot.languageLabel')} · {chatbotLanguageOptions.find((o) => o.id === chatbotLanguage)?.label}
               </div>
               <button
                 type="button"
@@ -1233,39 +1187,7 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
             </div>
           </div>
 
-          {isExitPromptOpen ? (
-            <div className={`flex flex-1 flex-col items-center justify-center gap-5 p-6 text-center animate-in fade-in slide-in-from-bottom-2 duration-300 ${isDark ? 'bg-slate-950/60' : 'bg-slate-50'}`}>
-              <div className={`w-full rounded-2xl border p-5 ${isDark ? 'border-emerald-500/25 bg-emerald-500/5' : 'border-emerald-200 bg-emerald-50/80'}`}>
-                <div className={`text-sm font-semibold leading-relaxed ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
-                  {chatbotExitCopy.farewell}
-                </div>
-                <div className={`mt-4 text-xs font-semibold ${isDark ? 'text-emerald-300' : 'text-emerald-700'}`}>
-                  {chatbotExitCopy.chooseLanguage}
-                </div>
-              </div>
-              <div className="grid w-full grid-cols-2 gap-2 sm:grid-cols-3" role="group" aria-label={chatbotExitCopy.chooseLanguage}>
-                {chatbotLanguageOptions.map((option) => (
-                  <button
-                    key={option.id}
-                    type="button"
-                    onClick={() => handleExitLanguageSelection(option.id)}
-                    aria-label={option.label}
-                    className={`rounded-xl border px-3 py-2.5 text-xs font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
-                      option.id === chatbotLanguage
-                        ? isDark
-                          ? 'border-emerald-400 bg-emerald-500/20 text-emerald-200'
-                          : 'border-emerald-500 bg-emerald-100 text-emerald-800'
-                        : isDark
-                        ? 'border-slate-700 bg-slate-900/70 text-slate-300 hover:border-emerald-500 hover:text-emerald-200'
-                        : 'border-slate-200 bg-white text-slate-700 hover:border-emerald-500 hover:text-emerald-700'
-                    }`}
-                  >
-                    {option.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          ) : chatbotSession.flow === 'LANGUAGE_SELECTION' ? (
+          {chatbotSession.flow === 'LANGUAGE_SELECTION' ? (
             <div className={`flex flex-1 flex-col items-center justify-center gap-5 p-6 text-center ${isDark ? 'bg-slate-950/60' : 'bg-slate-50'}`}>
               <div className={`w-full rounded-2xl border p-5 ${isDark ? 'border-emerald-500/25 bg-emerald-500/5' : 'border-emerald-200 bg-emerald-50/80'}`}>
                 <div className={`text-sm font-semibold leading-relaxed ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
@@ -1335,7 +1257,8 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
             <div className={`flex items-center gap-1.5 px-3 py-2 border-b text-[11px] ${isDark ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-50 border-slate-200'}`}>
               <button onClick={resetConversation} aria-label={t('chatbot.returnHome')} className="flex items-center gap-1 rounded-lg border border-slate-500/50 px-2 py-1 text-slate-400 transition-colors hover:border-emerald-500 hover:text-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"><Home className="h-3.5 w-3.5" /> {t('navigation.home')}</button>
               {guideState && <button onClick={() => setGuideState(null)} aria-label={t('chatbot.goBack')} className="flex items-center gap-1 rounded-lg border border-slate-500/50 px-2 py-1 text-slate-400 transition-colors hover:border-emerald-500 hover:text-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"><ChevronLeft className="h-3.5 w-3.5" /> {t('chatbot.goBack')}</button>}
-              <span className="ml-1 font-semibold">{guide === 'regions' ? t('chatbot.regionsPrompt') : t('chatbot.hillsPrompt')}</span>
+              <span className="ml-1 font-semibold text-emerald-500/90">{guide === 'regions' ? 'Regions & Places' : 'Hills & Mountains'}</span>
+              {guideState && <span className="ml-1 text-slate-400">• {guideState}</span>}
             </div>
           )}
 
