@@ -300,7 +300,7 @@ def generate_offline_response(message: str, loc_context: Optional[Dict[str, Any]
             "soil": "Soil",
             "seismic": "Seismic trigger score",
             "disclaimer": "TerraGuard is decision support, not an official warning or evacuation order. Follow SDMA/NDMA and local authority instructions.",
-            "fallback": "TerraGuard Assistant can analyze real-time landslide risk, terrain, rainfall, and seismic activity.\n\nTry asking about Teesta Basin, a Risk Map location, rainfall, or emergency safety.",
+            "fallback": "TerraGuard Assistant can analyze real-time landslide risk, terrain, rainfall, and seismic activity.\n\nTry asking about a Risk Map location, rainfall, or emergency safety.",
         },
         "hi": {
             "assessment": "TerraGuard रिस्क मैप विश्लेषण",
@@ -313,7 +313,7 @@ def generate_offline_response(message: str, loc_context: Optional[Dict[str, Any]
             "soil": "मिट्टी",
             "seismic": "भूकंपीय ट्रिगर स्कोर",
             "disclaimer": "TerraGuard निर्णय सहायक है, आधिकारिक चेतावनी या निकासी आदेश नहीं है। SDMA/NDMA और स्थानीय प्राधिकरण के निर्देशों का पालन करें।",
-            "fallback": "TerraGuard सहायक वास्तविक समय भूस्खलन जोखिम, भू-आकार, वर्षा और भूकंपीय गतिविधि का विश्लेषण कर सकता है।\n\nTeesta Basin, Risk Map स्थान, वर्षा या आपातकालीन सुरक्षा के बारे में पूछने का प्रयास करें।",
+            "fallback": "TerraGuard सहायक वास्तविक समय भूस्खलन जोखिम, भू-आकार, वर्षा और भूकंपीय गतिविधि का विश्लेषण कर सकता है।\n\nRisk Map स्थान, वर्षा या आपातकालीन सुरक्षा के बारे में पूछने का प्रयास करें।",
         },
         "as": {
             "assessment": "TerraGuard Risk Map বিশ্লেষণ",
@@ -326,7 +326,7 @@ def generate_offline_response(message: str, loc_context: Optional[Dict[str, Any]
             "soil": "মাটি",
             "seismic": "ভূকম্পন ট্ৰিগাৰ স্কোৰ",
             "disclaimer": "TerraGuard সিদ্ধান্ত সহায়ক, চৰকাৰী সতৰ্কবাণী বা স্থানান্তৰৰ আদেশ নহয়। SDMA/NDMA আৰু স্থানীয় কৰ্তৃপক্ষৰ নিৰ্দেশনা মানি চলক।",
-            "fallback": "TerraGuard সহায়কে ভূমিস্খলন ঝুঁকি, ভূ-প্ৰকৃতি, বৰষুণ আৰু ভূকম্পন সম্পৰ্কে বিশ্লেষণ কৰিব পাৰে।\n\nTeesta Basin, Risk Map, বৰষুণ বা জৰুৰী সুৰক্ষাৰ বিষয়ে সোধক।",
+            "fallback": "TerraGuard সহায়কে ভূমিস্খলন ঝুঁকি, ভূ-প্ৰকৃতি, বৰষুণ আৰু ভূকম্পন সম্পৰ্কে বিশ্লেষণ কৰিব পাৰে।\n\nRisk Map, বৰষুণ বা জৰুৰী সুৰক্ষাৰ বিষয়ে সোধক।",
         },
         "bn": {
             "assessment": "TerraGuard Risk Map বিশ্লেষণ",
@@ -352,7 +352,7 @@ def generate_offline_response(message: str, loc_context: Optional[Dict[str, Any]
             "soil": "हाम",
             "seismic": "भूकम्प ट्रिगार स्कोर",
             "disclaimer": "TerraGuard फिसायाव मदद होयो, सरकारी सोंदोब नङा। SDMA/NDMA आरो स्थानिय हुकुमनि उथान फाव।",
-            "fallback": "TerraGuard सहायक लैंडस्लाइड जोखिम, जमीन, अखा आरो भूकम्पनि बिबुंथि होयो।\n\nTeesta Basin, Risk Map, अखा एबा इमरजेन्सी सुरक्षा सोमोन्दै सों।",
+            "fallback": "TerraGuard सहायक लैंडस्लाइड जोखिम, जमीन, अखा आरो भूकम्पनि बिबुंथि होयो।\n\nRisk Map, अखा एबा इमरजेन्सी सुरक्षा सोमोन्दै सों।",
         },
         "ks": {
             "assessment": "TerraGuard Risk Map jaa'izah",
@@ -365,7 +365,7 @@ def generate_offline_response(message: str, loc_context: Optional[Dict[str, Any]
             "soil": "Matti",
             "seismic": "Zalzala trigger score",
             "disclaimer": "TerraGuard faisla-sazi madadgar chu, sarkaari khatre ya nikasi hukam na chu. SDMA/NDMA te maqami idaaran hinidayat maaniv۔",
-            "fallback": "TerraGuard madadgar landslide risk, zameen, baarish te zalzale di sargarmi jaa'iz karith sakaan۔\n\nTeesta Basin, Risk Map, baarish ya emergency safety baare puchiv۔",
+            "fallback": "TerraGuard madadgar landslide risk, zameen, baarish te zalzale di sargarmi jaa'iz karith sakaan۔\n\nRisk Map, baarish ya emergency safety baare puchiv۔",
         },
         "mni": {
             "assessment": "TerraGuard Risk Map gi wayel",
@@ -378,7 +378,7 @@ def generate_offline_response(message: str, loc_context: Optional[Dict[str, Any]
             "soil": "Lei",
             "seismic": "Earthquake trigger score",
             "disclaimer": "TerraGuard asi decision-support amadi official warning nattre. SDMA/NDMA amasung local authority-gi direction yeng-u.",
-            "fallback": "TerraGuard assistant-na landslide risk, terrain, nungsit amadi earthquake activity analyze touba ngammi.\n\nTeesta Basin, Risk Map, nungsit nattraga emergency safety gi maramda hang-u.",
+            "fallback": "TerraGuard assistant-na landslide risk, terrain, nungsit amadi earthquake activity analyze touba ngammi.\n\nRisk Map, nungsit nattraga emergency safety gi maramda hang-u.",
         },
         "lus": {
             "assessment": "TerraGuard Risk Map chhui",
@@ -391,7 +391,7 @@ def generate_offline_response(message: str, loc_context: Optional[Dict[str, Any]
             "soil": "Leilet",
             "seismic": "Earthquake trigger score",
             "disclaimer": "TerraGuard hi thutlukna tan puihna a ni, official warning emaw evacuation order emaw a ni lo. SDMA/NDMA leh local authority thuchah zawm rawh.",
-            "fallback": "TerraGuard assistant chuan landslide hlauhawm, terrain, ru leh earthquake activity a zirchiang thei.\n\nTeesta Basin, Risk Map, ru emaw emergency safety emaw zawt rawh.",
+            "fallback": "TerraGuard assistant chuan landslide hlauhawm, terrain, ru leh earthquake activity a zirchiang thei.\n\nRisk Map, ru emaw emergency safety emaw zawt rawh.",
         },
         "ne": {
             "assessment": "TerraGuard Risk Map विश्लेषण",
@@ -404,7 +404,7 @@ def generate_offline_response(message: str, loc_context: Optional[Dict[str, Any]
             "soil": "माटो",
             "seismic": "भूकम्प ट्रिगर स्कोर",
             "disclaimer": "TerraGuard निर्णय सहयोगी हो, आधिकारिक चेतावनी वा निकासी आदेश होइन। SDMA/NDMA र स्थानीय निकायका निर्देशन पालना गर्नुहोस्।",
-            "fallback": "TerraGuard सहायकले पहिरो जोखिम, भू-भाग, वर्षा र भूकम्पीय गतिविधिको विश्लेषण गर्न सक्छ।\n\nTeesta Basin, Risk Map, वर्षा वा आपतकालीन सुरक्षाबारे सोध्नुहोस्।",
+            "fallback": "TerraGuard सहायकले पहिरो जोखिम, भू-भाग, वर्षा र भूकम्पीय गतिविधिको विश्लेषण गर्न सक्छ।\n\nRisk Map, वर्षा वा आपतकालीन सुरक्षाबारे सोध्नुहोस्।",
         },
     }
 
