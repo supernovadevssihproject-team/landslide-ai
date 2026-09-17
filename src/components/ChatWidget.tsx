@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, Minus, Send, Bot, User, Sparkles, MapPin, AlertTriangle, ArrowRight, Home, ChevronLeft, Mountain, ShieldAlert, Activity, Database, Droplets, Gauge, LocateFixed, Radio, Mic, Square, Volume2, VolumeX } from 'lucide-react';
+import { X, Minus, Send, Bot, User, Sparkles, MapPin, ArrowRight, Home, Mountain, Activity, Database, Droplets, Gauge, LocateFixed, Radio, Mic, Square, Volume2, VolumeX } from 'lucide-react';
 import { LandslideApi } from '../services/api';
 import { LocationRiskEvaluation, OperationalModule, HazardZone } from '../types';
 import { HillsRegion, HILLS_AND_MOUNTAIN_REGIONS } from '../data/hillsData';
@@ -61,11 +61,11 @@ const formatLocationRisk = (name: string, evaluation: LocationRiskEvaluation) =>
     `TerraGuard Risk Map analysis: **${name}**\n\n` +
     `• **Overall risk:** **${value(evaluation.final_risk_score, ' / 100')}** (${evaluation.risk_level || 'Unavailable'})\n` +
     `• **Base ML probability:** ${baseProbabilityText}\n` +
-    `• **3-day rainfall:** ${value(evaluation.inputs.rainfall.rainfall_3d_mm, ' mm')}\n` +
-    `• **Slope:** ${value(evaluation.inputs.slope_deg, '°')}\n` +
-    `• **Elevation:** ${value(evaluation.inputs.elevation_m, ' m')}\n` +
+    `• **3-day rainfall:** ${value(evaluation.inputs?.rainfall?.rainfall_3d_mm, ' mm')}\n` +
+    `• **Slope:** ${value(evaluation.inputs?.slope_deg, '°')}\n` +
+    `• **Elevation:** ${value(evaluation.inputs?.elevation_m, ' m')}\n` +
     `• **Coordinates:** ${coordinatesText}\n` +
-    `• **Seismic trigger score:** ${value(evaluation.inputs.seismic.seismic_trigger_score)}\n\n` +
+    `• **Seismic trigger score:** ${value(evaluation.inputs?.seismic?.seismic_trigger_score)}\n\n` +
     'TerraGuard is decision support, not an official warning or evacuation order. Follow SDMA/NDMA and local authority instructions.'
   );
 };
@@ -77,16 +77,32 @@ const riskTone = (level: LocationRiskEvaluation['risk_level'], dark: boolean) =>
     HIGH: dark ? 'text-orange-300 bg-orange-500/10 border-orange-500/30' : 'text-orange-700 bg-orange-50 border-orange-200',
     VERY_HIGH: dark ? 'text-red-300 bg-red-500/10 border-red-500/30' : 'text-red-700 bg-red-50 border-red-200',
   };
-  return tones[level];
+  return tones[level] ?? (dark ? 'text-slate-300 bg-slate-500/10 border-slate-500/30' : 'text-slate-700 bg-slate-50 border-slate-200');
 };
 
 const RiskCard: React.FC<{ name: string; evaluation: LocationRiskEvaluation; isDark: boolean }> = ({ name, evaluation, isDark }) => {
   const metric = (value: number | null | undefined, suffix = '') =>
     value === null || value === undefined || Number.isNaN(value) ? 'Unavailable' : `${value}${suffix}`;
-  const coordinates = evaluation.location.latitude === null || evaluation.location.longitude === null
-    ? 'Unavailable'
-    : `${evaluation.location.latitude}, ${evaluation.location.longitude}`;
-  const score = Math.max(0, Math.min(100, evaluation.final_risk_score));
+
+  const lat = evaluation.location?.latitude;
+  const lon = evaluation.location?.longitude;
+  const coordinates =
+    lat === null || lat === undefined || lon === null || lon === undefined || Number.isNaN(lat) || Number.isNaN(lon)
+      ? 'Unavailable'
+      : `${lat}, ${lon}`;
+
+  const rawScore = evaluation.final_risk_score;
+  const score =
+    rawScore === null || rawScore === undefined || Number.isNaN(rawScore)
+      ? 0
+      : Math.max(0, Math.min(100, rawScore));
+
+  const baseMlPct =
+    evaluation.base_ml_probability === null ||
+    evaluation.base_ml_probability === undefined ||
+    Number.isNaN(evaluation.base_ml_probability)
+      ? null
+      : evaluation.base_ml_probability * 100;
 
   return (
     <div className={`mt-2 overflow-hidden rounded-2xl border ${isDark ? 'bg-slate-950/70 border-slate-700' : 'bg-white border-slate-200 shadow-sm'}`}>
@@ -95,38 +111,66 @@ const RiskCard: React.FC<{ name: string; evaluation: LocationRiskEvaluation; isD
         <div className="mt-1 flex items-start justify-between gap-3">
           <div>
             <div className="text-base font-semibold">{name}</div>
-            <div className={`mt-1 flex items-center gap-1.5 text-[10px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}><LocateFixed className="h-3 w-3" />{evaluation.location.state || 'North East India'}</div>
+            <div className={`mt-1 flex items-center gap-1.5 text-[10px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+              <LocateFixed className="h-3 w-3" />
+              {evaluation.location?.state || 'North East India'}
+            </div>
           </div>
-          <div className={`rounded-lg border px-2 py-1 text-[10px] font-bold ${riskTone(evaluation.risk_level, isDark)}`}>{evaluation.risk_level.replace('_', ' ')}</div>
+          <div className={`rounded-lg border px-2 py-1 text-[10px] font-bold ${riskTone(evaluation.risk_level, isDark)}`}>
+            {(evaluation.risk_level || 'UNKNOWN').replace('_', ' ')}
+          </div>
         </div>
         <div className="mt-4 flex items-end justify-between">
           <div>
             <div className={`text-[10px] uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Risk score</div>
-            <div className="text-3xl font-bold tracking-tight">{metric(evaluation.final_risk_score)}<span className={`text-sm font-medium ${isDark ? 'text-slate-400' : 'text-slate-500'}`}> / 100</span></div>
+            <div className="text-3xl font-bold tracking-tight">
+              {metric(evaluation.final_risk_score)}
+              <span className={`text-sm font-medium ${isDark ? 'text-slate-400' : 'text-slate-500'}`}> / 100</span>
+            </div>
           </div>
           <Gauge className={`h-9 w-9 ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`} />
         </div>
-        <div className={`mt-3 h-2 overflow-hidden rounded-full ${isDark ? 'bg-slate-800' : 'bg-slate-200'}`} aria-label={`Risk score ${score} out of 100`}>
-          <div className={`h-full rounded-full ${score >= 75 ? 'bg-red-500' : score >= 50 ? 'bg-orange-400' : score >= 25 ? 'bg-amber-400' : 'bg-emerald-500'}`} style={{ width: `${score}%` }} />
+        <div
+          className={`mt-3 h-2 overflow-hidden rounded-full ${isDark ? 'bg-slate-800' : 'bg-slate-200'}`}
+          aria-label={`Risk score ${score} out of 100`}
+        >
+          <div
+            className={`h-full rounded-full ${
+              score >= 75 ? 'bg-red-500' : score >= 50 ? 'bg-orange-400' : score >= 25 ? 'bg-amber-400' : 'bg-emerald-500'
+            }`}
+            style={{ width: `${score}%` }}
+          />
         </div>
       </div>
       <div className="grid grid-cols-2 gap-2 p-3 sm:grid-cols-3">
         {[
-          ['Base ML probability', metric(evaluation.base_ml_probability * 100, '%'), Activity],
-          ['Rainfall · 3 day', metric(evaluation.inputs.rainfall.rainfall_3d_mm, ' mm'), Droplets],
-          ['Slope', metric(evaluation.inputs.slope_deg, '°'), Mountain],
-          ['Elevation', metric(evaluation.inputs.elevation_m, ' m'), ArrowRight],
+          ['Base ML probability', metric(baseMlPct, '%'), Activity],
+          ['Rainfall · 3 day', metric(evaluation.inputs?.rainfall?.rainfall_3d_mm, ' mm'), Droplets],
+          ['Slope', metric(evaluation.inputs?.slope_deg, '°'), Mountain],
+          ['Elevation', metric(evaluation.inputs?.elevation_m, ' m'), ArrowRight],
           ['Coordinates', coordinates, LocateFixed],
-          ['Seismic trigger', metric(evaluation.inputs.seismic.seismic_trigger_score), Radio],
-          ['Soil', evaluation.inputs.soil_id || 'Unavailable', Database],
+          ['Seismic trigger', metric(evaluation.inputs?.seismic?.seismic_trigger_score), Radio],
+          ['Soil', evaluation.inputs?.soil_id || 'Unavailable', Database],
         ].map(([label, value, Icon]) => (
-          <div key={label as string} className={`rounded-xl border p-2 ${isDark ? 'border-slate-800 bg-slate-900/70' : 'border-slate-200 bg-slate-50'}`}>
-            <div className={`flex items-center gap-1 text-[9px] uppercase tracking-wide ${isDark ? 'text-slate-500' : 'text-slate-500'}`}><Icon className="h-3 w-3" />{label as string}</div>
+          <div
+            key={label as string}
+            className={`rounded-xl border p-2 ${isDark ? 'border-slate-800 bg-slate-900/70' : 'border-slate-200 bg-slate-50'}`}
+          >
+            <div className={`flex items-center gap-1 text-[9px] uppercase tracking-wide ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>
+              <Icon className="h-3 w-3" />
+              {label as string}
+            </div>
             <div className="mt-1 truncate text-[11px] font-semibold">{value as string}</div>
           </div>
         ))}
       </div>
-      <div className={`flex items-center gap-1.5 border-t px-3 py-2 text-[10px] ${isDark ? 'border-slate-800 text-slate-500' : 'border-slate-200 text-slate-500'}`}><Database className="h-3 w-3" /> TerraGuard live location-risk evaluation</div>
+      <div
+        className={`flex items-center gap-1.5 border-t px-3 py-2 text-[10px] ${
+          isDark ? 'border-slate-800 text-slate-500' : 'border-slate-200 text-slate-500'
+        }`}
+      >
+        <Database className="h-3 w-3" /> TerraGuard live location-risk evaluation
+      </div>
     </div>
   );
 };
@@ -179,26 +223,30 @@ interface ChatWidgetProps {
   onRequestStateChange?: (state: string) => void;
 }
 
-const CHATBOT_COPY: Record<ChatbotLanguage, {
-  welcome: string;
-  returningWelcome: string;
-  error: string;
-  hillsPrompt: string;
-  regionsPrompt: string;
-  regionPrompt: (state: string) => string;
-  hillPrompt: (state: string) => string;
-  unavailable: (name: string) => string;
-  evaluationError: string;
-}> = {
+const CHATBOT_COPY: Record<
+  ChatbotLanguage,
+  {
+    welcome: string;
+    returningWelcome: string;
+    error: string;
+    hillsPrompt: string;
+    regionsPrompt: string;
+    regionPrompt: (state: string) => string;
+    hillPrompt: (state: string) => string;
+    unavailable: (name: string) => string;
+    evaluationError: string;
+  }
+> = {
   en: {
     welcome: 'Hello! Welcome to TerraGuard AI. 🌿\n\nPlease choose your chatbot language.',
-    returningWelcome: 'Great! You\'re ready to explore TerraGuard. What would you like to explore?',
+    returningWelcome: "Great! You're ready to explore TerraGuard. What would you like to explore?",
     error: '⚠️ Failed to connect to TerraGuard AI Assistant. Please check your network.',
-    hillsPrompt: 'Great! Let\'s explore the hills and mountain regions. Which state would you like to explore?',
-    regionsPrompt: 'Great! Let\'s explore regions and places. Which state would you like to explore?',
+    hillsPrompt: "Great! Let's explore the hills and mountain regions. Which state would you like to explore?",
+    regionsPrompt: "Great! Let's explore regions and places. Which state would you like to explore?",
     regionPrompt: (state) => `${state} selected. Which region or place would you like to explore?`,
     hillPrompt: (state) => `${state} selected. Which hill or mountain region would you like to explore?`,
-    unavailable: (name) => `I don't have verified coordinates for ${name}, so a location-specific risk evaluation isn't available yet.`,
+    unavailable: (name) =>
+      `I don't have verified coordinates for ${name}, so a location-specific risk evaluation isn't available yet.`,
     evaluationError: 'Unable to evaluate this location through the TerraGuard location-risk service.',
   },
   hi: {
@@ -209,33 +257,39 @@ const CHATBOT_COPY: Record<ChatbotLanguage, {
     regionsPrompt: 'निगरानी किए गए क्षेत्रों और स्थानों को देखने के लिए राज्य चुनें।',
     regionPrompt: (state) => `${state} में निगरानी किया गया क्षेत्र या स्थान चुनें।`,
     hillPrompt: (state) => `${state} में कोई पहाड़ी या पर्वत चुनें।`,
-    unavailable: (name) => `${name} के सत्यापित निर्देशांक उपलब्ध नहीं हैं, इसलिए स्थान-विशिष्ट जोखिम मूल्यांकन अभी उपलब्ध नहीं है।`,
+    unavailable: (name) =>
+      `${name} के सत्यापित निर्देशांक उपलब्ध नहीं हैं, इसलिए स्थान-विशिष्ट जोखिम मूल्यांकन अभी उपलब्ध नहीं है।`,
     evaluationError: 'TerraGuard स्थान-जोखिम सेवा से इस स्थान का मूल्यांकन नहीं हो सका।',
   },
   as: {
-    welcome: 'নমস্কাৰ! মই TerraGuard AI 👋\n\nউত্তৰ-পূব অঞ্চল আৰু হিমালয়ৰ ভূমিস্খলন বিপদ বুজিবলৈ মই সহায় কৰিব পাৰোঁ।\n\nআপুনি কি চাব বিচাৰে?',
+    welcome:
+      'নমস্কাৰ! মই TerraGuard AI 👋\n\nউত্তৰ-পূব অঞ্চল আৰু হিমালয়ৰ ভূমিস্খলন বিপদ বুজিবলৈ মই সহায় কৰিব পাৰোঁ।\n\nআপুনি কি চাব বিচাৰে?',
     returningWelcome: 'TerraGuard AI-লৈ পুনৰ স্বাগতম 👋\n\nআপুনি কি চাব বিচাৰে?',
     error: '⚠️ TerraGuard AI Assistant-ৰ সৈতে সংযোগ নহ’ল। আপোনাৰ নেটৱৰ্ক পৰীক্ষা কৰক।',
     hillsPrompt: 'বৰ্তমান বিপদ চাবলৈ এখন পাহাৰ বা পৰ্বত বাছনি কৰক।',
     regionsPrompt: 'নিৰীক্ষণ কৰা অঞ্চল আৰু ঠাই চাবলৈ ৰাজ্য বাছনি কৰক।',
     regionPrompt: (state) => `${state}-ৰ এটা নিৰীক্ষণ কৰা অঞ্চল বা ঠাই বাছনি কৰক।`,
     hillPrompt: (state) => `${state}-ৰ এখন পাহাৰ বা পৰ্বত বাছনি কৰক।`,
-    unavailable: (name) => `${name}-ৰ সত্যাপিত স্থানাংক নাই, সেয়ে স্থান-নিৰ্দিষ্ট বিপদ মূল্যায়ন এতিয়া উপলব্ধ নহয়।`,
+    unavailable: (name) =>
+      `${name}-ৰ সত্যাপিত স্থানাংক নাই, সেয়ে স্থান-নিৰ্দিষ্ট বিপদ মূল্যায়ন এতিয়া উপলব্ধ নহয়।`,
     evaluationError: 'TerraGuard স্থান-বিপদ সেৱাৰ জৰিয়তে এই ঠাইটো মূল্যায়ন কৰিব পৰা নগ’ল।',
   },
   bn: {
-    welcome: 'নমস্কার! আমি TerraGuard AI 👋\n\nউত্তর-পূর্ব অঞ্চল ও হিমালয় এলাকায় ভূমিধসের ঝুঁকি বুঝতে আমি সাহায্য করতে পারি।\n\nআপনি কী দেখতে চান?',
+    welcome:
+      'নমস্কার! আমি TerraGuard AI 👋\n\nউত্তর-পূর্ব অঞ্চল ও হিমালয় এলাকায় ভূমিধসের ঝুঁকি বুঝতে আমি সাহায্য করতে পারি।\n\nআপনি কী দেখতে চান?',
     returningWelcome: 'TerraGuard AI-তে আবার স্বাগতম 👋\n\nআপনি কী দেখতে চান?',
     error: '⚠️ TerraGuard AI Assistant-এর সঙ্গে সংযোগ করা যায়নি। আপনার নেটওয়ার্ক পরীক্ষা করুন।',
     hillsPrompt: 'বর্তমান ঝুঁকি দেখতে একটি পাহাড় বা পর্বত বেছে নিন।',
     regionsPrompt: 'পর্যবেক্ষিত অঞ্চল ও স্থান দেখতে একটি রাজ্য বেছে নিন।',
     regionPrompt: (state) => `${state}-এর একটি পর্যবেক্ষিত অঞ্চল বা স্থান বেছে নিন।`,
     hillPrompt: (state) => `${state}-এর একটি পাহাড় বা পর্বত বেছে নিন।`,
-    unavailable: (name) => `${name}-এর যাচাই করা স্থানাঙ্ক নেই, তাই স্থান-নির্দিষ্ট ঝুঁকি মূল্যায়ন এখন উপলব্ধ নয়।`,
+    unavailable: (name) =>
+      `${name}-এর যাচাই করা স্থানাঙ্ক নেই, তাই স্থান-নির্দিষ্ট ঝুঁকি মূল্যায়ন এখন উপলব্ধ নয়।`,
     evaluationError: 'TerraGuard স্থানীয় ঝুঁকি পরিষেবার মাধ্যমে এই স্থানটি মূল্যায়ন করা যায়নি।',
   },
   brx: {
-    welcome: 'सुबुं! आं TerraGuard AI 👋\n\nआं उत्तर-पूर्व आरो हिमालयनि लैंडस्लाइड जोखोम नायनो मदद खालामनो हायो।\n\nनों मा नायनो लुबैयो?',
+    welcome:
+      'सुबुं! आं TerraGuard AI 👋\n\nआं उत्तर-पूर्व आरो हिमालयनि लैंडस्लाइड जोखोम नायनो मदद खालामनो हायो।\n\nनों मा नायनो लुबैयो?',
     returningWelcome: 'TerraGuard AI-आव फिन स्वागतम् 👋\n\nनों मा नायनो लुबैयो?',
     error: '⚠️ TerraGuard AI Assistant जों सोमोन्दो खालामनो हायाखै। नोंनि नेटवार्क नाय।',
     hillsPrompt: 'दानाय जोखोम नायनो डोंगर एबा पहार बासिख।',
@@ -246,47 +300,55 @@ const CHATBOT_COPY: Record<ChatbotLanguage, {
     evaluationError: 'TerraGuard जायगा-जोखोम सेवादों बे जायगाखौ मूल्यांकन खालामनो हायाखै।',
   },
   ks: {
-    welcome: 'Khublei! Nga dei TerraGuard AI 👋\n\nNga lah ban iarap ia phi ban sngewthuh ia ka jingma landslide ha North Eastern Region bad Himalayan areas.\n\nKaei kaba phi kwah ban peit?',
+    welcome:
+      'Khublei! Nga dei TerraGuard AI 👋\n\nNga lah ban iarap ia phi ban sngewthuh ia ka jingma landslide ha North Eastern Region bad Himalayan areas.\n\nKaei kaba phi kwah ban peit?',
     returningWelcome: 'Pdiang biang sha TerraGuard AI 👋\n\nKaei kaba phi kwah ban peit?',
     error: '⚠️ Ym lah ban pyniasoh bad TerraGuard AI Assistant. Peit ia ka network jong phi.',
     hillsPrompt: 'Jied ia u lum ne u bynta lum ban peit ia ka jingma mynta.',
     regionsPrompt: 'Jied ia ka jylla ban peit ia ki jaka ba peitngor.',
     regionPrompt: (state) => `Jied ia ka jaka ba peitngor ha ${state}.`,
     hillPrompt: (state) => `Jied ia u lum ha ${state}.`,
-    unavailable: (name) => 'Ym don ki coordinate ba la pynshisha na ka bynta ' + name + ', kumta ym pat lah ban ioh ia ka jingbishar jingma jong ka jaka.',
+    unavailable: (name) =>
+      'Ym don ki coordinate ba la pynshisha na ka bynta ' + name + ', kumta ym pat lah ban ioh ia ka jingbishar jingma jong ka jaka.',
     evaluationError: 'Ym lah ban bishar ia kane ka jaka lyngba ka TerraGuard location-risk service.',
   },
   mni: {
-    welcome: 'Khurum! Ei TerraGuard AI 👋\n\nNorth Eastern Region amasung Himalayan area-singda landslide risk thajaduna ei mapung phangjari.\n\nNangna kari thajaba pammi?',
+    welcome:
+      'Khurum! Ei TerraGuard AI 👋\n\nNorth Eastern Region amasung Himalayan area-singda landslide risk thajaduna ei mapung phangjari.\n\nNangna kari thajaba pammi?',
     returningWelcome: 'TerraGuard AI-da amuk humar swagat 👋\n\nNangna kari thajaba pammi?',
     error: '⚠️ TerraGuard AI Assistant-ga connect touba ngamde. Nanggi network yeng-u.',
     hillsPrompt: 'Houjik-gi risk yengnanaba hill nattraga mountain ama khan-u.',
     regionsPrompt: 'Monitored region amasung place yengnanaba state ama khan-u.',
     regionPrompt: (state) => `${state}-da monitored region nattraga place ama khan-u.`,
     hillPrompt: (state) => `${state}-da hill nattraga mountain ama khan-u.`,
-    unavailable: (name) => `${name}-gi verified coordinates phangde, maram aduna location-specific risk evaluation houjik available nattre.`,
+    unavailable: (name) =>
+      `${name}-gi verified coordinates phangde, maram aduna location-specific risk evaluation houjik available nattre.`,
     evaluationError: 'TerraGuard location-risk service-na madugi evaluation touba ngamde.',
   },
   lus: {
-    welcome: 'Chibai! TerraGuard AI ka ni e 👋\n\nNorth Eastern Region leh Himalaya hmunah landslide hlauhawm hrethiam turin ka pui thei.\n\nEng nge i en duh?',
+    welcome:
+      'Chibai! TerraGuard AI ka ni e 👋\n\nNorth Eastern Region leh Himalaya hmunah landslide hlauhawm hrethiam turin ka pui thei.\n\nEng nge i en duh?',
     returningWelcome: 'TerraGuard AI-ah lo kir leh rawh 👋\n\nEng nge i en duh?',
     error: '⚠️ TerraGuard AI Assistant nen inbiakpawh theih lo. Network i en rawh.',
     hillsPrompt: 'Tunah risk en turin tlang emaw tlangpui emaw thlang rawh.',
     regionsPrompt: 'Region leh hmunte en turin state thlang rawh.',
     regionPrompt: (state) => `${state}-ah hmun thlanga en rawh.`,
     hillPrompt: (state) => `${state}-ah tlang emaw tlangpui emaw thlang rawh.`,
-    unavailable: (name) => `${name} tana coordinates dik tak a awm lo, chuvangin location-risk evaluation tunah a awm lo.`,
+    unavailable: (name) =>
+      `${name} tana coordinates dik tak a awm lo, chuvangin location-risk evaluation tunah a awm lo.`,
     evaluationError: 'TerraGuard location-risk service hmangin he hmun hi zirchiang theih a ni lo.',
   },
   ne: {
-    welcome: 'नमस्ते! म TerraGuard AI हुँ 👋\n\nम उत्तर-पूर्वी क्षेत्र र हिमाली भूभागमा पहिरोको जोखिम बुझ्न सहयोग गर्न सक्छु।\n\nतपाईं के हेर्न चाहनुहुन्छ?',
+    welcome:
+      'नमस्ते! म TerraGuard AI हुँ 👋\n\nम उत्तर-पूर्वी क्षेत्र र हिमाली भूभागमा पहिरोको जोखिम बुझ्न सहयोग गर्न सक्छु।\n\nतपाईं के हेर्न चाहनुहुन्छ?',
     returningWelcome: 'TerraGuard AI मा पुनः स्वागत छ 👋\n\nतपाईं के हेर्न चाहनुहुन्छ?',
     error: '⚠️ TerraGuard AI Assistant सँग जडान हुन सकेन। कृपया आफ्नो नेटवर्क जाँच गर्नुहोस्।',
     hillsPrompt: 'हालको जोखिम जाँच्न पहाड वा पर्वत छान्नुहोस्।',
     regionsPrompt: 'निगरानी गरिएका क्षेत्र र स्थान हेर्न राज्य छान्नुहोस्।',
     regionPrompt: (state) => `${state} मा निगरानी गरिएको क्षेत्र वा स्थान छान्नुहोस्।`,
     hillPrompt: (state) => `${state} मा पहाड वा पर्वत छान्नुहोस्।`,
-    unavailable: (name) => `${name} का प्रमाणित निर्देशाङ्क उपलब्ध छैनन्, त्यसैले स्थान-विशिष्ट जोखिम मूल्याङ्कन अहिले उपलब्ध छैन।`,
+    unavailable: (name) =>
+      `${name} का प्रमाणित निर्देशाङ्क उपलब्ध छैनन्, त्यसैले स्थान-विशिष्ट जोखिम मूल्याङ्कन अहिले उपलब्ध छैन।`,
     evaluationError: 'TerraGuard स्थान-जोखिम सेवाबाट यस स्थानको मूल्याङ्कन गर्न सकिएन।',
   },
 };
@@ -345,9 +407,10 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
   const { language: chatbotLanguage, setLanguage: setChatbotLanguage } = useChatbotLanguage(language);
   const chatbotCopy = CHATBOT_COPY[chatbotLanguage];
   const chatbotExitCopy = CHATBOT_EXIT_COPY[chatbotLanguage];
-  const initialWelcomeMessage = {
+
+  const initialWelcomeMessage: ChatMessage = {
     id: 'welcome-msg',
-    role: 'assistant' as const,
+    role: 'assistant',
     content: chatbotCopy.welcome,
     source: 'terraguard-engine',
     timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
@@ -356,7 +419,7 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
   const [messages, setMessages] = useState<ChatMessage[]>([initialWelcomeMessage]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [chatbotSession, setChatbotSession] = useState<{ 
+  const [chatbotSession, setChatbotSession] = useState<{
     flow: ChatbotFlow;
     exploration: 'HILLS' | 'REGIONS' | null;
     selectedState: string | null;
@@ -381,6 +444,7 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
     awaitingAcknowledgement: false,
     status: 'IDLE',
   });
+
   const [regionZones, setRegionZones] = useState<HazardZone[]>(HAZARD_ZONES);
   const [regionZonesLoaded, setRegionZonesLoaded] = useState(false);
   const [isListening, setIsListening] = useState(false);
@@ -394,6 +458,7 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
   const [isVoiceProcessing, setIsVoiceProcessing] = useState(false);
   const [speakingMessageId, setSpeakingMessageId] = useState<string | null>(null);
   const [voiceStatus, setVoiceStatus] = useState<string | null>(null);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const lastGuidedTransitionRef = useRef<string | null>(null);
   const chatRequestControllerRef = useRef<AbortController | null>(null);
@@ -449,7 +514,9 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
     setVoiceMode(true);
     try {
       localStorage.setItem('terraguard_voice_mode', 'true');
-    } catch {}
+    } catch {
+      // ignore
+    }
 
     stopListening();
     lastVoiceTranscriptRef.current = null;
@@ -457,6 +524,7 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
     recognition.lang = VOICE_LANGUAGE_TAGS[chatbotLanguage];
     recognition.continuous = false;
     recognition.interimResults = false;
+
     recognition.onresult = (event) => {
       if (event.isFinal === false || isVoiceProcessing) return;
       const result = event.results[event.resultIndex ?? 0];
@@ -472,19 +540,27 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
         setVoiceStatus(null);
       }
     };
+
     recognition.onerror = (event) => {
-      setVoiceStatus(event.error === 'not-allowed' ? 'Microphone permission was denied.' : `Voice input error: ${event.error}.`);
+      setVoiceStatus(
+        event.error === 'not-allowed'
+          ? 'Microphone permission was denied.'
+          : `Voice input error: ${event.error}.`
+      );
       isListeningRef.current = false;
       setIsListening(false);
     };
+
     recognition.onend = () => {
       isListeningRef.current = false;
       setIsListening(false);
     };
+
     recognitionRef.current = recognition;
     isListeningRef.current = true;
     setIsListening(true);
     setVoiceStatus(null);
+
     try {
       recognition.start();
     } catch {
@@ -494,27 +570,41 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
     }
   };
 
-  const speakMessage = (messageId: string, content: string, languageOverride: ChatbotLanguage = chatbotLanguage) => {
+  const speakMessage = (
+    messageId: string,
+    content: string,
+    languageOverride: ChatbotLanguage = chatbotLanguage,
+    onEnd?: () => void
+  ) => {
     if (!('speechSynthesis' in window)) {
       setVoiceStatus('Text-to-speech is not supported in this browser.');
+      onEnd?.();
       return;
     }
     if (speakingMessageId === messageId) {
       stopSpeaking();
+      onEnd?.();
       return;
     }
     stopListening();
     const utterance = new SpeechSynthesisUtterance(content.replace(/[*#•]/g, ''));
     const requestedTag = VOICE_LANGUAGE_TAGS[languageOverride].toLowerCase();
     const voices = window.speechSynthesis.getVoices();
-    const voice = voices.find((candidate) => candidate.lang.toLowerCase() === requestedTag)
-      || voices.find((candidate) => candidate.lang.toLowerCase().startsWith(requestedTag.slice(0, 2)));
+    const voice =
+      voices.find((candidate) => candidate.lang.toLowerCase() === requestedTag) ||
+      voices.find((candidate) => candidate.lang.toLowerCase().startsWith(requestedTag.slice(0, 2)));
+
     if (!voice) {
-      setVoiceStatus(`No ${chatbotLanguageOptions.find((option) => option.id === languageOverride)?.label} speech voice is available on this device.`);
+      setVoiceStatus(
+        `No ${chatbotLanguageOptions.find((option) => option.id === languageOverride)?.label} speech voice is available on this device.`
+      );
+      onEnd?.();
       return;
     }
+
     utterance.voice = voice;
     utterance.lang = voice.lang;
+
     utterance.onstart = () => {
       setVoiceStatus('TerraBot speaking...');
       setSpeakingMessageId(messageId);
@@ -522,21 +612,27 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
     utterance.onend = () => {
       setSpeakingMessageId(null);
       setVoiceStatus(null);
+      onEnd?.();
     };
     utterance.onerror = () => {
       setSpeakingMessageId(null);
       setVoiceStatus('Text-to-speech could not play.');
+      onEnd?.();
     };
+
     window.speechSynthesis.cancel();
     window.speechSynthesis.speak(utterance);
   };
 
-  useEffect(() => () => {
-    cancelChatRequest();
-    cancelLocationRiskRequest();
-    stopListening();
-    stopSpeaking();
-  }, []);
+  useEffect(
+    () => () => {
+      cancelChatRequest();
+      cancelLocationRiskRequest();
+      stopListening();
+      stopSpeaking();
+    },
+    []
+  );
 
   const createFreshWelcomeMessage = (nextLanguage: ChatbotLanguage = chatbotLanguage): ChatMessage => ({
     id: `welcome-${Date.now()}`,
@@ -570,11 +666,6 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
     });
   };
 
-  const beginFreshSession = (nextLanguage: ChatbotLanguage = chatbotLanguage) => {
-    resetFreshChatSession(nextLanguage);
-    setIsOpen(true);
-  };
-
   const handleMinimize = () => {
     cancelChatRequest();
     stopListening();
@@ -592,31 +683,14 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
     resetFreshChatSession();
   };
 
-  const handleChatbotLanguageChange = (nextLanguage: ChatbotLanguage) => {
-    if (nextLanguage === chatbotLanguage) return;
-    cancelChatRequest();
-    stopListening();
-    stopSpeaking();
-    setIsVoiceProcessing(false);
-    setVoiceStatus(null);
-    setChatbotLanguage(nextLanguage);
-    setMessages((previous) => previous.map((msg) => (
-      msg.id === 'welcome-msg'
-        ? { ...msg, content: CHATBOT_COPY[nextLanguage].welcome }
-        : msg
-    )));
-    setChatbotSession((previous) => ({
-      ...previous,
-      status: previous.status,
-    }));
-  };
-
   const handleVoiceModeChange = () => {
     const nextVoiceMode = !voiceMode;
     setVoiceMode(nextVoiceMode);
     try {
       localStorage.setItem('terraguard_voice_mode', String(nextVoiceMode));
-    } catch {}
+    } catch {
+      // ignore
+    }
     if (!nextVoiceMode) {
       stopListening();
       stopSpeaking();
@@ -640,10 +714,6 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
     stopListening();
     stopSpeaking();
     setIsVoiceProcessing(false);
-    setChatbotSession((previous) => ({
-      ...previous,
-      status: previous.status,
-    }));
     setMessages((previous) => {
       if (previous.length === 0) return [createFreshWelcomeMessage(chatbotLanguage)];
       if (previous.length === 1 && previous[0].id === 'welcome-msg') {
@@ -681,6 +751,7 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
   const handleSend = async (textToSend?: string, fromVoice = false) => {
     const messageText = textToSend || input;
     if (!messageText.trim() || isLoading) return;
+
     const requestLanguage = chatbotLanguage;
     const requestId = chatRequestIdRef.current + 1;
     chatRequestIdRef.current = requestId;
@@ -707,13 +778,44 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
       return;
     }
 
+    if (fromVoice && chatbotSession.flow !== 'LANGUAGE_SELECTION' && chatbotSession.flow !== 'MAIN_MENU') {
+      const guidedPrompt =
+        chatbotSession.flow === 'HILLS_STATE_SELECTION' || chatbotSession.flow === 'REGIONS_STATE_SELECTION'
+          ? 'Please choose one of the available states.'
+          : chatbotSession.flow === 'HILLS_LOCATION_SELECTION'
+          ? 'Please choose one of the available hills or mountain regions.'
+          : chatbotSession.flow === 'REGIONS_LOCATION_SELECTION'
+          ? 'Please choose one of the available regions or places.'
+          : chatbotSession.flow === 'WAITING_FOR_ACKNOWLEDGEMENT'
+          ? 'Please say OK or Continue when you are ready for the next options.'
+          : chatbotSession.flow === 'HILL_ACTIONS'
+          ? 'Please choose Risk Map, Risk Details, another hill, or Exit.'
+          : chatbotSession.flow === 'REGION_ACTIONS'
+          ? 'Please choose Risk Map, Risk Details, another place, or Exit.'
+          : null;
+
+      if (guidedPrompt) {
+        requestController.abort();
+        chatRequestControllerRef.current = null;
+        setIsLoading(false);
+        setIsVoiceProcessing(false);
+        addGuidedAssistantMessage(guidedPrompt, true);
+        return;
+      }
+    }
+
     try {
       const historyPayload = messages
         .filter((m) => m.id !== 'welcome-msg')
         .map((m) => ({ role: m.role, content: m.content }))
         .slice(-20);
 
-      const response = await LandslideApi.sendChatMessage(messageText, historyPayload, requestLanguage, requestController.signal);
+      const response = await LandslideApi.sendChatMessage(
+        messageText,
+        historyPayload,
+        requestLanguage,
+        requestController.signal
+      );
 
       if (
         requestController.signal.aborted ||
@@ -828,12 +930,17 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
     const transitionKey = `domain:${domain}`;
     if (lastGuidedTransitionRef.current === transitionKey) return;
     lastGuidedTransitionRef.current = transitionKey;
-    setMessages((previous) => [...previous, {
-      id: `domain-${Date.now()}`,
-      role: 'user',
-      content: domain === 'hills' ? 'Hills & Mountains' : 'Regions / Places',
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    }]);
+
+    setMessages((previous) => [
+      ...previous,
+      {
+        id: `domain-${Date.now()}`,
+        role: 'user',
+        content: domain === 'hills' ? 'Hills & Mountains' : 'Regions / Places',
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      },
+    ]);
+
     setChatbotSession((previous) => ({
       ...previous,
       flow: domain === 'hills' ? 'HILLS_STATE_SELECTION' : 'REGIONS_STATE_SELECTION',
@@ -848,15 +955,17 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
       awaitingAcknowledgement: false,
       status: 'IDLE',
     }));
-    setMessages((previous) => [...previous, {
-      id: `domain-followup-${Date.now()}`,
-      role: 'assistant',
-      content: domain === 'hills'
-        ? chatbotCopy.hillsPrompt
-        : chatbotCopy.regionsPrompt,
-      source: 'terraguard-engine',
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    }]);
+
+    setMessages((previous) => [
+      ...previous,
+      {
+        id: `domain-followup-${Date.now()}`,
+        role: 'assistant',
+        content: domain === 'hills' ? chatbotCopy.hillsPrompt : chatbotCopy.regionsPrompt,
+        source: 'terraguard-engine',
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      },
+    ]);
   };
 
   const handleStateSelection = (state: string, addUserMessage = true, fromVoice = false) => {
@@ -865,15 +974,21 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
     const transitionKey = `${domain}:state:${normalizeState(state)}`;
     if (lastGuidedTransitionRef.current === transitionKey) return;
     lastGuidedTransitionRef.current = transitionKey;
+
     if (addUserMessage) {
-      setMessages((previous) => [...previous, {
-        id: `state-${Date.now()}`,
-        role: 'user',
-        content: state,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      }]);
+      setMessages((previous) => [
+        ...previous,
+        {
+          id: `state-${Date.now()}`,
+          role: 'user',
+          content: state,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        },
+      ]);
     }
+
     onRequestStateChange?.(state);
+
     setChatbotSession((previous) => ({
       ...previous,
       flow: 'APPLICATION_SELECTION_PENDING',
@@ -885,13 +1000,19 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
       awaitingAcknowledgement: false,
       status: 'SELECTION_LOADING',
     }));
-    setMessages((previous) => [...previous, {
-      id: `state-followup-${Date.now()}`,
-      role: 'assistant',
-      content: `${state} selected. I’m loading the available ${domain === 'regions' ? 'regions and places' : 'hills and mountain regions'} for this state.`,
-      source: 'terraguard-engine',
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    }]);
+
+    setMessages((previous) => [
+      ...previous,
+      {
+        id: `state-followup-${Date.now()}`,
+        role: 'assistant',
+        content: `${state} selected. I’m loading the available ${
+          domain === 'regions' ? 'regions and places' : 'hills and mountain regions'
+        } for this state.`,
+        source: 'terraguard-engine',
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      },
+    ]);
   };
 
   const startZoneAnalysis = (zone: HazardZone, fromVoice: boolean) => {
@@ -914,65 +1035,115 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
       awaitingAcknowledgement: false,
       status: 'DATA_LOADING',
     }));
-    addGuidedAssistantMessage(`${zone.name} is now selected. I’m retrieving the available environmental and risk information.`, fromVoice);
+
+    addGuidedAssistantMessage(
+      `${zone.name} is now selected. I’m retrieving the available environmental and risk information.`,
+      fromVoice
+    );
 
     if (!parsedCoords) {
-      setMessages((previous) => [...previous, {
-        id: `zone-error-${Date.now()}`, role: 'assistant', source: 'terraguard-data',
-        content: chatbotCopy.unavailable(zone.name),
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      }]);
-      setChatbotSession((previous) => ({ ...previous, flow: 'REGIONS_LOCATION_SELECTION', status: 'COMPLETE', awaitingAcknowledgement: false }));
+      setMessages((previous) => [
+        ...previous,
+        {
+          id: `zone-error-${Date.now()}`,
+          role: 'assistant',
+          source: 'terraguard-data',
+          content: chatbotCopy.unavailable(zone.name),
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        },
+      ]);
+      setChatbotSession((previous) => ({
+        ...previous,
+        flow: 'REGIONS_LOCATION_SELECTION',
+        status: 'COMPLETE',
+        awaitingAcknowledgement: false,
+      }));
       return;
     }
 
     setIsLoading(true);
     setChatbotSession((previous) => ({ ...previous, flow: 'ANALYSIS', status: 'ANALYZING' }));
-    addGuidedAssistantMessage(`Analyzing the available terrain, rainfall, soil, seismic and landslide-risk information for ${zone.name}...`, fromVoice);
+    addGuidedAssistantMessage(
+      `Analyzing the available terrain, rainfall, soil, seismic and landslide-risk information for ${zone.name}...`,
+      fromVoice
+    );
+
     const locationController = new AbortController();
     locationRiskControllerRef.current = locationController;
-    fetchLocationRisk({
-      name: zone.name,
-      locationType: 'region',
-      latitude: parsedCoords.lat,
-      longitude: parsedCoords.lon,
-      state: zone.state,
-    }, locationController.signal).then((evaluation) => {
-      const content = formatLocationRisk(zone.name, evaluation);
-      const messageId = `zone-risk-${Date.now()}`;
-      setMessages((previous) => [...previous, {
-        id: messageId, role: 'assistant', source: 'terraguard-location-risk',
-        content,
-        riskEvaluation: evaluation,
-        locationName: zone.name,
-        resultType: 'region',
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      }]);
-      setChatbotSession((previous) => ({
-        ...previous,
-        flow: 'WAITING_FOR_ACKNOWLEDGEMENT',
-        exploration: 'REGIONS',
-        selectedState: zone.state,
-        selectedRegion: zone,
-        awaitingAcknowledgement: true,
-        status: 'COMPLETE',
-      }));
-      const ackMessage = `${zone.name} analysis is complete. I’ve prepared the available results below.\n\nThe analysis is complete. Say “OK” or “Continue” when you’re ready for the next options.`;
-      addGuidedAssistantMessage(ackMessage, fromVoice);
-      if (fromVoice || voiceMode) speakMessage(messageId, content);
-    }).catch((error) => {
-      if (error instanceof DOMException && error.name === 'AbortError') return;
-      setMessages((previous) => [...previous, {
-        id: `zone-error-${Date.now()}`, role: 'assistant', source: 'error',
-        content: chatbotCopy.evaluationError,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      }]);
-    }).finally(() => {
-      if (locationRiskControllerRef.current === locationController) {
-        locationRiskControllerRef.current = null;
-        setIsLoading(false);
-      }
-    });
+
+    fetchLocationRisk(
+      {
+        name: zone.name,
+        locationType: 'region',
+        latitude: parsedCoords.lat,
+        longitude: parsedCoords.lon,
+        state: zone.state,
+      },
+      locationController.signal
+    )
+      .then((evaluation) => {
+        const content = formatLocationRisk(zone.name, evaluation);
+        const messageId = `zone-risk-${Date.now()}`;
+        setMessages((previous) => [
+          ...previous,
+          {
+            id: messageId,
+            role: 'assistant',
+            source: 'terraguard-location-risk',
+            content,
+            riskEvaluation: evaluation,
+            locationName: zone.name,
+            resultType: 'region',
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          },
+        ]);
+        setChatbotSession((previous) => ({
+          ...previous,
+          flow: 'WAITING_FOR_ACKNOWLEDGEMENT',
+          exploration: 'REGIONS',
+          selectedState: zone.state,
+          selectedRegion: zone,
+          awaitingAcknowledgement: true,
+          status: 'COMPLETE',
+        }));
+        const ackMessage = `${zone.name} analysis is complete. I’ve prepared the available results below.\n\nThe analysis is complete. Say “OK” or “Continue” when you’re ready for the next options.`;
+        guidedMessageSequenceRef.current += 1;
+        const ackId = `guide-${Date.now()}-${guidedMessageSequenceRef.current}`;
+        setMessages((previous) => [
+          ...previous,
+          {
+            id: ackId,
+            role: 'assistant',
+            content: ackMessage,
+            source: 'terraguard-guide',
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          },
+        ]);
+        if (fromVoice || voiceMode) {
+          speakMessage(messageId, content, chatbotLanguage, () => {
+            speakMessage(ackId, ackMessage);
+          });
+        }
+      })
+      .catch((error) => {
+        if (error instanceof DOMException && error.name === 'AbortError') return;
+        setMessages((previous) => [
+          ...previous,
+          {
+            id: `zone-error-${Date.now()}`,
+            role: 'assistant',
+            source: 'error',
+            content: chatbotCopy.evaluationError,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          },
+        ]);
+      })
+      .finally(() => {
+        if (locationRiskControllerRef.current === locationController) {
+          locationRiskControllerRef.current = null;
+          setIsLoading(false);
+        }
+      });
   };
 
   const startHillAnalysis = (hill: HillsRegion, fromVoice: boolean) => {
@@ -987,56 +1158,117 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
       awaitingAcknowledgement: false,
       status: 'DATA_LOADING',
     }));
-    addGuidedAssistantMessage(`${hill.name} is now selected. I’m retrieving the available environmental and risk information.`, fromVoice);
+
+    addGuidedAssistantMessage(
+      `${hill.name} is now selected. I’m retrieving the available environmental and risk information.`,
+      fromVoice
+    );
+
     setIsLoading(true);
     setChatbotSession((previous) => ({ ...previous, flow: 'ANALYSIS', status: 'ANALYZING' }));
-    addGuidedAssistantMessage(`Analyzing the available terrain, rainfall, soil, seismic and landslide-risk information for ${hill.name}...`, fromVoice);
+    addGuidedAssistantMessage(
+      `Analyzing the available terrain, rainfall, soil, seismic and landslide-risk information for ${hill.name}...`,
+      fromVoice
+    );
+
     const locationController = new AbortController();
     locationRiskControllerRef.current = locationController;
-    fetchLocationRisk({
-      name: hill.name,
-      locationType: 'hill',
-      latitude: hill.latitude!,
-      longitude: hill.longitude!,
-      state: hill.state,
-    }, locationController.signal).then((evaluation) => {
-      const content = formatLocationRisk(hill.name, evaluation);
-      const messageId = `hill-risk-${Date.now()}`;
-      setMessages((previous) => [...previous, {
-        id: messageId, role: 'assistant', source: 'terraguard-location-risk', content,
-        riskEvaluation: evaluation, locationName: hill.name, resultType: 'hill',
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      }]);
-      setChatbotSession((previous) => ({
-        ...previous, flow: 'WAITING_FOR_ACKNOWLEDGEMENT', status: 'COMPLETE',
-        exploration: 'HILLS', selectedState: hill.state, selectedHill: hill,
-        awaitingAcknowledgement: true,
-      }));
-      addGuidedAssistantMessage(`${hill.name} analysis is complete. I’ve prepared the available results below.\n\nThe analysis is complete. Say “OK” or “Continue” when you’re ready for the next options.`, fromVoice);
-      if (fromVoice || voiceMode) speakMessage(messageId, content);
-    }).catch((error) => {
-      if (error instanceof DOMException && error.name === 'AbortError') return;
-      addGuidedAssistantMessage(chatbotCopy.evaluationError, fromVoice);
-    }).finally(() => {
-      if (locationRiskControllerRef.current === locationController) {
-        locationRiskControllerRef.current = null;
-        setIsLoading(false);
-      }
-    });
+
+    fetchLocationRisk(
+      {
+        name: hill.name,
+        locationType: 'hill',
+        latitude: hill.latitude!,
+        longitude: hill.longitude!,
+        state: hill.state,
+      },
+      locationController.signal
+    )
+      .then((evaluation) => {
+        const content = formatLocationRisk(hill.name, evaluation);
+        const messageId = `hill-risk-${Date.now()}`;
+        setMessages((previous) => [
+          ...previous,
+          {
+            id: messageId,
+            role: 'assistant',
+            source: 'terraguard-location-risk',
+            content,
+            riskEvaluation: evaluation,
+            locationName: hill.name,
+            resultType: 'hill',
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          },
+        ]);
+        setChatbotSession((previous) => ({
+          ...previous,
+          flow: 'WAITING_FOR_ACKNOWLEDGEMENT',
+          status: 'COMPLETE',
+          exploration: 'HILLS',
+          selectedState: hill.state,
+          selectedHill: hill,
+          awaitingAcknowledgement: true,
+        }));
+        const ackMessage = `${hill.name} analysis is complete. I’ve prepared the available results below.\n\nThe analysis is complete. Say “OK” or “Continue” when you’re ready for the next options.`;
+        guidedMessageSequenceRef.current += 1;
+        const ackId = `guide-${Date.now()}-${guidedMessageSequenceRef.current}`;
+        setMessages((previous) => [
+          ...previous,
+          {
+            id: ackId,
+            role: 'assistant',
+            content: ackMessage,
+            source: 'terraguard-guide',
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          },
+        ]);
+        if (fromVoice || voiceMode) {
+          speakMessage(messageId, content, chatbotLanguage, () => {
+            speakMessage(ackId, ackMessage);
+          });
+        }
+      })
+      .catch((error) => {
+        if (error instanceof DOMException && error.name === 'AbortError') return;
+        addGuidedAssistantMessage(chatbotCopy.evaluationError, fromVoice);
+      })
+      .finally(() => {
+        if (locationRiskControllerRef.current === locationController) {
+          locationRiskControllerRef.current = null;
+          setIsLoading(false);
+        }
+      });
   };
 
   const selectZone = (zone: HazardZone, addUserMessage = true, fromVoice = false) => {
     cancelLocationRiskRequest();
     lastGuidedTransitionRef.current = null;
-    if (addUserMessage) setMessages((previous) => [...previous, {
-      id: `zone-user-${Date.now()}`, role: 'user', content: `Show me ${zone.name}.`,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    }]);
+
+    if (addUserMessage) {
+      setMessages((previous) => [
+        ...previous,
+        {
+          id: `zone-user-${Date.now()}`,
+          role: 'user',
+          content: `Show me ${zone.name}.`,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        },
+      ]);
+    }
+
     setChatbotSession((previous) => ({
-      ...previous, flow: 'APPLICATION_SELECTION_PENDING', exploration: 'REGIONS',
-      pendingRegion: zone, selectedRegion: null, pendingHill: null,
-      pendingFromVoice: fromVoice, selectedState: zone.state, status: 'SELECTION_LOADING', awaitingAcknowledgement: false,
+      ...previous,
+      flow: 'APPLICATION_SELECTION_PENDING',
+      exploration: 'REGIONS',
+      pendingRegion: zone,
+      selectedRegion: null,
+      pendingHill: null,
+      pendingFromVoice: fromVoice,
+      selectedState: zone.state,
+      status: 'SELECTION_LOADING',
+      awaitingAcknowledgement: false,
     }));
+
     addGuidedAssistantMessage(`I’m opening ${zone.name} in TerraGuard.`, fromVoice);
     onSelectZone?.(zone);
   };
@@ -1044,20 +1276,33 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
   const selectHill = (hill: HillsRegion, addUserMessage = true, fromVoice = false) => {
     cancelLocationRiskRequest();
     lastGuidedTransitionRef.current = null;
+
     if (!hill.coordinatesVerified || hill.latitude === undefined || hill.longitude === undefined) {
-      setMessages((previous) => [...previous, {
-        id: `hill-${Date.now()}`, role: 'assistant', source: 'terraguard-data',
-        content: chatbotCopy.unavailable(hill.name),
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      }]);
+      setMessages((previous) => [
+        ...previous,
+        {
+          id: `hill-${Date.now()}`,
+          role: 'assistant',
+          source: 'terraguard-data',
+          content: chatbotCopy.unavailable(hill.name),
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        },
+      ]);
       return;
     }
+
     if (addUserMessage) {
-      setMessages((previous) => [...previous, {
-        id: `hill-user-${Date.now()}`, role: 'user', content: `Show me ${hill.name}.`,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      }]);
+      setMessages((previous) => [
+        ...previous,
+        {
+          id: `hill-user-${Date.now()}`,
+          role: 'user',
+          content: `Show me ${hill.name}.`,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        },
+      ]);
     }
+
     setChatbotSession((previous) => ({
       ...previous,
       flow: 'APPLICATION_SELECTION_PENDING',
@@ -1071,6 +1316,7 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
       awaitingAcknowledgement: false,
       status: 'SELECTION_LOADING',
     }));
+
     addGuidedAssistantMessage(`I’m opening ${hill.name} in TerraGuard.`, fromVoice);
     onSelectRegion?.(hill);
   };
@@ -1078,17 +1324,24 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
   const addGuidedAssistantMessage = (content: string, fromVoice: boolean) => {
     guidedMessageSequenceRef.current += 1;
     const id = `guide-${Date.now()}-${guidedMessageSequenceRef.current}`;
-    setMessages((previous) => [...previous, {
-      id,
-      role: 'assistant',
-      content,
-      source: 'terraguard-guide',
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    }]);
+    setMessages((previous) => [
+      ...previous,
+      {
+        id,
+        role: 'assistant',
+        content,
+        source: 'terraguard-guide',
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      },
+    ]);
     if (fromVoice || voiceMode) speakMessage(id, content);
   };
 
-  const handleChatbotLanguageSelection = (nextLanguage: ChatbotLanguage, addUserMessage = true, fromVoice = false) => {
+  const handleChatbotLanguageSelection = (
+    nextLanguage: ChatbotLanguage,
+    addUserMessage = true,
+    fromVoice = false
+  ) => {
     setChatbotLanguage(nextLanguage);
     setChatbotSession((previous) => ({
       ...previous,
@@ -1108,12 +1361,16 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
     const responseId = `language-followup-${Date.now()}-${guidedMessageSequenceRef.current + 1}`;
     setMessages((previous) => [
       ...previous,
-      ...(addUserMessage ? [{
-        id: `language-${Date.now()}`,
-        role: 'user' as const,
-        content: chatbotLanguageOptions.find((option) => option.id === nextLanguage)?.label || nextLanguage,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      }] : []),
+      ...(addUserMessage
+        ? [
+            {
+              id: `language-${Date.now()}`,
+              role: 'user' as const,
+              content: chatbotLanguageOptions.find((option) => option.id === nextLanguage)?.label || nextLanguage,
+              timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            },
+          ]
+        : []),
       {
         id: responseId,
         role: 'assistant' as const,
@@ -1122,6 +1379,7 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       },
     ]);
+
     if (fromVoice) {
       pendingLanguageSpeechRef.current = {
         id: responseId,
@@ -1132,9 +1390,12 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
 
   useEffect(() => {
     const pendingState = chatbotSession.pendingState;
-    const stateConfirmed = pendingState && applicationState
-      && normalizeState(applicationState) === normalizeState(pendingState);
+    const stateConfirmed =
+      pendingState &&
+      applicationState &&
+      normalizeState(applicationState) === normalizeState(pendingState);
     const dataReady = chatbotSession.exploration === 'HILLS' || regionZonesLoaded;
+
     if (!stateConfirmed || !dataReady || chatbotSession.flow !== 'APPLICATION_SELECTION_PENDING') return;
 
     const isRegions = chatbotSession.exploration === 'REGIONS';
@@ -1146,16 +1407,27 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
       pendingFromVoice: false,
       status: 'COMPLETE',
     }));
+
     addGuidedAssistantMessage(
-      `Here are the available ${isRegions ? 'regions and places' : 'hills and mountain regions'} in ${pendingState}. Which one would you like to explore?`,
-      chatbotSession.pendingFromVoice,
+      `Here are the available ${
+        isRegions ? 'regions and places' : 'hills and mountain regions'
+      } in ${pendingState}. Which one would you like to explore?`,
+      chatbotSession.pendingFromVoice
     );
-  }, [applicationState, chatbotSession.exploration, chatbotSession.flow, chatbotSession.pendingState, chatbotSession.pendingFromVoice, regionZonesLoaded]);
+  }, [
+    applicationState,
+    chatbotSession.exploration,
+    chatbotSession.flow,
+    chatbotSession.pendingState,
+    chatbotSession.pendingFromVoice,
+    regionZonesLoaded,
+  ]);
 
   useEffect(() => {
     const pendingHill = chatbotSession.pendingHill;
     if (
-      pendingHill && applicationRegion?.id === pendingHill.id &&
+      pendingHill &&
+      applicationRegion?.id === pendingHill.id &&
       chatbotSession.flow === 'APPLICATION_SELECTION_PENDING'
     ) {
       setChatbotSession((previous) => ({
@@ -1171,7 +1443,8 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
 
     const pendingRegion = chatbotSession.pendingRegion;
     if (
-      pendingRegion && applicationZone?.id === pendingRegion.id &&
+      pendingRegion &&
+      applicationZone?.id === pendingRegion.id &&
       chatbotSession.flow === 'APPLICATION_SELECTION_PENDING'
     ) {
       setChatbotSession((previous) => ({
@@ -1183,16 +1456,44 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
       }));
       startZoneAnalysis(pendingRegion, chatbotSession.pendingFromVoice);
     }
-  }, [applicationRegion?.id, applicationZone?.id, chatbotSession.pendingHill?.id, chatbotSession.pendingRegion?.id, chatbotSession.flow]);
+  }, [
+    applicationRegion?.id,
+    applicationZone?.id,
+    chatbotSession.pendingHill?.id,
+    chatbotSession.pendingRegion?.id,
+    chatbotSession.flow,
+  ]);
 
   const handleLocalConversationCommand = (messageText: string, fromVoice: boolean) => {
     const normalized = messageText.trim().toLowerCase();
     if (!normalized) return false;
 
     if (chatbotSession.flow === 'LANGUAGE_SELECTION') {
-      const languageOption = chatbotLanguageOptions.find((option) => normalized === option.label.toLowerCase() || normalized.includes(option.label.toLowerCase()));
+      const languageOption = chatbotLanguageOptions.find(
+        (option) =>
+          normalized === option.label.toLowerCase() || normalized.includes(option.label.toLowerCase())
+      );
       if (languageOption) {
         handleChatbotLanguageSelection(languageOption.id, false, fromVoice);
+        return true;
+      }
+      // Greetings before language selection → normal welcome, never inherit app location
+      if (/\b(hello|hi|hey|नमस्ते|নমস্কাৰ|নমস্কার)\b/i.test(normalized)) {
+        setChatbotSession((previous) => ({
+          ...previous,
+          flow: 'MAIN_MENU',
+          exploration: null,
+          selectedState: null,
+          selectedHill: null,
+          selectedRegion: null,
+          pendingState: null,
+          pendingHill: null,
+          pendingRegion: null,
+          pendingFromVoice: false,
+          awaitingAcknowledgement: false,
+          status: 'IDLE',
+        }));
+        addGuidedAssistantMessage(chatbotCopy.returningWelcome, fromVoice);
         return true;
       }
     }
@@ -1204,7 +1505,10 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
       }
     }
 
-    if (chatbotSession.flow === 'WAITING_FOR_ACKNOWLEDGEMENT' && /^(ok|okay|continue|next|what next|yes[, ]+continue|हाँ|हां|ठीक|जारी रखें|ঠিক আছে)$/i.test(normalized)) {
+    if (
+      chatbotSession.flow === 'WAITING_FOR_ACKNOWLEDGEMENT' &&
+      /^(ok|okay|continue|next|what next|yes[, ]+continue|हाँ|हां|ठीक|जारी रखें|ঠিক আছে)$/i.test(normalized)
+    ) {
       setChatbotSession((previous) => ({
         ...previous,
         flow: previous.exploration === 'REGIONS' ? 'REGION_ACTIONS' : 'HILL_ACTIONS',
@@ -1216,7 +1520,10 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
     }
 
     if (chatbotSession.flow === 'HILL_ACTIONS' || chatbotSession.flow === 'REGION_ACTIONS') {
-      if (/^(?:(?:open|show|view)\s+)?(?:risk map|map)$/i.test(normalized) || /(?:open|show|view).*(risk map|map)/i.test(normalized)) {
+      if (
+        /^(?:(?:open|show|view)\s+)?(?:risk map|map)$/i.test(normalized) ||
+        /(?:open|show|view).*(risk map|map)/i.test(normalized)
+      ) {
         handleActionClick({ type: 'NAVIGATE', module: 'risk-map' });
         addGuidedAssistantMessage('Opening Risk Map.', fromVoice);
         return true;
@@ -1226,7 +1533,10 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
         addGuidedAssistantMessage('Opening Risk Details.', fromVoice);
         return true;
       }
-      if (/(another|choose another|check another)/i.test(normalized) && /(hill|place|region)/i.test(normalized)) {
+      if (
+        /(another|choose another|check another|other hill|other place|other region)/i.test(normalized) ||
+        (/(another|choose another|check another)/i.test(normalized) && /(hill|place|region)/i.test(normalized))
+      ) {
         handleChooseAnother();
         return true;
       }
@@ -1236,7 +1546,8 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
       }
     }
 
-    // Weather, seismic, and general risk questions stay on the grounded backend path.
+    // Weather / seismic / general risk questions stay on the grounded backend path
+    // (unless the chatbot already has a selected location and the user is asking about its risk)
     if (/(weather|rain|rainfall|earthquake|seismic|risk|जोखिम|मौसम|बारिश|भूकंप|বতৰ|ভূমিকম্প)/i.test(normalized)) {
       if (chatbotSession.selectedHill && /(risk|जोखिम)/i.test(normalized)) {
         selectHill(chatbotSession.selectedHill, false, fromVoice);
@@ -1251,9 +1562,9 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
 
     const state = NER_STATES.find((candidate) => normalized.includes(normalizeState(candidate)));
     const requestedHill = /(hill|hills|mountain|पहाड़|पहाड़|पहाड़ी|পাহাড়|डोंगर)/i.test(normalized);
-    const requestedRegion = /(regional|place|places|क्षेत्र|जगह|অঞ্চল|স্থান)/i.test(normalized)
-      || (!requestedHill && /region|regions/i.test(normalized));
-    const explicitBrowse = /(open|show|list|find|explore|available|go to|what|which|दिख|खोल|सूची|क्षेत्रों)/i.test(normalized);
+    const requestedRegion =
+      /(regional|place|places|क्षेत्र|जगह|অঞ্চল|স্থান)/i.test(normalized) ||
+      (!requestedHill && /region|regions/i.test(normalized));
 
     if (chatbotSession.flow === 'HILLS_STATE_SELECTION' && state) {
       handleStateSelection(state, false, fromVoice);
@@ -1279,7 +1590,11 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
       }
     }
 
-    if ((chatbotSession.flow === 'MAIN_MENU' || chatbotSession.flow === 'HILLS_STATE_SELECTION') && requestedHill && !requestedRegion) {
+    if (
+      (chatbotSession.flow === 'MAIN_MENU' || chatbotSession.flow === 'HILLS_STATE_SELECTION') &&
+      requestedHill &&
+      !requestedRegion
+    ) {
       const transitionKey = 'domain:hills';
       if (lastGuidedTransitionRef.current === transitionKey && chatbotSession.exploration === 'HILLS') return true;
       lastGuidedTransitionRef.current = transitionKey;
@@ -1289,11 +1604,13 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
       return true;
     }
 
-    if ((chatbotSession.flow === 'MAIN_MENU' || chatbotSession.flow === 'REGIONS_STATE_SELECTION') && requestedRegion) {
+    if (
+      (chatbotSession.flow === 'MAIN_MENU' || chatbotSession.flow === 'REGIONS_STATE_SELECTION') &&
+      requestedRegion
+    ) {
       const transitionKey = 'domain:regions';
       if (lastGuidedTransitionRef.current === transitionKey && chatbotSession.exploration === 'REGIONS') return true;
       lastGuidedTransitionRef.current = transitionKey;
-      handleActionClick({ type: 'NAVIGATE', module: 'hills-regions' });
       setChatbotSession((previous) => ({ ...previous, flow: 'REGIONS_STATE_SELECTION', exploration: 'REGIONS' }));
       addGuidedAssistantMessage(chatbotCopy.regionsPrompt, fromVoice);
       return true;
@@ -1306,9 +1623,7 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
     <div className="fixed bottom-4 right-4 z-50 font-sans sm:bottom-5 sm:right-5">
       {!isOpen && (
         <button
-          onClick={() => {
-            setIsOpen(true);
-          }}
+          onClick={() => setIsOpen(true)}
           className={`mb-20 flex items-center gap-2.5 px-4 py-3 rounded-full shadow-2xl border transition-all duration-300 hover:scale-105 sm:mb-24 ${
             isDark
               ? 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-400/30 shadow-emerald-950/50'
@@ -1337,9 +1652,7 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
           {/* Header */}
           <div
             className={`flex items-center justify-between px-4 py-3.5 border-b ${
-              isDark
-                ? 'bg-slate-800/90 border-slate-700/80'
-                : 'bg-emerald-700 text-white border-emerald-600'
+              isDark ? 'bg-slate-800/90 border-slate-700/80' : 'bg-emerald-700 text-white border-emerald-600'
             }`}
           >
             <div className="flex items-center gap-2.5">
@@ -1401,7 +1714,11 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
           </div>
 
           {chatbotSession.flow === 'LANGUAGE_SELECTION' ? (
-            <div className={`border-b p-3 text-center ${isDark ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-50 border-slate-200'}`}>
+            <div
+              className={`border-b p-3 text-center ${
+                isDark ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-50 border-slate-200'
+              }`}
+            >
               <div className="grid w-full grid-cols-2 gap-2 sm:grid-cols-3" role="group" aria-label={t('chatbot.selectLanguage')}>
                 {chatbotLanguageOptions.map((option) => (
                   <button
@@ -1425,52 +1742,165 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
               </div>
             </div>
           ) : chatbotSession.flow === 'MAIN_MENU' ? (
-            <div className={`p-3 border-b text-xs ${isDark ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-50 border-slate-200'}`}>
-              <div className={`rounded-xl border p-3 ${isDark ? 'border-emerald-500/20 bg-emerald-500/5' : 'border-emerald-200 bg-emerald-50/70'}`}>
-                <div className={`text-sm font-semibold ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>{t('chatbot.welcomeIntro')}</div>
-                <div className={`mt-1 text-[11px] leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>{t('chatbot.welcomeDescription')}</div>
+            <div
+              className={`p-3 border-b text-xs ${
+                isDark ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-50 border-slate-200'
+              }`}
+            >
+              <div
+                className={`rounded-xl border p-3 ${
+                  isDark ? 'border-emerald-500/20 bg-emerald-500/5' : 'border-emerald-200 bg-emerald-50/70'
+                }`}
+              >
+                <div className={`text-sm font-semibold ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
+                  {t('chatbot.welcomeIntro')}
+                </div>
+                <div className={`mt-1 text-[11px] leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                  {t('chatbot.welcomeDescription')}
+                </div>
               </div>
               <div className="mt-3 grid grid-cols-2 gap-2">
-                <button onClick={() => handleDomainSelection('hills')} className={`rounded-xl border px-3 py-3 text-left text-[12px] font-medium transition-colors hover:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 ${isDark ? 'border-emerald-500/40 bg-emerald-500/5 text-emerald-300' : 'border-emerald-300 bg-emerald-50 text-emerald-800'}`}>
-                  <div className="flex items-center gap-2"><Mountain className="h-4 w-4" /> {t('chatbot.hillsButton')}</div>
+                <button
+                  onClick={() => handleDomainSelection('hills')}
+                  className={`rounded-xl border px-3 py-3 text-left text-[12px] font-medium transition-colors hover:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
+                    isDark
+                      ? 'border-emerald-500/40 bg-emerald-500/5 text-emerald-300'
+                      : 'border-emerald-300 bg-emerald-50 text-emerald-800'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <Mountain className="h-4 w-4" /> {t('chatbot.hillsButton')}
+                  </div>
                 </button>
-                <button onClick={() => handleDomainSelection('regions')} className={`rounded-xl border px-3 py-3 text-left text-[12px] font-medium transition-colors hover:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 ${isDark ? 'border-emerald-500/40 bg-emerald-500/5 text-emerald-300' : 'border-emerald-300 bg-emerald-50 text-emerald-800'}`}>
-                  <div className="flex items-center gap-2"><MapPin className="h-4 w-4" /> {t('chatbot.regionsButton')}</div>
+                <button
+                  onClick={() => handleDomainSelection('regions')}
+                  className={`rounded-xl border px-3 py-3 text-left text-[12px] font-medium transition-colors hover:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
+                    isDark
+                      ? 'border-emerald-500/40 bg-emerald-500/5 text-emerald-300'
+                      : 'border-emerald-300 bg-emerald-50 text-emerald-800'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <MapPin className="h-4 w-4" /> {t('chatbot.regionsButton')}
+                  </div>
                 </button>
               </div>
             </div>
           ) : (
-            <div className={`flex items-center gap-1.5 px-3 py-2 border-b text-[11px] ${isDark ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-50 border-slate-200'}`}>
-              <button onClick={resetConversation} aria-label={t('chatbot.returnHome')} className="flex items-center gap-1 rounded-lg border border-slate-500/50 px-2 py-1 text-slate-400 transition-colors hover:border-emerald-500 hover:text-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"><Home className="h-3.5 w-3.5" /> {t('navigation.home')}</button>
-              <span className="ml-1 font-semibold text-emerald-500/90">{chatbotSession.exploration === 'REGIONS' ? 'Regions & Places' : 'Hills & Mountains'}</span>
-              {chatbotSession.selectedState && <span className="ml-1 text-slate-400">• {chatbotSession.selectedState}</span>}
-            </div>
-          )}
-
-          {chatbotSession.flow !== 'LANGUAGE_SELECTION' && chatbotSession.flow !== 'MAIN_MENU' &&
-            (chatbotSession.flow === 'HILLS_STATE_SELECTION' || chatbotSession.flow === 'REGIONS_STATE_SELECTION' || chatbotSession.flow === 'HILLS_LOCATION_SELECTION' || chatbotSession.flow === 'REGIONS_LOCATION_SELECTION') && (
-            <div className={`px-3 py-2 border-b text-xs ${isDark ? 'bg-slate-950/70 border-slate-800' : 'bg-slate-50 border-slate-200'}`}>
-              {chatbotSession.flow === 'HILLS_STATE_SELECTION' || chatbotSession.flow === 'REGIONS_STATE_SELECTION' ? (
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">{NER_STATES.map((state) => <button key={state} onClick={() => handleStateSelection(state)} className={`rounded-xl border p-2.5 text-left text-[11px] font-medium transition-colors hover:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 ${isDark ? 'border-slate-700 bg-slate-900/60 text-slate-300 hover:bg-emerald-950/40' : 'border-slate-200 bg-white text-slate-700 hover:bg-emerald-50'}`}><span className="block text-[9px] uppercase tracking-wider text-emerald-500">{t('chatbot.stateLabel')}</span>{state}</button>)}</div>
-              ) : chatbotSession.exploration === 'REGIONS' ? (
-                <div className="grid max-h-32 grid-cols-1 gap-2 overflow-y-auto pr-1 sm:grid-cols-2">{regionZones.filter((zone) => normalizeState(zone.state) === normalizeState(chatbotSession.pendingState || chatbotSession.selectedState || '')).map((zone) => <button key={zone.id} onClick={() => selectZone(zone)} className={`rounded-xl border p-2.5 text-left transition-colors hover:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 ${isDark ? 'border-slate-700 bg-slate-900/60 hover:bg-emerald-950/30' : 'border-slate-200 bg-white hover:bg-emerald-50'}`}><span className="block text-[11px] font-semibold">{zone.name}</span><span className={`mt-1 block text-[9px] ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>{zone.riskStatus} · {zone.coords}</span></button>)}</div>
-              ) : (
-                <div className="grid max-h-32 grid-cols-1 gap-2 overflow-y-auto pr-1 sm:grid-cols-2">{HILLS_AND_MOUNTAIN_REGIONS.filter((hill) => normalizeState(hill.state) === normalizeState(chatbotSession.pendingState || chatbotSession.selectedState || '')).map((hill) => <button key={hill.id} onClick={() => selectHill(hill)} className={`rounded-xl border p-2.5 text-left transition-colors hover:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 ${isDark ? 'border-slate-700 bg-slate-900/60 hover:bg-emerald-950/30' : 'border-slate-200 bg-white hover:bg-emerald-50'}`}><span className="block text-[11px] font-semibold">{hill.name}</span><span className={`mt-1 block text-[9px] ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>{hill.category} · {hill.coordinatesVerified ? 'Verified coordinates' : 'Coordinates unavailable'}</span></button>)}</div>
+            <div
+              className={`flex items-center gap-1.5 px-3 py-2 border-b text-[11px] ${
+                isDark ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-50 border-slate-200'
+              }`}
+            >
+              <button
+                onClick={resetConversation}
+                aria-label={t('chatbot.returnHome')}
+                className="flex items-center gap-1 rounded-lg border border-slate-500/50 px-2 py-1 text-slate-400 transition-colors hover:border-emerald-500 hover:text-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              >
+                <Home className="h-3.5 w-3.5" /> {t('navigation.home')}
+              </button>
+              <span className="ml-1 font-semibold text-emerald-500/90">
+                {chatbotSession.exploration === 'REGIONS' ? 'Regions & Places' : 'Hills & Mountains'}
+              </span>
+              {chatbotSession.selectedState && (
+                <span className="ml-1 text-slate-400">• {chatbotSession.selectedState}</span>
               )}
             </div>
           )}
 
+          {chatbotSession.flow !== 'LANGUAGE_SELECTION' &&
+            chatbotSession.flow !== 'MAIN_MENU' &&
+            (chatbotSession.flow === 'HILLS_STATE_SELECTION' ||
+              chatbotSession.flow === 'REGIONS_STATE_SELECTION' ||
+              chatbotSession.flow === 'HILLS_LOCATION_SELECTION' ||
+              chatbotSession.flow === 'REGIONS_LOCATION_SELECTION') && (
+              <div
+                className={`px-3 py-2 border-b text-xs ${
+                  isDark ? 'bg-slate-950/70 border-slate-800' : 'bg-slate-50 border-slate-200'
+                }`}
+              >
+                {chatbotSession.flow === 'HILLS_STATE_SELECTION' ||
+                chatbotSession.flow === 'REGIONS_STATE_SELECTION' ? (
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                    {NER_STATES.map((state) => (
+                      <button
+                        key={state}
+                        onClick={() => handleStateSelection(state)}
+                        className={`rounded-xl border p-2.5 text-left text-[11px] font-medium transition-colors hover:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
+                          isDark
+                            ? 'border-slate-700 bg-slate-900/60 text-slate-300 hover:bg-emerald-950/40'
+                            : 'border-slate-200 bg-white text-slate-700 hover:bg-emerald-50'
+                        }`}
+                      >
+                        <span className="block text-[9px] uppercase tracking-wider text-emerald-500">
+                          {t('chatbot.stateLabel')}
+                        </span>
+                        {state}
+                      </button>
+                    ))}
+                  </div>
+                ) : chatbotSession.exploration === 'REGIONS' ? (
+                  <div className="grid max-h-32 grid-cols-1 gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
+                    {regionZones
+                      .filter(
+                        (zone) =>
+                          normalizeState(zone.state) ===
+                          normalizeState(chatbotSession.pendingState || chatbotSession.selectedState || '')
+                      )
+                      .map((zone) => (
+                        <button
+                          key={zone.id}
+                          onClick={() => selectZone(zone)}
+                          className={`rounded-xl border p-2.5 text-left transition-colors hover:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
+                            isDark
+                              ? 'border-slate-700 bg-slate-900/60 hover:bg-emerald-950/30'
+                              : 'border-slate-200 bg-white hover:bg-emerald-50'
+                          }`}
+                        >
+                          <span className="block text-[11px] font-semibold">{zone.name}</span>
+                          <span className={`mt-1 block text-[9px] ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>
+                            {zone.riskStatus} · {zone.coords}
+                          </span>
+                        </button>
+                      ))}
+                  </div>
+                ) : (
+                  <div className="grid max-h-32 grid-cols-1 gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
+                    {HILLS_AND_MOUNTAIN_REGIONS.filter(
+                      (hill) =>
+                        normalizeState(hill.state) ===
+                        normalizeState(chatbotSession.pendingState || chatbotSession.selectedState || '')
+                    ).map((hill) => (
+                      <button
+                        key={hill.id}
+                        onClick={() => selectHill(hill)}
+                        className={`rounded-xl border p-2.5 text-left transition-colors hover:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
+                          isDark
+                            ? 'border-slate-700 bg-slate-900/60 hover:bg-emerald-950/30'
+                            : 'border-slate-200 bg-white hover:bg-emerald-50'
+                        }`}
+                      >
+                        <span className="block text-[11px] font-semibold">{hill.name}</span>
+                        <span className={`mt-1 block text-[9px] ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>
+                          {hill.category} · {hill.coordinatesVerified ? 'Verified coordinates' : 'Coordinates unavailable'}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
           {/* Message History */}
           <div className="flex-1 p-4 overflow-y-auto space-y-3.5 text-xs leading-relaxed">
             {messages.map((msg) => (
-              <div
-                key={msg.id}
-                className={`flex gap-2.5 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-              >
+              <div key={msg.id} className={`flex gap-2.5 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 {msg.role === 'assistant' && (
                   <div
                     className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${
-                      isDark ? 'bg-emerald-900/60 text-emerald-400 border border-emerald-700/50' : 'bg-emerald-100 text-emerald-700'
+                      isDark
+                        ? 'bg-emerald-900/60 text-emerald-400 border border-emerald-700/50'
+                        : 'bg-emerald-100 text-emerald-700'
                     }`}
                   >
                     <Bot className="w-3.5 h-3.5" />
@@ -1499,7 +1929,9 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
                         onClick={() => speakMessage(msg.id, msg.content)}
                         aria-label={speakingMessageId === msg.id ? 'Stop speaking' : 'Read assistant message aloud'}
                         className={`mt-2 inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-[10px] transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
-                          isDark ? 'border-slate-600 text-slate-300 hover:border-emerald-500 hover:text-emerald-300' : 'border-slate-300 text-slate-600 hover:border-emerald-600 hover:text-emerald-700'
+                          isDark
+                            ? 'border-slate-600 text-slate-300 hover:border-emerald-500 hover:text-emerald-300'
+                            : 'border-slate-300 text-slate-600 hover:border-emerald-600 hover:text-emerald-700'
                         }`}
                       >
                         {speakingMessageId === msg.id ? <VolumeX className="h-3 w-3" /> : <Volume2 className="h-3 w-3" />}
@@ -1515,7 +1947,6 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
                     )}
                   </div>
 
-                  {/* Interactive Action Card */}
                   {msg.action && (
                     <button
                       onClick={() => handleActionClick(msg.action!)}
@@ -1550,16 +1981,44 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
 
             {(chatbotSession.flow === 'HILL_ACTIONS' || chatbotSession.flow === 'REGION_ACTIONS') && (
               <div className="grid grid-cols-2 gap-2" aria-label="TerraBot actions">
-                <button onClick={() => onNavigate?.('risk-map')} className={`rounded-xl border px-2.5 py-2 text-[10px] font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 ${isDark ? 'border-emerald-500/40 bg-emerald-500/5 text-emerald-300 hover:bg-emerald-500/10' : 'border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100'}`}>
+                <button
+                  onClick={() => onNavigate?.('risk-map')}
+                  className={`rounded-xl border px-2.5 py-2 text-[10px] font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
+                    isDark
+                      ? 'border-emerald-500/40 bg-emerald-500/5 text-emerald-300 hover:bg-emerald-500/10'
+                      : 'border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
+                  }`}
+                >
                   Open Risk Map
                 </button>
-                <button onClick={() => onNavigate?.('risk-details')} className={`rounded-xl border px-2.5 py-2 text-[10px] font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 ${isDark ? 'border-slate-700 bg-slate-800/80 text-slate-300 hover:border-slate-500' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-100'}`}>
+                <button
+                  onClick={() => onNavigate?.('risk-details')}
+                  className={`rounded-xl border px-2.5 py-2 text-[10px] font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
+                    isDark
+                      ? 'border-slate-700 bg-slate-800/80 text-slate-300 hover:border-slate-500'
+                      : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-100'
+                  }`}
+                >
                   View Risk Details
                 </button>
-                <button onClick={handleChooseAnother} className={`rounded-xl border px-2.5 py-2 text-[10px] font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 ${isDark ? 'border-slate-700 bg-slate-800/80 text-slate-300 hover:border-slate-500' : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-100'}`}>
+                <button
+                  onClick={handleChooseAnother}
+                  className={`rounded-xl border px-2.5 py-2 text-[10px] font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
+                    isDark
+                      ? 'border-slate-700 bg-slate-800/80 text-slate-300 hover:border-slate-500'
+                      : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-100'
+                  }`}
+                >
                   {chatbotSession.exploration === 'REGIONS' ? 'Check Another Place' : 'Check Another Hill'}
                 </button>
-                <button onClick={handleExit} className={`rounded-xl border px-2.5 py-2 text-[10px] font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 ${isDark ? 'border-red-500/40 bg-red-500/5 text-red-300 hover:bg-red-500/10' : 'border-red-200 bg-red-50 text-red-700 hover:bg-red-100'}`}>
+                <button
+                  onClick={handleExit}
+                  className={`rounded-xl border px-2.5 py-2 text-[10px] font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
+                    isDark
+                      ? 'border-red-500/40 bg-red-500/5 text-red-300 hover:bg-red-500/10'
+                      : 'border-red-200 bg-red-50 text-red-700 hover:bg-red-100'
+                  }`}
+                >
                   Exit
                 </button>
               </div>
@@ -1570,8 +2029,18 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
                 <div className="w-6 h-6 rounded-full bg-emerald-900/60 text-emerald-400 flex items-center justify-center animate-pulse">
                   <Bot className="w-3.5 h-3.5" />
                 </div>
-                <div className={`flex items-center gap-2 rounded-xl border px-3 py-2 ${isDark ? 'border-slate-700 bg-slate-800/70 text-slate-400' : 'border-slate-200 bg-slate-50 text-slate-500'}`}>
-                  <span>{chatbotSession.status === 'DATA_LOADING' ? 'Retrieving available environmental and risk information' : chatbotSession.status === 'ANALYZING' ? 'Analyzing available risk information' : 'TerraBot is processing your request'}</span>
+                <div
+                  className={`flex items-center gap-2 rounded-xl border px-3 py-2 ${
+                    isDark ? 'border-slate-700 bg-slate-800/70 text-slate-400' : 'border-slate-200 bg-slate-50 text-slate-500'
+                  }`}
+                >
+                  <span>
+                    {chatbotSession.status === 'DATA_LOADING'
+                      ? 'Retrieving available environmental and risk information'
+                      : chatbotSession.status === 'ANALYZING'
+                      ? 'Analyzing available risk information'
+                      : 'TerraBot is processing your request'}
+                  </span>
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-bounce"></span>
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-bounce [animation-delay:0.2s]"></span>
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-bounce [animation-delay:0.4s]"></span>
@@ -1595,14 +2064,20 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
               type="button"
               onClick={handleMicButtonClick}
               disabled={isVoiceProcessing}
-              aria-label={isListening ? 'Stop listening' : isVoiceProcessing ? 'Processing voice command' : 'Start voice input'}
+              aria-label={
+                isListening
+                  ? 'Stop listening'
+                  : isVoiceProcessing
+                  ? 'Processing voice command'
+                  : 'Start voice input'
+              }
               className={`shrink-0 rounded-xl border p-2.5 transition-all focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
                 isListening
                   ? 'border-red-500 bg-red-500/15 text-red-500 animate-pulse'
                   : isDark
                   ? 'border-slate-700 bg-slate-800 text-slate-300 hover:border-emerald-500 hover:text-emerald-300'
                   : 'border-slate-300 bg-white text-slate-600 hover:border-emerald-600 hover:text-emerald-700'
-                } ${isVoiceProcessing ? 'cursor-not-allowed opacity-60' : ''}`}
+              } ${isVoiceProcessing ? 'cursor-not-allowed opacity-60' : ''}`}
             >
               {isListening ? <Square className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
             </button>
@@ -1634,7 +2109,10 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
             </button>
           </form>
           {voiceStatus && (
-            <div role="status" className={`px-3 pb-2 text-[10px] ${isDark ? 'bg-slate-900 text-slate-400' : 'bg-slate-50 text-slate-500'}`}>
+            <div
+              role="status"
+              className={`px-3 pb-2 text-[10px] ${isDark ? 'bg-slate-900 text-slate-400' : 'bg-slate-50 text-slate-500'}`}
+            >
               {voiceStatus}
             </div>
           )}
