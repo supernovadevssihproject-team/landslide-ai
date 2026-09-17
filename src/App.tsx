@@ -508,6 +508,13 @@ export default function App() {
       <Suspense fallback={null}>
         <ChatWidget
           theme={theme}
+          applicationState={selectedState === 'all' ? undefined : selectedState}
+          applicationRegion={selectedRegion}
+          applicationZone={contextSelectedZone}
+          onRequestStateChange={(state) => {
+            const stateKey = state.toLowerCase().replace(/\s+pradesh$/, '') as NerState;
+            setSelectedState(stateKey);
+          }}
           onNavigate={(mod) => setActiveModule(mod)}
           onSelectZone={(zone) => {
             setSelectedZone(zone);

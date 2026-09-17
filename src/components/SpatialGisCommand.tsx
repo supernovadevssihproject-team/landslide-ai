@@ -1197,35 +1197,6 @@ export const SpatialGisCommand: React.FC<SpatialGisCommandProps> = ({
               </div>
             </div>
 
-            {/* Precipitation Stress Slider */}
-            <div className="mt-4 pt-2">
-              <div className="flex items-center justify-between text-xs font-mono mb-1">
-                <span className="flex items-center gap-1.5 text-slate-400">
-                  <CloudRain className="w-4 h-4 text-cyan-500" />
-                  Rainfall Stress Test Simulation:
-                </span>
-                <span className="text-amber-500 font-bold">
-                  +{stressRainfall} mm{' '}
-                  <span className="text-slate-400 font-normal">
-                    (Total: {(zoneMlRisk ? zoneMlRisk.feature_summary.rainfall_3d_mm + stressRainfall : 120 + stressRainfall).toFixed(1)} mm)
-                  </span>
-                </span>
-              </div>
-              <input
-                type="range"
-                min="0"
-                max="120"
-                step="5"
-                value={stressRainfall}
-                onChange={(e) => setStressRainfall(Number(e.target.value))}
-                className="w-full h-2 rounded-lg appearance-none cursor-pointer accent-emerald-500 bg-slate-200 dark:bg-slate-700"
-              />
-              <div className="flex justify-between text-[10px] font-mono text-slate-400 mt-1">
-                <span>Baseline (+0mm)</span>
-                <span>Severe Cloudburst (+120mm)</span>
-              </div>
-            </div>
-
             {/* Geotechnical metrics strip */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mt-4">
               <div className={`p-2.5 rounded-xl border ${isDark ? 'bg-slate-800/40 border-slate-700/60' : 'bg-slate-50 border-slate-200'}`}>
