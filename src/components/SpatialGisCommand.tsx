@@ -1069,7 +1069,7 @@ export const SpatialGisCommand: React.FC<SpatialGisCommandProps> = ({
         </div>
 
         {/* Right Column: Google Earth GIS Map Canvas + Telemetry & Inspector (8 cols) */}
-        <div className="lg:col-span-8 space-y-4">
+        <div className="min-w-0 lg:col-span-8 space-y-4">
           <div
             className={`border rounded-2xl overflow-hidden relative shadow-lg ${isDark ? 'bg-[#0d1c2d] border-[#1c2b3c]' : 'bg-white border-slate-200'
               }`}
@@ -1176,7 +1176,7 @@ export const SpatialGisCommand: React.FC<SpatialGisCommandProps> = ({
 
           {/* Inspector Panel & Real-time ML Evaluation */}
           <div
-            className={`p-5 rounded-2xl border ${isDark ? 'bg-[#0d1c2d] border-[#1c2b3c]' : 'bg-white border-slate-200 shadow-sm'
+            className={`min-w-0 max-w-full p-5 rounded-2xl border ${isDark ? 'bg-[#0d1c2d] border-[#1c2b3c]' : 'bg-white border-slate-200 shadow-sm'
               }`}
           >
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-3 border-b border-slate-200 dark:border-slate-800">

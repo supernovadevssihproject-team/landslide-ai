@@ -193,7 +193,7 @@ export const MlRiskScoreCard: React.FC<MlRiskScoreCardProps> = ({
 
   return (
     <div
-      className={`rounded-2xl border transition-all duration-300 shadow-xl overflow-hidden ${
+      className={`w-full max-w-full min-w-0 box-border rounded-2xl border transition-all duration-300 shadow-xl overflow-hidden ${
         isDark
           ? 'bg-[#091523]/95 border-[#1c3046] text-slate-100'
           : 'bg-white border-slate-200 text-slate-900'
@@ -205,13 +205,13 @@ export const MlRiskScoreCard: React.FC<MlRiskScoreCardProps> = ({
           isDark ? 'bg-[#0e1d2f]/90 border-[#1c3046]' : 'bg-slate-50 border-slate-200'
         }`}
       >
-        <div className="flex items-center gap-2 min-w-0">
+        <div className="flex min-w-0 max-w-full items-center gap-2">
           <div className="w-7 h-7 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center flex-shrink-0 border border-emerald-500/20">
             <Cpu className="w-4 h-4" />
           </div>
           <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-mono font-bold tracking-wider uppercase text-cyan-400">
+            <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2">
+              <span className="min-w-0 max-w-full break-words text-[10px] font-mono font-bold tracking-wider uppercase text-cyan-400">
                 {titlePrefix}
               </span>
               <span
@@ -224,13 +224,13 @@ export const MlRiskScoreCard: React.FC<MlRiskScoreCardProps> = ({
                 {locType === 'hill' ? 'Hills & Mountains' : 'Region Corridor'}
               </span>
             </div>
-            <h4 className="text-sm sm:text-base font-black truncate text-white">
+            <h4 className="min-w-0 max-w-full break-words text-sm sm:text-base font-black text-white">
               {locName}
             </h4>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 flex-shrink-0">
+        <div className="flex max-w-full flex-wrap items-center justify-end gap-2">
           <div
             className={`flex items-center gap-1.5 px-2 py-0.5 rounded font-mono text-[10px] border ${
               isSeismicLive
@@ -260,165 +260,75 @@ export const MlRiskScoreCard: React.FC<MlRiskScoreCardProps> = ({
         </div>
       </div>
 
-      {/* Main Score Hero Section */}
-      <div className="p-4 sm:p-5">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          {/* Left: Score Out of 100 Dial */}
-          <div className="flex items-center gap-4">
-            <div
-              className={`relative flex items-center justify-center w-20 h-20 sm:w-24 sm:h-24 rounded-2xl border-2 shadow-2xl flex-shrink-0 ${styles.dial}`}
-            >
-              <div className="text-center">
-                <span className="text-2xl sm:text-3xl font-black font-mono leading-none tracking-tight block">
-                  {scoreOutOf100}
-                </span>
-                <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider block mt-0.5">
-                  / 100
-                </span>
-              </div>
-              <div className={`absolute -top-1.5 -right-1.5 w-3.5 h-3.5 rounded-full border-2 border-[#091523] ${styles.pulse} animate-pulse`} />
+      {/* Main KPI Dashboard */}
+      <div className="min-w-0 p-4 sm:p-5">
+        <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className={`rounded-xl border p-3 ${isDark ? 'bg-slate-900/50 border-slate-800' : 'bg-slate-50 border-slate-200'}`}>
+            <span className="text-[9px] font-mono font-bold uppercase leading-tight tracking-wider text-slate-400">Risk Score</span>
+              <div className="mt-2 flex items-baseline gap-1">
+                <span className="text-[19px] font-black font-mono leading-none text-white">{scoreOutOf100}</span>
+                <span className="text-[9px] font-mono leading-tight text-slate-400">/ 100</span>
             </div>
-
-            <div>
-              <div className="flex items-center gap-2">
-                <span
-                  className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-black tracking-wider uppercase border shadow-md ${styles.badge}`}
-                >
-                  <RiskIcon className="w-3.5 h-3.5" />
-                  <span>RISK LEVEL: {styles.label}</span>
-                </span>
-              </div>
-
-              <div className="mt-2 flex items-baseline gap-2">
-                <span className="text-xl sm:text-2xl font-extrabold font-mono text-white">
-                  {probabilityPct}%
-                </span>
-                <span className="text-xs text-slate-400 font-mono font-medium">
-                  Landslide Probability
-                </span>
-              </div>
-
-              <div className="mt-1 flex items-center gap-1 text-[11px] font-mono text-slate-400">
-                <MapPin className="w-3 h-3 text-cyan-400" />
-                <span>
-                  {locLat}° N, {locLon}° E
-                </span>
-                <span>•</span>
-                <span>Elev: {elevM} m</span>
-              </div>
+            <div className="mt-2 h-1.5 w-full rounded-full bg-slate-800 p-0.5">
+              <div className={`h-full rounded-full ${styles.bar}`} style={{ width: `${Math.max(4, Math.min(100, scoreOutOf100))}%` }} />
             </div>
           </div>
 
-          {/* Right: Progress Bar & Action Code */}
-          <div className="sm:max-w-xs w-full flex flex-col justify-center">
-            <div className="flex items-center justify-between text-xs font-mono mb-1">
-              <span className="text-slate-400">Calculated Risk Index:</span>
-              <span className="font-bold text-white font-mono">{scoreOutOf100} / 100</span>
+          <div className={`rounded-xl border p-3 ${isDark ? 'bg-slate-900/50 border-slate-800' : 'bg-slate-50 border-slate-200'}`}>
+            <span className="text-[9px] font-mono font-bold uppercase leading-tight tracking-wider text-slate-400">Risk Level</span>
+            <div className="mt-2 flex items-center gap-1.5">
+              <RiskIcon className="h-4 w-4 shrink-0 text-red-400" />
+                <span className="break-words text-[13px] font-black uppercase leading-tight text-white">{styles.label}</span>
             </div>
-            <div className="w-full h-2.5 bg-slate-800 rounded-full overflow-hidden p-0.5 border border-slate-700/60 shadow-inner">
-              <div
-                className={`h-full rounded-full transition-all duration-700 ${styles.bar}`}
-                style={{ width: `${Math.max(4, Math.min(100, scoreOutOf100))}%` }}
-              />
+          </div>
+
+          <div className={`rounded-xl border p-3 ${isDark ? 'bg-slate-900/50 border-slate-800' : 'bg-slate-50 border-slate-200'}`}>
+            <span className="text-[9px] font-mono font-bold uppercase leading-tight tracking-wider text-slate-400">Landslide Probability</span>
+              <div className="mt-2 text-[17px] font-black font-mono leading-none text-white">{probabilityPct}%</div>
+          </div>
+
+          <div className={`rounded-xl border p-3 ${isDark ? 'bg-slate-900/50 border-slate-800' : 'bg-slate-50 border-slate-200'}`}>
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[9px] font-mono font-bold uppercase leading-tight tracking-wider text-slate-400">Base ML Model</span>
+                <Cpu className="h-3.5 w-3.5 shrink-0 text-cyan-400" />
             </div>
-            <div className="mt-2 flex items-center justify-between text-[10px] font-mono text-slate-400">
-              <span>0 (Low)</span>
-              <span>25 (Mod)</span>
-              <span>50 (High)</span>
-              <span>75+ (Critical)</span>
+            <div className="mt-2 text-[16px] font-black font-mono leading-none text-cyan-300">{baseMlPct}%</div>
+          </div>
+
+          <div className={`rounded-xl border p-3 ${isDark ? 'bg-slate-900/50 border-slate-800' : 'bg-slate-50 border-slate-200'}`}>
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[9px] font-mono font-bold uppercase leading-tight tracking-wider text-slate-400">Seismic Adjustment</span>
+                <Flame className="h-3.5 w-3.5 shrink-0 text-orange-400" />
+            </div>
+            <div className={`mt-2 text-[16px] font-black font-mono leading-none ${seismicAdjPct > 0 ? 'text-orange-400' : 'text-slate-400'}`}>
+              +{seismicAdjPct}%
+            </div>
+          </div>
+
+          <div className={`rounded-xl border p-3 ${isDark ? 'bg-slate-900/50 border-slate-800' : 'bg-slate-50 border-slate-200'}`}>
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[9px] font-mono font-bold uppercase leading-tight tracking-wider text-slate-400">Key Triggers</span>
+                <CloudRain className="h-3.5 w-3.5 shrink-0 text-cyan-400" />
+            </div>
+            <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[10px] leading-tight text-slate-300">
+                <span>3d Rain: <strong>{rain3d} mm</strong></span>
+              <span>Slope: <strong>{slopeDeg}°</strong></span>
             </div>
           </div>
         </div>
 
-        {/* Transparent Model Layer Breakdown Strip */}
-        <div
-          className={`mt-4 pt-3 border-t grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 text-xs font-mono ${
-            isDark ? 'border-slate-800/80' : 'border-slate-200'
-          }`}
-        >
-          {/* Base ML Score */}
-          <div
-            className={`p-2.5 rounded-xl border ${
-              isDark ? 'bg-slate-900/50 border-slate-800' : 'bg-slate-50 border-slate-200'
-            }`}
-          >
-            <div className="flex items-center justify-between text-slate-400 text-[10px] uppercase">
-              <span>Base ML Model</span>
-              <Cpu className="w-3 h-3 text-cyan-400" />
-            </div>
-            <div className="mt-1 flex items-baseline justify-between">
-              <span className="text-base font-bold text-cyan-300 font-mono">
-                {baseMlPct}%
-              </span>
-              <span className="text-[10px] text-slate-400">Random Forest + RF</span>
-            </div>
-            <span className="text-[10px] text-slate-500 block truncate mt-0.5">
-              Terrain &amp; Antecedent Rain Ensemble
-            </span>
-          </div>
-
-          {/* Seismic Co-Trigger Adjustment */}
-          <div
-            className={`p-2.5 rounded-xl border ${
-              isDark ? 'bg-slate-900/50 border-slate-800' : 'bg-slate-50 border-slate-200'
-            }`}
-          >
-            <div className="flex items-center justify-between text-slate-400 text-[10px] uppercase">
-              <span>Seismic Adjustment Layer</span>
-              <Flame className="w-3 h-3 text-orange-400" />
-            </div>
-            <div className="mt-1 flex items-baseline justify-between">
-              <span
-                className={`text-base font-bold font-mono ${
-                  seismicAdjPct > 0 ? 'text-orange-400' : 'text-slate-400'
-                }`}
-              >
-                +{seismicAdjPct}%
-              </span>
-              <span className="text-[10px] text-slate-400">
-                Trigger Score: {triggerScore.toFixed(2)}
-              </span>
-            </div>
-            <span className="text-[10px] text-slate-500 block truncate mt-0.5">
-              NCS Ground Motion Co-Factor (Bounded)
-            </span>
-          </div>
-
-          {/* Environmental Drivers */}
-          <div
-            className={`p-2.5 rounded-xl border sm:col-span-2 lg:col-span-1 ${
-              isDark ? 'bg-slate-900/50 border-slate-800' : 'bg-slate-50 border-slate-200'
-            }`}
-          >
-            <div className="flex items-center justify-between text-slate-400 text-[10px] uppercase">
-              <span>Key Triggers</span>
-              <CloudRain className="w-3 h-3 text-cyan-400" />
-            </div>
-            <div className="mt-1 flex items-center justify-between text-[11px]">
-              <span className="text-slate-300">
-                3d Rain: <strong>{rain3d} mm</strong>
-              </span>
-              <span className="text-slate-300">
-                Slope: <strong>{slopeDeg}°</strong>
-              </span>
-            </div>
-            <span className="text-[10px] text-slate-500 block truncate mt-0.5">
-              {eventsInRange} NCS events evaluated in range
-            </span>
-          </div>
+        <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-slate-800/60 pt-3 text-[9px] leading-tight font-mono text-slate-400">
+          <MapPin className="h-3 w-3 shrink-0 text-cyan-400" />
+          <span>{locLat}° N, {locLon}° E</span>
+          <span>•</span>
+           <span>Elev: {elevM} m</span>
         </div>
 
-        {/* Bottom Transparency & Calculation Timestamp Bar */}
-        <div className="mt-3 pt-2.5 border-t border-slate-800/60 flex flex-wrap items-center justify-between gap-2 text-[10px] font-mono text-slate-400">
-          <div className="flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
-            <span>Formula: P_final = P_base + S_seismic × 0.20 × (1 - P_base)</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span>Action: <strong className="text-slate-300">{evaluation.action_code}</strong></span>
-            <span>•</span>
-            <span>Updated: {formatTime(evaluation.updated_at)}</span>
-          </div>
+        <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-slate-800/60 pt-3 text-[9px] leading-tight font-mono text-slate-400">
+          <span className="font-bold uppercase tracking-wider text-slate-500">Action</span>
+          <strong className="break-words text-slate-200">{evaluation.action_code}</strong>
+          <span className="text-slate-600">•</span>
+          <span className="text-[8px]">Updated: {formatTime(evaluation.updated_at)}</span>
         </div>
       </div>
     </div>
