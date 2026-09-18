@@ -134,6 +134,12 @@ export interface ReliefShelter {
   name: string;
   location: string;
   state: NerState;
+  latitude?: number;
+  longitude?: number;
+  coordinatesVerified?: boolean;
+  coordinateType?: 'exact' | 'approximate';
+  dataStatus?: 'VERIFIED' | 'DEMO' | 'UNVERIFIED';
+  coordinateSource?: string;
   capacityCurrent: number;
   capacityMax: number;
   occupancyPercent: number;

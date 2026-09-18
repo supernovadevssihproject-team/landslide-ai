@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
-import { HazardZone, OperationalModule } from '../types';
+import React, { useEffect, useState } from 'react';
+import { HazardZone, OperationalModule, ReliefShelter } from '../types';
 import { MONTHLY_HISTORICAL_DATA, RELIEF_SHELTERS } from '../data/mockData';
+import { FocusCoordinates, useMapContext } from '../context/MapContext';
+import { LandslideApi } from '../services/api';
 import {
   ArrowLeft,
   AlertTriangle,
@@ -50,10 +52,54 @@ export const TerraRiskDetails: React.FC<TerraRiskDetailsProps> = ({
   theme,
 }) => {
   const { t } = useI18n();
+  const { setFocusCoordinates } = useMapContext();
   const [activeMetricTab, setActiveMetricTab] = useState<MetricCategory>('rainfall');
   const [hoveredMonth, setHoveredMonth] = useState<string | null>(null);
+  const [reliefShelters, setReliefShelters] = useState<ReliefShelter[]>(RELIEF_SHELTERS);
+
+  useEffect(() => {
+    let active = true;
+
+    LandslideApi.getReliefShelters().then((shelters) => {
+      if (active && shelters.length > 0) {
+        setReliefShelters(shelters);
+      }
+    });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const isDark = theme === 'dark';
+
+  const handleViewShelterRoute = (shelter: ReliefShelter) => {
+    const hasCoordinates =
+      Number.isFinite(shelter.latitude) && Number.isFinite(shelter.longitude);
+
+    if (!hasCoordinates) {
+      return;
+    }
+
+    const coordinateType = shelter.coordinateType === 'exact' || shelter.coordinatesVerified === true
+      ? 'exact'
+      : 'approximate';
+
+    setFocusCoordinates({
+      latitude: shelter.latitude as number,
+      longitude: shelter.longitude as number,
+      zoom: coordinateType === 'exact' ? 16 : 14,
+      coordinateType,
+      shelterId: shelter.id,
+      label: shelter.name,
+      description:
+        coordinateType === 'exact'
+          ? 'Designated Relief Shelter'
+          : 'Relief Shelter (Approximate Location)',
+    });
+
+    onNavigate('risk-map');
+  };
 
   // Calculate risk percentage numeric value from zone
   const riskScoreNum = selectedZone.riskStatus.includes('CRITICAL')
@@ -115,11 +161,11 @@ export const TerraRiskDetails: React.FC<TerraRiskDetailsProps> = ({
     .join(' ');
 
   // Filter shelters for current state or fallback to top shelters
-  const sheltersForZone = RELIEF_SHELTERS.filter(
+  const sheltersForZone = reliefShelters.filter(
     (s) => s.state.toLowerCase() === selectedZone.state.toLowerCase()
   );
   const displayShelters =
-    sheltersForZone.length > 0 ? sheltersForZone : RELIEF_SHELTERS.slice(0, 3);
+    sheltersForZone.length > 0 ? sheltersForZone : reliefShelters.slice(0, 3);
 
   // Tab metadata
   const metricTabConfigs: Record<MetricCategory, MetricTabConfig> = {
@@ -616,78 +662,113 @@ export const TerraRiskDetails: React.FC<TerraRiskDetailsProps> = ({
               </div>
 
               <div className="space-y-3">
-                {displayShelters.map((shelter) => (
-                  <div
-                    key={shelter.id}
-                    className={`p-4 rounded-xl border transition-all ${
-                      isDark
-                        ? 'bg-slate-800/50 border-slate-700/70 hover:border-slate-600'
-                        : 'bg-slate-50 border-slate-200 hover:border-slate-300'
-                    }`}
-                  >
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <h4 className="font-bold text-sm">{shelter.name}</h4>
-                          <span
-                            className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full ${
-                              shelter.status === 'CRITICAL'
-                                ? 'bg-red-500/20 text-red-500'
-                                : 'bg-emerald-500/20 text-emerald-500'
+                {displayShelters.map((shelter) => {
+                  const hasCoordinates =
+                    Number.isFinite(shelter.latitude) && Number.isFinite(shelter.longitude);
+                  const isApproximate =
+                    hasCoordinates && (shelter.coordinateType === 'approximate' || shelter.coordinatesVerified === false);
+
+                  return (
+                    <div
+                      key={shelter.id}
+                      className={`p-4 rounded-xl border transition-all ${
+                        isDark
+                          ? 'bg-slate-800/50 border-slate-700/70 hover:border-slate-600'
+                          : 'bg-slate-50 border-slate-200 hover:border-slate-300'
+                      }`}
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-bold text-sm">{shelter.name}</h4>
+                            <span
+                              className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full ${
+                                shelter.status === 'CRITICAL'
+                                  ? 'bg-red-500/20 text-red-500'
+                                  : 'bg-emerald-500/20 text-emerald-500'
+                              }`}
+                            >
+                              {shelter.status}
+                            </span>
+                          </div>
+                          <p
+                            className={`text-xs mt-0.5 ${
+                              isDark ? 'text-slate-400' : 'text-slate-500'
                             }`}
                           >
-                            {shelter.status}
-                          </span>
+                            <MapPin className="w-3 h-3 inline mr-1 text-emerald-500" />
+                            {shelter.location}
+                          </p>
                         </div>
-                        <p
-                          className={`text-xs mt-0.5 ${
-                            isDark ? 'text-slate-400' : 'text-slate-500'
-                          }`}
-                        >
-                          <MapPin className="w-3 h-3 inline mr-1 text-emerald-500" />
-                          {shelter.location}
-                        </p>
-                      </div>
 
-                      <div className="flex items-center gap-3">
-                        <div className="text-right">
-                          <div className="text-xs font-bold">
-                            {shelter.capacityCurrent} / {shelter.capacityMax}
+                        <div className="flex items-center gap-3">
+                          <div className="text-right">
+                            <div className="text-xs font-bold">
+                              {shelter.capacityCurrent} / {shelter.capacityMax}
+                            </div>
+                            <div className="text-[10px] text-slate-400">Capacity ({shelter.occupancyPercent}%)</div>
                           </div>
-                          <div className="text-[10px] text-slate-400">Capacity ({shelter.occupancyPercent}%)</div>
+                          <button
+                            disabled={!hasCoordinates}
+                            onClick={() => handleViewShelterRoute(shelter)}
+                            title={
+                              hasCoordinates
+                                ? isApproximate
+                                  ? 'Approximate shelter location'
+                                  : 'Exact shelter location'
+                                : 'Shelter location unavailable'
+                            }
+                            className={`px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all flex items-center gap-1 ${
+                              hasCoordinates
+                                ? isApproximate
+                                  ? 'bg-amber-600/10 hover:bg-amber-600 text-amber-500 hover:text-white border-amber-500/30'
+                                  : 'bg-emerald-600/10 hover:bg-emerald-600 text-emerald-500 hover:text-white border-emerald-500/30'
+                                : 'bg-slate-500/10 text-slate-500 border-slate-500/20 cursor-not-allowed opacity-70'
+                            }`}
+                          >
+                            <Navigation className="w-3 h-3" />
+                            <span>View Route</span>
+                          </button>
                         </div>
-                        <button
-                          onClick={() => onNavigate('risk-map')}
-                          className="px-3 py-1.5 rounded-lg bg-emerald-600/10 hover:bg-emerald-600 text-emerald-500 hover:text-white border border-emerald-500/30 text-xs font-semibold transition-all flex items-center gap-1"
-                        >
-                          <Navigation className="w-3 h-3" />
-                          <span>View Route</span>
-                        </button>
                       </div>
-                    </div>
 
-                    {/* Progress Bar & Supplies */}
-                    <div className="mt-3">
-                      <div
-                        className={`w-full h-1.5 rounded-full overflow-hidden ${
-                          isDark ? 'bg-slate-700' : 'bg-slate-200'
-                        }`}
-                      >
+                      {!hasCoordinates && (
+                        <p className="mt-2 text-[10px] text-amber-500">
+                          Shelter location unavailable
+                        </p>
+                      )}
+
+                      {hasCoordinates && (
+                        <p className={`mt-2 text-[10px] ${isApproximate ? 'text-amber-500' : 'text-emerald-500'}`}>
+                          {isApproximate
+                            ? `Approximate shelter location: ${shelter.coordinateSource || 'nearby reference'}`
+                            : 'Exact shelter location'}
+                        </p>
+                      )}
+
+                      {/* Progress Bar & Supplies */}
+                      <div className="mt-3">
                         <div
-                          className={`h-full rounded-full ${
-                            shelter.occupancyPercent > 80 ? 'bg-red-500' : 'bg-emerald-500'
+                          className={`w-full h-1.5 rounded-full overflow-hidden ${
+                            isDark ? 'bg-slate-700' : 'bg-slate-200'
                           }`}
-                          style={{ width: `${shelter.occupancyPercent}%` }}
-                        />
-                      </div>
-                      <div className="flex flex-wrap items-center justify-between text-[11px] text-slate-400 mt-1.5">
-                        <span>Rations: {shelter.rationsDays}</span>
-                        <span>Power: {shelter.gensetStatus}</span>
-                        <span>Medical: {shelter.medicalActive ? 'Active Team on Duty' : 'Standby'}</span>
+                        >
+                          <div
+                            className={`h-full rounded-full ${
+                              shelter.occupancyPercent > 80 ? 'bg-red-500' : 'bg-emerald-500'
+                            }`}
+                            style={{ width: `${shelter.occupancyPercent}%` }}
+                          />
+                        </div>
+                        <div className="flex flex-wrap items-center justify-between text-[11px] text-slate-400 mt-1.5">
+                          <span>Rations: {shelter.rationsDays}</span>
+                          <span>Power: {shelter.gensetStatus}</span>
+                          <span>Medical: {shelter.medicalActive ? 'Active Team on Duty' : 'Standby'}</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </div>

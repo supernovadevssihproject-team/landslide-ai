@@ -42,6 +42,8 @@ export default function App() {
   const { language, setLanguage } = useI18n();
   const {
     selectedRegion,
+    selectedState,
+    setSelectedState,
     setSelectedRegion,
     setFocusCoordinates,
     selectedZone: contextSelectedZone,
@@ -49,7 +51,6 @@ export default function App() {
   } = useMapContext();
 
   const [activeModule, setActiveModule] = useState<OperationalModule>('home');
-  const [selectedState, setSelectedState] = useState<NerState>('all');
   const [zones, setZones] = useState<HazardZone[]>(HAZARD_ZONES);
   const [selectedZone, setSelectedZone] = useState<HazardZone>(HAZARD_ZONES[0]);
 

@@ -23,6 +23,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { ThreeDMapView } from './ThreeDMapView';
+import { FocusCoordinates } from '../context/MapContext';
 import { HillsRegion } from '../data/hillsData';
 
 export type GoogleEarthBasemap = 'satellite' | 'hybrid' | 'terrain' | '3d_earth';
@@ -58,11 +59,7 @@ interface GisMapContainerProps {
   is3DMode: boolean;
   onToggle3D: () => void;
   selectedHillRegion?: HillsRegion | null;
-  focusCoordinates?: {
-    latitude: number;
-    longitude: number;
-    zoom?: number;
-  };
+  focusCoordinates?: FocusCoordinates | null;
 }
 
 // Coordinate parser for "27.5312° N, 88.5134° E"
@@ -111,6 +108,7 @@ export const GisMapContainer: React.FC<GisMapContainerProps> = ({
   const earthquakesLayerGroupRef = useRef<L.LayerGroup | null>(null);
   const historicalEarthquakesLayerGroupRef = useRef<L.LayerGroup | null>(null);
   const selectedHillMarkerLayerRef = useRef<L.LayerGroup | null>(null);
+  const shelterMarkerLayerRef = useRef<L.LayerGroup | null>(null);
 
   const [basemap, setBasemap] = useState<GoogleEarthBasemap>('hybrid');
   const [heatmapRadius, setHeatmapRadius] = useState<number>(32);
@@ -182,6 +180,7 @@ export const GisMapContainer: React.FC<GisMapContainerProps> = ({
     earthquakesLayerGroupRef.current = L.layerGroup().addTo(map);
     historicalEarthquakesLayerGroupRef.current = L.layerGroup().addTo(map);
     selectedHillMarkerLayerRef.current = L.layerGroup().addTo(map);
+    shelterMarkerLayerRef.current = L.layerGroup().addTo(map);
     mapRef.current = map;
 
     // Track zoom
@@ -328,6 +327,68 @@ export const GisMapContainer: React.FC<GisMapContainerProps> = ({
     selectedHillRegion?.longitude,
     selectedHillRegion?.coordinatesVerified,
   ]);
+
+  useEffect(() => {
+    const group = shelterMarkerLayerRef.current;
+    if (!group) return;
+
+    group.clearLayers();
+
+    if (!focusCoordinates || !focusCoordinates.label) {
+      return;
+    }
+
+    const isShelterFocus =
+      focusCoordinates.coordinateType === 'exact' ||
+      focusCoordinates.coordinateType === 'approximate';
+
+    if (!isShelterFocus) {
+      return;
+    }
+
+    const iconHtml = `
+      <div class="relative flex flex-col items-center">
+        <span class="absolute top-0 inline-flex h-10 w-10 rounded-full ${focusCoordinates.coordinateType === 'exact' ? 'bg-emerald-500/25' : 'bg-amber-500/25'} animate-ping"></span>
+        <div class="relative flex h-9 w-9 items-center justify-center rounded-full border-2 ${focusCoordinates.coordinateType === 'exact' ? 'border-emerald-300 bg-slate-950 text-emerald-300 ring-2 ring-emerald-400/30' : 'border-amber-300 bg-slate-950 text-amber-300 ring-2 ring-amber-400/30'} shadow-xl">
+          <span class="text-lg leading-none">🛡️</span>
+        </div>
+        <div class="mt-1 rounded border ${focusCoordinates.coordinateType === 'exact' ? 'border-emerald-400 bg-slate-950/95 text-emerald-300' : 'border-amber-400 bg-slate-950/95 text-amber-300'} px-2 py-1 text-[10px] font-mono font-bold whitespace-nowrap shadow-lg">
+          ${focusCoordinates.coordinateType === 'exact' ? 'EXACT SHELTER' : 'APPROX SHELTER'}
+        </div>
+      </div>
+    `;
+
+    const icon = L.divIcon({
+      className: 'shelter-focus-marker',
+      html: iconHtml,
+      iconSize: [46, 58],
+      iconAnchor: [23, 42],
+    });
+
+    const marker = L.marker(
+      [focusCoordinates.latitude, focusCoordinates.longitude],
+      {
+        icon,
+        zIndexOffset: 2200,
+      }
+    );
+
+    marker.bindPopup(`
+      <div class="p-2 font-sans text-xs bg-slate-950 text-slate-100 rounded-lg max-w-xs">
+        <div class="font-bold ${focusCoordinates.coordinateType === 'exact' ? 'text-emerald-300' : 'text-amber-300'} text-sm">
+          ${focusCoordinates.label}
+        </div>
+        <div class="mt-1 text-slate-300">
+          ${focusCoordinates.description || (focusCoordinates.coordinateType === 'exact' ? 'Designated Relief Shelter' : 'Relief Shelter (Approximate Location)')}
+        </div>
+        <div class="mt-2 font-mono text-[10px] text-slate-400">
+          ${focusCoordinates.latitude.toFixed(5)}, ${focusCoordinates.longitude.toFixed(5)}
+        </div>
+      </div>
+    `);
+
+    marker.addTo(group);
+  }, [focusCoordinates?.latitude, focusCoordinates?.longitude, focusCoordinates?.shelterId, focusCoordinates?.label, focusCoordinates?.description, focusCoordinates?.coordinateType]);
 
   // Render Hazard Zone Pins
   useEffect(() => {

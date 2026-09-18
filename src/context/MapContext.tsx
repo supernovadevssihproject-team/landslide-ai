@@ -1,14 +1,21 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { HillsRegion } from '../data/hillsData';
+import { NerState } from '../types';
 
 export type MapMode = 'LIVE' | 'HISTORICAL';
 
 export type Region = HillsRegion;
 
+export type FocusCoordinateType = 'exact' | 'approximate';
+
 export interface FocusCoordinates {
   latitude: number;
   longitude: number;
   zoom?: number;
+  coordinateType?: FocusCoordinateType;
+  shelterId?: string;
+  label?: string;
+  description?: string;
 }
 
 export interface EnabledLayers {
@@ -28,6 +35,7 @@ export interface EnabledLayers {
 }
 
 export interface MapContextProps {
+  selectedState: NerState;
   selectedRegion?: HillsRegion | null;
   selectedZone?: any;
   focusCoordinates?: FocusCoordinates | null;
@@ -35,6 +43,7 @@ export interface MapContextProps {
   selectedYear: number;
   enabledLayers: EnabledLayers;
   searchQuery: string;
+  setSelectedState: (state: NerState) => void;
   setSelectedRegion: (r?: HillsRegion | null) => void;
   setSelectedZone: (z?: any) => void;
   setFocusCoordinates: (c?: FocusCoordinates | null) => void;
@@ -61,6 +70,7 @@ const defaultEnabledLayers: EnabledLayers = {
 };
 
 const defaultContext: MapContextProps = {
+  selectedState: 'all',
   selectedRegion: null,
   selectedZone: null,
   focusCoordinates: null,
@@ -68,6 +78,7 @@ const defaultContext: MapContextProps = {
   selectedYear: 2023,
   enabledLayers: defaultEnabledLayers,
   searchQuery: '',
+  setSelectedState: () => {},
   setSelectedRegion: () => {},
   setSelectedZone: () => {},
   setFocusCoordinates: () => {},
@@ -80,6 +91,7 @@ const defaultContext: MapContextProps = {
 const MapContext = createContext<MapContextProps>(defaultContext);
 
 export const MapProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const [selectedState, setSelectedState] = useState<NerState>('all');
   const [selectedRegion, setSelectedRegionState] = useState<HillsRegion | null>(null);
   const [selectedZone, setSelectedZoneState] = useState<any>(null);
   const [focusCoordinates, setFocusCoordinates] = useState<FocusCoordinates | null>(null);
@@ -94,6 +106,7 @@ export const MapProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       const saved = sessionStorage.getItem('mapContext');
       if (saved) {
         const data = JSON.parse(saved);
+        if (data.selectedState) setSelectedState(data.selectedState);
         if (data.selectedRegion !== undefined) setSelectedRegionState(data.selectedRegion);
         if (data.selectedZone !== undefined) setSelectedZoneState(data.selectedZone);
         if (data.focusCoordinates !== undefined) setFocusCoordinates(data.focusCoordinates);
@@ -112,6 +125,7 @@ export const MapProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   useEffect(() => {
     try {
       const payload = {
+        selectedState,
         selectedRegion,
         selectedZone,
         focusCoordinates,
@@ -124,7 +138,7 @@ export const MapProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     } catch {
       // Ignore storage write errors
     }
-  }, [selectedRegion, selectedZone, focusCoordinates, mapMode, selectedYear, searchQuery, enabledLayers]);
+  }, [selectedState, selectedRegion, selectedZone, focusCoordinates, mapMode, selectedYear, searchQuery, enabledLayers]);
 
   const handleSetSelectedRegion = (r?: HillsRegion | null) => {
     setSelectedRegionState(r || null);
@@ -147,6 +161,7 @@ export const MapProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   return (
     <MapContext.Provider
       value={{
+        selectedState,
         selectedRegion,
         selectedZone,
         focusCoordinates,
@@ -154,6 +169,7 @@ export const MapProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         selectedYear,
         searchQuery,
         enabledLayers,
+        setSelectedState,
         setSelectedRegion: handleSetSelectedRegion,
         setSelectedZone: handleSetSelectedZone,
         setFocusCoordinates,

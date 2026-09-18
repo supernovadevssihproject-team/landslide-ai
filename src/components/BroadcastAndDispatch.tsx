@@ -394,7 +394,7 @@ export const BroadcastAndDispatch: React.FC<BroadcastAndDispatchProps> = ({
             </div>
 
             <div className="space-y-2.5">
-              {RELIEF_SHELTERS.map((shelter) => (
+              {reliefShelters.map((shelter) => (
                 <div
                   key={shelter.id}
                   className="bg-[#122131] border border-[#1c2b3c] p-3 rounded-lg text-xs space-y-1.5"

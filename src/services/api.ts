@@ -107,6 +107,44 @@ async function fetchJson<T>(url: string, options?: RequestInit, fallback?: T): P
   }
 }
 
+function mergeReliefShelters(liveShelters: ReliefShelter[]): ReliefShelter[] {
+  const coordinateOverrides: Record<string, Pick<ReliefShelter, 'latitude' | 'longitude' | 'coordinatesVerified' | 'coordinateType' | 'coordinateSource'>> = {
+    'sh-01': {
+      latitude: 27.2319975,
+      longitude: 88.4970841,
+      coordinatesVerified: false,
+      coordinateType: 'approximate',
+      coordinateSource: 'Named Singtam town locality reference from OpenStreetMap; the exact school camp is not verified.',
+    },
+    'sh-02': {
+      latitude: 27.1744361,
+      longitude: 88.5303403,
+      coordinatesVerified: false,
+      coordinateType: 'approximate',
+      coordinateSource: 'Named Rangpo town locality reference from OpenStreetMap; the exact stadium pavilion is not verified.',
+    },
+  };
+
+  const sheltersById = new Map<string, ReliefShelter>(
+    RELIEF_SHELTERS.map((shelter) => [shelter.id, shelter])
+  );
+
+  liveShelters.forEach((shelter) => {
+    const fallbackShelter = sheltersById.get(shelter.id);
+    const coordinateOverride = coordinateOverrides[shelter.id];
+    sheltersById.set(
+      shelter.id,
+      {
+        ...(fallbackShelter || {}),
+        ...shelter,
+        ...(coordinateOverride || {}),
+      }
+    );
+  });
+
+  return Array.from(sheltersById.values());
+}
+
 export const LandslideApi = {
   async getEarthquakes(latitude?: number, longitude?: number, signal?: AbortSignal): Promise<EarthquakeResponse> {
     const params = new URLSearchParams({ radius_km: '500', limit: '100' });
@@ -353,7 +391,8 @@ export const LandslideApi = {
   },
 
   async getReliefShelters(): Promise<ReliefShelter[]> {
-    return fetchJson<ReliefShelter[]>('/api/alerts/shelters', undefined, RELIEF_SHELTERS);
+    const shelters = await fetchJson<ReliefShelter[]>('/api/alerts/shelters', undefined, RELIEF_SHELTERS);
+    return mergeReliefShelters(shelters);
   },
 
   async getAuditLogs(): Promise<AuditLogEntry[]> {
