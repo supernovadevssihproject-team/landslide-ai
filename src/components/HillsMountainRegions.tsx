@@ -24,6 +24,7 @@ import { useMapContext } from '../context/MapContext';
 import { evaluateEventMetrics } from '../utils/seismicMetrics';
 import { fetchLocationRisk } from '../services/locationRiskService';
 import { MlRiskScoreCard } from './MlRiskScoreCard';
+import { useI18n } from '../i18n/index.tsx';
 
 interface HillsMountainRegionsProps {
   theme?: 'dark' | 'light';
@@ -43,15 +44,15 @@ const WEATHER_STATE_BY_REGION: Record<string, string> = {
   Sikkim: 'sikkim',
 };
 
-const weatherDescription = (code: number | null) => {
-  if (code === null || code === undefined) return 'Forecast unavailable';
-  if (code === 0) return 'Clear sky';
-  if (code <= 3) return 'Partly cloudy';
-  if (code <= 48) return 'Foggy conditions';
-  if (code <= 67) return 'Rain expected';
-  if (code <= 77) return 'Snow or ice';
-  if (code <= 82) return 'Rain showers';
-  return 'Storm risk';
+const weatherDescription = (code: number | null, t: (key: string) => string) => {
+  if (code === null || code === undefined) return t('hills.forecast.unavailable');
+  if (code === 0) return t('hills.forecast.clearSky');
+  if (code <= 3) return t('hills.forecast.partlyCloudy');
+  if (code <= 48) return t('hills.forecast.foggy');
+  if (code <= 67) return t('hills.forecast.rainExpected');
+  if (code <= 77) return t('hills.forecast.snowOrIce');
+  if (code <= 82) return t('hills.forecast.rainShowers');
+  return t('hills.forecast.stormRisk');
 };
 
 export const HillsMountainRegions: React.FC<HillsMountainRegionsProps> = ({
@@ -60,6 +61,7 @@ export const HillsMountainRegions: React.FC<HillsMountainRegionsProps> = ({
   onSelectRegion,
   onNavigateToMap,
 }) => {
+  const { t } = useI18n();
   const isDark = theme === 'dark';
   const {
     selectedRegion: contextRegion,
@@ -295,7 +297,7 @@ export const HillsMountainRegions: React.FC<HillsMountainRegionsProps> = ({
     if (!earthquakeData) {
       return {
         level: 'LOW' as const,
-        label: 'LOW',
+        label: t('hills.triggerLow'),
         badgeClass: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300',
       };
     }
@@ -308,7 +310,7 @@ export const HillsMountainRegions: React.FC<HillsMountainRegionsProps> = ({
     ) {
       return {
         level: 'HIGH' as const,
-        label: 'HIGH',
+        label: t('hills.triggerHigh'),
         badgeClass: 'border-red-500/40 bg-red-500/15 text-red-300 animate-pulse',
       };
     }
@@ -320,16 +322,16 @@ export const HillsMountainRegions: React.FC<HillsMountainRegionsProps> = ({
     ) {
       return {
         level: 'MODERATE' as const,
-        label: 'MODERATE',
+        label: t('hills.triggerModerate'),
         badgeClass: 'border-amber-500/40 bg-amber-500/15 text-amber-300',
       };
     }
     return {
       level: 'LOW' as const,
-      label: 'LOW',
+      label: t('hills.triggerLow'),
       badgeClass: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300',
     };
-  }, [earthquakeData, latestDistanceKm, latestEarthquake]);
+  }, [earthquakeData, latestDistanceKm, latestEarthquake, t]);
 
   // Fetch ML Location Risk Score safely
   useEffect(() => {
@@ -399,10 +401,10 @@ export const HillsMountainRegions: React.FC<HillsMountainRegionsProps> = ({
 
   const formatEventTime = (isoTime: string) => {
     const d = new Date(isoTime);
-    if (Number.isNaN(d.getTime())) return isoTime || 'Time unavailable';
+    if (Number.isNaN(d.getTime())) return isoTime || t('hills.timeUnavailable');
     const diffHours = Math.round((Date.now() - d.getTime()) / (1000 * 3600));
     if (diffHours >= 0 && diffHours < 24) {
-      return `${diffHours === 0 ? 'Just now' : `${diffHours}h ago`} (${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})`;
+      return `${diffHours === 0 ? t('hills.justNow') : `${diffHours}${t('hills.hAgo')}`} (${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})`;
     }
     return d.toLocaleDateString([], {
       month: 'short',
@@ -426,17 +428,17 @@ export const HillsMountainRegions: React.FC<HillsMountainRegionsProps> = ({
             <div>
               <div className="mb-2 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-cyan-400">
                 <Mountain className="h-4 w-4" />
-                North Eastern terrain reference
+                {t('hills.terrainReference')}
               </div>
               <h1 className="text-2xl font-black tracking-tight sm:text-3xl">
-                Hills &amp; Mountain Regions
+                {t('hills.title')}
               </h1>
               <p className={`mt-2 max-w-2xl text-sm leading-6 ${mutedTextClass}`}>
-                Browse major hill systems and mountain regions by state. Geographic coordinates are added only when verified by the project data sources.
+                {t('hills.subtitle')}
               </p>
             </div>
             <div className="shrink-0 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-[10px] font-mono text-emerald-300">
-              {HILLS_AND_MOUNTAIN_REGIONS.length} REFERENCE REGIONS
+              {HILLS_AND_MOUNTAIN_REGIONS.length} {t('hills.referenceRegions')}
             </div>
           </div>
         </div>
@@ -449,8 +451,8 @@ export const HillsMountainRegions: React.FC<HillsMountainRegionsProps> = ({
                 type="search"
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
-                placeholder="Search hill or state..."
-                aria-label="Search hills and mountain regions"
+                placeholder={t('hills.searchPlaceholder')}
+                aria-label={t('hills.searchAriaLabel')}
                 className={`w-full rounded-xl border py-3 pl-10 pr-3 text-sm outline-none transition-all focus:border-cyan-400 ${
                   isDark
                     ? 'border-slate-700 bg-slate-900/70 text-white'
@@ -462,7 +464,7 @@ export const HillsMountainRegions: React.FC<HillsMountainRegionsProps> = ({
             <div className="space-y-3">
               {groupedRegions.length === 0 && (
                 <div className={`rounded-xl border border-dashed p-6 text-center text-sm ${mutedTextClass}`}>
-                  No hills or states match this search.
+                  {t('hills.noMatch')}
                 </div>
               )}
               {groupedRegions.map(([state, regions]) => {
@@ -482,7 +484,7 @@ export const HillsMountainRegions: React.FC<HillsMountainRegionsProps> = ({
                     >
                       <span>{state}</span>
                       <span className="flex items-center gap-2 text-[10px] font-mono text-slate-400">
-                        {regions.length} regions
+                        {regions.length} {t('hills.regionsCount')}
                         <ChevronDown className={`h-4 w-4 transition-transform ${isCollapsed ? '-rotate-90' : ''}`} />
                       </span>
                     </button>
@@ -508,7 +510,7 @@ export const HillsMountainRegions: React.FC<HillsMountainRegionsProps> = ({
                                 {selected && <ShieldCheck className="h-4 w-4 shrink-0 text-cyan-300" />}
                               </div>
                               <span className={`mt-1 block text-[10px] font-mono uppercase tracking-wider ${mutedTextClass}`}>
-                                {region.category}
+                                {t(`hills.category.${region.category}`, region.category)}
                               </span>
                             </button>
                           );
@@ -524,7 +526,7 @@ export const HillsMountainRegions: React.FC<HillsMountainRegionsProps> = ({
           <aside className={`h-fit rounded-xl border p-5 ${isDark ? 'border-cyan-400/20 bg-[#0d1c2d]' : 'border-cyan-200 bg-cyan-50/50'}`}>
             <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-cyan-400">
               <Mountain className="h-4 w-4" />
-              Region selection
+              {t('hills.regionSelection')}
             </div>
             {selectedRegion ? (
               <div className="mt-5">
@@ -537,12 +539,12 @@ export const HillsMountainRegions: React.FC<HillsMountainRegionsProps> = ({
                 }`}>
                   <div>
                     {selectedRegion.coordinatesVerified
-                      ? 'Verified representative coordinates available. The existing Risk Map can focus this region.'
-                      : 'Verified representative coordinates are currently unavailable for this region.'}
+                      ? t('hills.verifiedCoords')
+                      : t('hills.unverifiedCoords')}
                   </div>
                   {selectedRegion.source?.name && (
                     <div className="mt-1.5 flex flex-wrap items-center gap-1 text-[10px] font-mono opacity-85">
-                      <span className="text-slate-400">Source:</span>
+                      <span className="text-slate-400">{t('hills.source')}</span>
                       {selectedRegion.source.url ? (
                         <a
                           href={selectedRegion.source.url}
@@ -566,7 +568,7 @@ export const HillsMountainRegions: React.FC<HillsMountainRegionsProps> = ({
                     onClick={() => onNavigateToMap(selectedRegion)}
                     className="mt-4 w-full rounded-lg border border-emerald-400/40 bg-emerald-500/15 px-3 py-2.5 text-sm font-bold text-emerald-200 transition-colors hover:bg-emerald-500/25 focus:outline-none focus:ring-2 focus:ring-emerald-400/60"
                   >
-                    View Risk Map →
+                    {t('hills.viewRiskMap')}
                   </button>
                 )}
 
@@ -574,7 +576,7 @@ export const HillsMountainRegions: React.FC<HillsMountainRegionsProps> = ({
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-cyan-400">
                       <CloudRain className="h-4 w-4" />
-                      Live weather coverage
+                      {t('hills.liveWeatherCoverage')}
                     </div>
                     {weatherLoading && <Loader2 className="h-4 w-4 animate-spin text-cyan-300" />}
                   </div>
@@ -585,36 +587,36 @@ export const HillsMountainRegions: React.FC<HillsMountainRegionsProps> = ({
                         {weather.station_name} • {weather.district}
                       </div>
                       <div className={`mt-1 text-[10px] font-mono ${mutedTextClass}`}>
-                        Station {weather.latitude.toFixed(2)}° N, {weather.longitude.toFixed(2)}° E • {weather.is_live_feed ? 'LIVE' : 'CACHED'}
+                        {t('hills.station')} {weather.latitude.toFixed(2)}° N, {weather.longitude.toFixed(2)}° E • {weather.is_live_feed ? t('hills.live') : t('hills.cached')}
                       </div>
 
                       <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
                         <div className={`rounded-lg border p-2 ${isDark ? 'border-slate-700 bg-slate-950/30' : 'border-slate-200 bg-white'}`}>
                           <Thermometer className="h-3.5 w-3.5 text-orange-400" />
                           <div className="mt-1 font-bold">{weather.current_temperature_c.toFixed(1)}°C</div>
-                          <div className={mutedTextClass}>Current</div>
+                          <div className={mutedTextClass}>{t('hills.current')}</div>
                         </div>
                         <div className={`rounded-lg border p-2 ${isDark ? 'border-slate-700 bg-slate-950/30' : 'border-slate-200 bg-white'}`}>
                           <Droplets className="h-3.5 w-3.5 text-cyan-400" />
                           <div className="mt-1 font-bold">{weather.relative_humidity_pct.toFixed(0)}%</div>
-                          <div className={mutedTextClass}>Humidity</div>
+                          <div className={mutedTextClass}>{t('hills.humidity')}</div>
                         </div>
                         <div className={`rounded-lg border p-2 ${isDark ? 'border-slate-700 bg-slate-950/30' : 'border-slate-200 bg-white'}`}>
                           <CloudRain className="h-3.5 w-3.5 text-blue-400" />
                           <div className="mt-1 font-bold">{weather.current_rainfall_mm_hr.toFixed(1)} mm/h</div>
-                          <div className={mutedTextClass}>Rain now</div>
+                          <div className={mutedTextClass}>{t('hills.rainNow')}</div>
                         </div>
                         <div className={`rounded-lg border p-2 ${isDark ? 'border-slate-700 bg-slate-950/30' : 'border-slate-200 bg-white'}`}>
                           <Wind className="h-3.5 w-3.5 text-emerald-400" />
                           <div className="mt-1 font-bold">{weather.wind_speed_kmh.toFixed(1)} km/h</div>
-                          <div className={mutedTextClass}>Wind</div>
+                          <div className={mutedTextClass}>{t('hills.wind')}</div>
                         </div>
                       </div>
 
                       {weather.forecast && weather.forecast.length > 0 && (
                         <div className="mt-4">
                           <div className={`text-[10px] font-mono uppercase tracking-wider ${mutedTextClass}`}>
-                            3-day forecast
+                            {t('hills.forecast3Day')}
                           </div>
                           <div className="mt-2 space-y-2">
                             {weather.forecast.map((day) => (
@@ -624,11 +626,11 @@ export const HillsMountainRegions: React.FC<HillsMountainRegionsProps> = ({
                               >
                                 <div>
                                   <div className="font-bold">{day.date}</div>
-                                  <div className={mutedTextClass}>{weatherDescription(day.weather_code)}</div>
+                                  <div className={mutedTextClass}>{weatherDescription(day.weather_code, t)}</div>
                                 </div>
                                 <div className="text-right font-mono">
                                   <div>{day.temperature_max_c ?? '--'}° / {day.temperature_min_c ?? '--'}°C</div>
-                                  <div className="text-cyan-300">{day.precipitation_mm ?? '--'} mm rain</div>
+                                  <div className="text-cyan-300">{day.precipitation_mm ?? '--'} mm {t('hills.rain')}</div>
                                 </div>
                               </div>
                             ))}
@@ -644,7 +646,7 @@ export const HillsMountainRegions: React.FC<HillsMountainRegionsProps> = ({
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-orange-400">
                       <Activity className="h-4 w-4" />
-                      Seismic activity (NCS live)
+                      {t('hills.seismicActivity')}
                     </div>
                     {earthquakeLoading ? (
                       <Loader2 className="h-4 w-4 animate-spin text-orange-300" />
@@ -656,7 +658,7 @@ export const HillsMountainRegions: React.FC<HillsMountainRegionsProps> = ({
                             : 'border-amber-500/30 bg-amber-500/10 text-amber-300'
                         }`}
                       >
-                        {earthquakeData?.source_status === 'available' ? 'ONLINE' : 'CACHED'}
+                        {earthquakeData?.source_status === 'available' ? t('hills.online') : t('hills.cached')}
                       </span>
                     )}
                   </div>
@@ -670,8 +672,7 @@ export const HillsMountainRegions: React.FC<HillsMountainRegionsProps> = ({
                       <div className="flex items-start gap-2">
                         <TriangleAlert className="h-4 w-4 shrink-0 text-amber-400 mt-0.5" />
                         <span>
-                          Live earthquake data is temporarily unavailable from the National Center for
-                          Seismology. Other monitoring feeds continue uninterrupted.
+                          {t('hills.seismicUnavailable')}
                         </span>
                       </div>
                     </div>
@@ -681,10 +682,10 @@ export const HillsMountainRegions: React.FC<HillsMountainRegionsProps> = ({
                       <div className="mt-3 flex items-center justify-between rounded-lg border p-2.5 bg-slate-950/20 border-slate-700/60">
                         <div>
                           <div className={`text-[10px] font-mono uppercase tracking-wider ${mutedTextClass}`}>
-                            Derived Seismic Trigger
+                            {t('hills.derivedSeismicTrigger')}
                           </div>
                           <div className="mt-0.5 text-[11px] font-medium text-slate-300">
-                            Ground motion advisory
+                            {t('hills.groundMotionAdvisory')}
                           </div>
                         </div>
                         <span
@@ -704,7 +705,7 @@ export const HillsMountainRegions: React.FC<HillsMountainRegionsProps> = ({
                           <div className="flex items-start justify-between gap-2">
                             <div>
                               <div className={`text-[10px] font-mono uppercase tracking-wider ${mutedTextClass}`}>
-                                Latest NCS Event
+                                {t('hills.latestNcsEvent')}
                               </div>
                               <div className="mt-1 text-xs font-bold text-slate-200 truncate max-w-[180px]">
                                 {latestEarthquake.location}
@@ -721,7 +722,7 @@ export const HillsMountainRegions: React.FC<HillsMountainRegionsProps> = ({
                                 isDark ? 'border-slate-800 bg-slate-900/50' : 'border-slate-100 bg-slate-50'
                               }`}
                             >
-                              <span className={mutedTextClass}>Depth: </span>
+                              <span className={mutedTextClass}>{t('hills.depth')} </span>
                               <span className="font-bold text-slate-200">
                                 {latestEarthquake.depth_km.toFixed(0)} km
                               </span>
@@ -731,7 +732,7 @@ export const HillsMountainRegions: React.FC<HillsMountainRegionsProps> = ({
                                 isDark ? 'border-slate-800 bg-slate-900/50' : 'border-slate-100 bg-slate-50'
                               }`}
                             >
-                              <span className={mutedTextClass}>Recency: </span>
+                              <span className={mutedTextClass}>{t('hills.recency')} </span>
                               <span className="font-bold text-slate-200">
                                 {formatEventTime(latestEarthquake.event_time)}
                               </span>
@@ -741,14 +742,14 @@ export const HillsMountainRegions: React.FC<HillsMountainRegionsProps> = ({
                           {/* Region-Specific Distance, PGA, and MMI */}
                           <div className="mt-2.5 border-t border-slate-800/80 pt-2 space-y-1.5 text-[11px]">
                             <div className="flex items-center justify-between">
-                              <span className={mutedTextClass}>Epicentral Distance: </span>
+                              <span className={mutedTextClass}>{t('hills.epicentralDistance')} </span>
                               {latestDistanceKm !== null ? (
                                 <span className="font-mono font-bold text-cyan-300">
-                                  {latestDistanceKm} km from {selectedRegion.name}
+                                  {latestDistanceKm} km {t('hills.from')} {selectedRegion.name}
                                 </span>
                               ) : (
                                 <span className="font-mono text-amber-300/90 italic">
-                                  Region-specific seismic distance is unavailable.
+                                  {t('hills.distanceUnavailable')}
                                 </span>
                               )}
                             </div>
@@ -759,7 +760,7 @@ export const HillsMountainRegions: React.FC<HillsMountainRegionsProps> = ({
                                     isDark ? 'border-slate-800 bg-slate-900/50' : 'border-slate-100 bg-slate-50'
                                   }`}
                                 >
-                                  <span className={mutedTextClass}>Est. PGA: </span>
+                                  <span className={mutedTextClass}>{t('hills.estPga')} </span>
                                   <span
                                     className={`font-bold ${
                                       latestSeismicMetrics.estimatedPgaG >= 0.05 ? 'text-amber-400' : 'text-slate-200'
@@ -773,7 +774,7 @@ export const HillsMountainRegions: React.FC<HillsMountainRegionsProps> = ({
                                     isDark ? 'border-slate-800 bg-slate-900/50' : 'border-slate-100 bg-slate-50'
                                   }`}
                                 >
-                                  <span className={mutedTextClass}>Intensity: </span>
+                                  <span className={mutedTextClass}>{t('hills.intensity')} </span>
                                   <span
                                     className={`font-bold ${
                                       latestSeismicMetrics.estimatedMmi.intensity >= 5 ? 'text-rose-400' : 'text-slate-200'
@@ -790,7 +791,7 @@ export const HillsMountainRegions: React.FC<HillsMountainRegionsProps> = ({
                         <div
                           className={`mt-3 rounded-lg border border-dashed p-3 text-center text-xs ${mutedTextClass}`}
                         >
-                          No earthquake events currently recorded within regional range.
+                          {t('hills.noEarthquakes')}
                         </div>
                       )}
 
@@ -801,10 +802,10 @@ export const HillsMountainRegions: React.FC<HillsMountainRegionsProps> = ({
                             isDark ? 'border-slate-700 bg-slate-950/30' : 'border-slate-200 bg-white'
                           }`}
                         >
-                          <div className={`text-[10px] font-mono ${mutedTextClass}`}>Last 24 Hours</div>
+                          <div className={`text-[10px] font-mono ${mutedTextClass}`}>{t('hills.last24Hours')}</div>
                           <div className="mt-1 text-lg font-black font-mono text-orange-400">
                             {recentCounts.last24h}{' '}
-                            <span className="text-[10px] font-normal text-slate-400">events</span>
+                            <span className="text-[10px] font-normal text-slate-400">{t('hills.events')}</span>
                           </div>
                         </div>
                         <div
@@ -812,18 +813,17 @@ export const HillsMountainRegions: React.FC<HillsMountainRegionsProps> = ({
                             isDark ? 'border-slate-700 bg-slate-950/30' : 'border-slate-200 bg-white'
                           }`}
                         >
-                          <div className={`text-[10px] font-mono ${mutedTextClass}`}>Last 7 Days</div>
+                          <div className={`text-[10px] font-mono ${mutedTextClass}`}>{t('hills.last7Days')}</div>
                           <div className="mt-1 text-lg font-black font-mono text-cyan-400">
                             {recentCounts.last7d}{' '}
-                            <span className="text-[10px] font-normal text-slate-400">events</span>
+                            <span className="text-[10px] font-normal text-slate-400">{t('hills.events')}</span>
                           </div>
                         </div>
                       </div>
 
                       {/* Educational Non-Alarmist Disclaimer */}
                       <p className={`mt-3 text-[10px] leading-4 ${mutedTextClass}`}>
-                        Disclaimer: Seismic trigger indicates potential ground motion advisory from NCS
-                        feeds. It is an independent geophysical parameter and not a direct landslide prediction.
+                        {t('hills.seismicDisclaimer')}
                       </p>
                     </>
                   )}
@@ -840,7 +840,7 @@ export const HillsMountainRegions: React.FC<HillsMountainRegionsProps> = ({
               </div>
             ) : (
               <p className={`mt-5 text-sm leading-6 ${mutedTextClass}`}>
-                Select a region to inspect its reference category and verification status.
+                {t('hills.selectRegionPrompt')}
               </p>
             )}
           </aside>

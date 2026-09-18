@@ -14,6 +14,7 @@ import {
   Satellite,
   GitBranch,
 } from 'lucide-react';
+import { useI18n } from '../i18n/index.tsx';
 
 interface TerraAboutProps {
   onNavigate: (module: OperationalModule) => void;
@@ -21,6 +22,7 @@ interface TerraAboutProps {
 }
 
 export const TerraAbout: React.FC<TerraAboutProps> = ({ onNavigate, theme }) => {
+  const { t } = useI18n();
   const isDark = theme === 'dark';
 
   return (
@@ -43,9 +45,9 @@ export const TerraAbout: React.FC<TerraAboutProps> = ({ onNavigate, theme }) => 
               <Shield className="w-7 h-7" />
             </span>
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">About TerraGuard System</h1>
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{t('about.title')}</h1>
               <p className={`text-xs sm:text-sm mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                Next-Generation AI & GIS Landslide Early Warning System for Critical Himalayan Corridors
+                {t('about.subtitle')}
               </p>
             </div>
           </div>
@@ -61,9 +63,9 @@ export const TerraAbout: React.FC<TerraAboutProps> = ({ onNavigate, theme }) => 
             <div className="p-3 w-12 h-12 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center mb-4">
               <Satellite className="w-6 h-6" />
             </div>
-            <h3 className="font-bold text-base mb-2">Multi-Source Earth Data</h3>
+            <h3 className="font-bold text-base mb-2">{t('about.multiSourceTitle')}</h3>
             <p className={`text-xs leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-              Seamlessly integrates Sentinel-1 InSAR synthetic aperture radar, NASA SRTM 30m digital elevation models, IMD gridded rainfall telemetry, and real-time piezometric soil pore sensors.
+              {t('about.multiSourceDesc')}
             </p>
           </div>
 
@@ -75,9 +77,9 @@ export const TerraAbout: React.FC<TerraAboutProps> = ({ onNavigate, theme }) => 
             <div className="p-3 w-12 h-12 rounded-xl bg-purple-500/10 text-purple-500 flex items-center justify-center mb-4">
               <BrainCircuit className="w-6 h-6" />
             </div>
-            <h3 className="font-bold text-base mb-2">Dual ML Architecture</h3>
+            <h3 className="font-bold text-base mb-2">{t('about.dualMlTitle')}</h3>
             <p className={`text-xs leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-              Trained on 19 historical landslide datasets. Features an ensemble Random Forest classifier (94.1% test precision) alongside a Bidirectional LSTM neural network forecasting 12-hour lead times.
+              {t('about.dualMlDesc')}
             </p>
           </div>
 
@@ -89,9 +91,9 @@ export const TerraAbout: React.FC<TerraAboutProps> = ({ onNavigate, theme }) => 
             <div className="p-3 w-12 h-12 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center mb-4">
               <Radio className="w-6 h-6" />
             </div>
-            <h3 className="font-bold text-base mb-2">CAP Dispatch & Siren Network</h3>
+            <h3 className="font-bold text-base mb-2">{t('about.capSirenTitle')}</h3>
             <p className={`text-xs leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-              Instantaneous Common Alerting Protocol (CAP) wireless emergency dispatch across cell broadcast, local LoRa relays, and physical acoustic sirens with quick silence overrides.
+              {t('about.capSirenDesc')}
             </p>
           </div>
         </div>
@@ -104,7 +106,7 @@ export const TerraAbout: React.FC<TerraAboutProps> = ({ onNavigate, theme }) => 
         >
           <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
             <Cpu className="w-5 h-5 text-emerald-500" />
-            <span>Advanced Research & Dispatch Tooling</span>
+            <span>{t('about.toolingTitle')}</span>
           </h2>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -118,11 +120,11 @@ export const TerraAbout: React.FC<TerraAboutProps> = ({ onNavigate, theme }) => 
             >
               <Cpu className="w-5 h-5 text-emerald-400 mb-2" />
               <div className="font-bold text-sm text-emerald-400 flex items-center justify-between">
-                <span>ML Risk Simulator</span>
-                <span className="text-[10px] font-mono uppercase px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300">Live API</span>
+                <span>{t('about.riskSimTitle')}</span>
+                <span className="text-[10px] font-mono uppercase px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300">{t('about.liveApi')}</span>
               </div>
               <div className="text-[11px] text-slate-400 mt-1">
-                Run inference with real trained Random Forest on custom terrain, soil and cumulative rainfall.
+                {t('about.riskSimDesc')}
               </div>
             </button>
 
@@ -135,9 +137,9 @@ export const TerraAbout: React.FC<TerraAboutProps> = ({ onNavigate, theme }) => 
               }`}
             >
               <BarChart3 className="w-5 h-5 text-purple-400 mb-2" />
-              <div className="font-bold text-sm">ML Pipeline Sandbox</div>
+              <div className="font-bold text-sm">{t('about.pipelineSandboxTitle')}</div>
               <div className="text-[11px] text-slate-400 mt-1">
-                Inspect metrics, feature importance, confusion matrices, and ROC curves on 19 datasets.
+                {t('about.pipelineSandboxDesc')}
               </div>
             </button>
 
@@ -150,9 +152,9 @@ export const TerraAbout: React.FC<TerraAboutProps> = ({ onNavigate, theme }) => 
               }`}
             >
               <Activity className="w-5 h-5 text-blue-400 mb-2" />
-              <div className="font-bold text-sm">Temporal Ingestion</div>
+              <div className="font-bold text-sm">{t('about.temporalIngestionTitle')}</div>
               <div className="text-[11px] text-slate-400 mt-1">
-                Live sensor ingestion simulation and 24-hour lead-time projection graphs.
+                {t('about.temporalIngestionDesc')}
               </div>
             </button>
 
@@ -165,9 +167,9 @@ export const TerraAbout: React.FC<TerraAboutProps> = ({ onNavigate, theme }) => 
               }`}
             >
               <Radio className="w-5 h-5 text-amber-400 mb-2" />
-              <div className="font-bold text-sm">Tactical CAP Dispatch</div>
+              <div className="font-bold text-sm">{t('about.tacticalCapTitle')}</div>
               <div className="text-[11px] text-slate-400 mt-1">
-                Trigger CAP emergency broadcasts and dispatch relief convoys to shelters.
+                {t('about.tacticalCapDesc')}
               </div>
             </button>
 
@@ -180,9 +182,9 @@ export const TerraAbout: React.FC<TerraAboutProps> = ({ onNavigate, theme }) => 
               }`}
             >
               <Database className="w-5 h-5 text-emerald-400 mb-2" />
-              <div className="font-bold text-sm">Crowdsource CV Intake</div>
+              <div className="font-bold text-sm">{t('about.crowdsourceCvTitle')}</div>
               <div className="text-[11px] text-slate-400 mt-1">
-                Citizen photo submission with automated Computer Vision rockfall verification.
+                {t('about.crowdsourceCvDesc')}
               </div>
             </button>
           </div>
@@ -195,10 +197,10 @@ export const TerraAbout: React.FC<TerraAboutProps> = ({ onNavigate, theme }) => 
           }`}
         >
           <div>
-            <strong>TerraGuard v2.4 Enterprise</strong> • Geological Survey of India (GSI) & National Disaster Management Authority (NDMA) Compliant
+            {t('about.footerCompliant')}
           </div>
           <div>
-            Built with React 18, Vite, Tailwind CSS, Leaflet GIS, FastAPI & Scikit-Learn
+            {t('about.footerBuiltWith')}
           </div>
         </div>
       </div>
