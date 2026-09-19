@@ -500,7 +500,8 @@ export const TerraRiskDetails: React.FC<TerraRiskDetailsProps> = ({
               </div>
 
               {/* Rainfall and landslide event relationship */}
-              <div className={`mb-5 rounded-xl border p-3 sm:p-4 ${isDark ? 'border-slate-800 bg-slate-950/50' : 'border-slate-200 bg-slate-50/70'}`}>
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 items-start">
+              <div className={`rounded-xl border p-3 sm:p-4 ${isDark ? 'border-slate-800 bg-slate-950/50' : 'border-slate-200 bg-slate-50/70'}`}>
                 <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <h4 className="text-sm font-bold">Rainfall vs. Landslide Activity</h4>
@@ -616,6 +617,8 @@ export const TerraRiskDetails: React.FC<TerraRiskDetailsProps> = ({
                     );
                   })}
                 </div>
+              </div>
+
               </div>
 
               {/* Bottom Chart Insight Summary */}
