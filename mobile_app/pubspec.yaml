@@ -10,18 +10,29 @@ dependencies:
   flutter:
     sdk: flutter
   connectivity_plus: ^6.1.0
+  flutter_map: ^7.0.2
   geolocator: ^13.0.0
   http: ^1.2.2
   image_picker: ^1.1.2
+  latlong2: ^0.9.1
   path: ^1.9.0
   permission_handler: ^11.3.0
   sqflite: ^2.3.3+1
+  url_launcher: ^6.3.0
   uuid: ^4.5.1
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  flutter_launcher_icons: ^0.14.3
   flutter_lints: ^3.0.0
+
+flutter_launcher_icons:
+  android: "ic_launcher"
+  image_path: "assets/icons/app_icon.png"
+  min_sdk_android: 21
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/icons/

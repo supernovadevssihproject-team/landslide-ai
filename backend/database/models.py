@@ -81,6 +81,12 @@ class CrowdsourceReportModel(Base):
     englishTranslation = Column(Text, default="")
     sensorCorroboration = Column(JSON, nullable=True)
     boundingBoxes = Column(JSON, nullable=True)
+    imageStorageKey = Column(String, nullable=True)
+    imageOriginalName = Column(String, nullable=True)
+    imageMimeType = Column(String, nullable=True)
+    imageSizeBytes = Column(Integer, nullable=True)
+    aiClassificationStatus = Column(String, default="pending")
+    aiConfidence = Column(Float, nullable=True)
     status = Column(String, default="active") # active | dismissed | escalated
 
 

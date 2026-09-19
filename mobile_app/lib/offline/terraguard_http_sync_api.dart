@@ -1,11 +1,12 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:http/http.dart' as http;
 
 import 'offline_hazard_report.dart';
 import 'offline_sync_manager.dart';
 
-/// JSON adapter for LandslideGuard's POST /api/reports/submit contract.
+/// JSON & Multipart adapter for LandslideGuard's POST /api/reports endpoint.
 class TerraGuardHttpSyncApi implements TerraGuardSyncApi {
   final Uri reportsEndpoint;
   final Future<String?> Function()? accessToken;
@@ -19,36 +20,67 @@ class TerraGuardHttpSyncApi implements TerraGuardSyncApi {
 
   @override
   Future<void> uploadReport(OfflineHazardReport report) async {
-    final headers = <String, String>{
-      'Accept': 'application/json',
-      'Content-Type': 'application/json',
-    };
     final token = accessToken == null ? null : await accessToken!();
-    if (token != null && token.isNotEmpty) {
-      headers['Authorization'] = 'Bearer $token';
-    }
+    final hasImage = report.imagePath != null &&
+        report.imagePath!.isNotEmpty &&
+        File(report.imagePath!).existsSync();
 
-    final response = await client.post(
-      reportsEndpoint,
-      headers: headers,
-      body: jsonEncode({
-        'location': '${report.latitude}, ${report.longitude}',
-        'subDivision': 'Mobile Field Report',
-        'state': 'sikkim',
-        'description': [
-          '[${report.hazardType.name}]',
-          if (report.description?.isNotEmpty == true) report.description,
-          'report_id=${report.reportId}',
-          'captured_at=${report.capturedAt.toUtc().toIso8601String()}',
-          'device_id=${report.deviceId}',
-          'coordinates=${report.latitude},${report.longitude}',
-        ].join(' '),
-        'coordinates': '${report.latitude}° N, ${report.longitude}° E',
-      }),
-    );
+    final desc = [
+      '[${report.hazardType.name.toUpperCase()}]',
+      if (report.description?.isNotEmpty == true) report.description,
+      'report_id=${report.reportId}',
+      'captured_at=${report.capturedAt.toUtc().toIso8601String()}',
+      'device_id=${report.deviceId}',
+    ].join(' ');
 
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw StateError('Report upload failed (${response.statusCode}): ${response.body}');
+    if (hasImage) {
+      final request = http.MultipartRequest('POST', reportsEndpoint);
+      if (token != null && token.isNotEmpty) {
+        request.headers['Authorization'] = 'Bearer $token';
+      }
+      request.headers['Accept'] = 'application/json';
+
+      request.fields['location'] = '${report.latitude.toStringAsFixed(5)}, ${report.longitude.toStringAsFixed(5)}';
+      request.fields['subDivision'] = 'Mobile Field Report';
+      request.fields['state'] = 'sikkim';
+      request.fields['description'] = desc;
+      request.fields['coordinates'] = '${report.latitude.toStringAsFixed(5)}° N, ${report.longitude.toStringAsFixed(5)}° E';
+
+      request.files.add(await http.MultipartFile.fromPath(
+        'file',
+        report.imagePath!,
+      ));
+
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw StateError('Multipart report upload failed (${response.statusCode}): ${response.body}');
+      }
+    } else {
+      final headers = <String, String>{
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      };
+      if (token != null && token.isNotEmpty) {
+        headers['Authorization'] = 'Bearer $token';
+      }
+
+      final response = await client.post(
+        reportsEndpoint,
+        headers: headers,
+        body: jsonEncode({
+          'location': '${report.latitude.toStringAsFixed(5)}, ${report.longitude.toStringAsFixed(5)}',
+          'subDivision': 'Mobile Field Report',
+          'state': 'sikkim',
+          'description': desc,
+          'coordinates': '${report.latitude.toStringAsFixed(5)}° N, ${report.longitude.toStringAsFixed(5)}° E',
+        }),
+      );
+
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw StateError('Report upload failed (${response.statusCode}): ${response.body}');
+      }
     }
   }
 }

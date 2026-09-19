@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
+import 'config/app_config.dart';
 import 'operational_risk_api.dart';
+import 'risk_map_page.dart';
 import 'offline/field_report_capture_service.dart';
 import 'offline/offline_hazard_report_page.dart';
 import 'offline/offline_reports_page.dart';
@@ -9,10 +11,7 @@ import 'offline/terraguard_offline_services.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  const baseUrl = String.fromEnvironment(
-    'TERRAGUARD_API_BASE_URL',
-    defaultValue: 'http://localhost:8000',
-  );
+  final baseUrl = AppConfig.apiBaseUrl;
   final services = TerraGuardOfflineServices(
     api: TerraGuardHttpSyncApi(
       reportsEndpoint: Uri.parse('$baseUrl/api/reports/submit'),
@@ -237,9 +236,20 @@ class _HomePageState extends State<_HomePage> {
           ),
           const SizedBox(height: 24),
           OutlinedButton.icon(
-            onPressed: null,
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => RiskMapPage(
+                    selectedZone: _selectedZone,
+                    risk: _risk,
+                    zones: _zones,
+                  ),
+                ),
+              );
+            },
             icon: const Icon(Icons.map_outlined),
-            label: const Text('View Risk Map - Coming soon'),
+            label: const Text('View Risk Map'),
           ),
           const SizedBox(height: 12),
           FilledButton.icon(
