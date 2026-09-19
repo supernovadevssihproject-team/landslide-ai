@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import 'config/app_config.dart';
 import 'operational_risk_api.dart';
+import 'theme/app_theme.dart';
 
 class RiskMapPage extends StatelessWidget {
   final OperationalZone? selectedZone;
@@ -17,23 +18,6 @@ class RiskMapPage extends StatelessWidget {
     required this.risk,
     required this.zones,
   });
-
-  Color _riskColor(String? level, BuildContext context) {
-    switch (level?.toUpperCase()) {
-      case 'VERY_HIGH':
-      case 'CRITICAL':
-        return const Color(0xFFEF4444);
-      case 'HIGH':
-        return const Color(0xFFF97316);
-      case 'MODERATE':
-      case 'MEDIUM':
-        return const Color(0xFFEAB308);
-      case 'LOW':
-        return const Color(0xFF10B981);
-      default:
-        return Theme.of(context).colorScheme.primary;
-    }
-  }
 
   Future<void> _openFullWebMap(BuildContext context) async {
     const webUrlStr = AppConfig.webUrl;
@@ -60,18 +44,24 @@ class RiskMapPage extends StatelessWidget {
     final lat = zone?.latitude ?? 27.5312;
     final lng = zone?.longitude ?? 88.5134;
     final center = LatLng(lat, lng);
-    final primaryColor = _riskColor(risk?.riskLevel, context);
+    final primaryColor = TerraTheme.getSeverityColor(risk?.riskLevel);
 
     return Scaffold(
+      backgroundColor: TerraTheme.background,
       appBar: AppBar(
-        title: const Text('Risk Map'),
+        title: const Text('GIS SPATIAL TERRAIN MAP'),
       ),
       body: Column(
         children: [
+          // Top Info Banner Card
           Padding(
             padding: const EdgeInsets.all(16.0),
-            child: Card(
-              color: Theme.of(context).colorScheme.surface,
+            child: Container(
+              decoration: BoxDecoration(
+                color: TerraTheme.surface,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: primaryColor.withValues(alpha: 0.4), width: 1.5),
+              ),
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
@@ -79,12 +69,37 @@ class RiskMapPage extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        Icon(Icons.location_on, color: primaryColor, size: 28),
-                        const SizedBox(width: 10),
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: primaryColor.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Icon(Icons.location_on, color: primaryColor, size: 22),
+                        ),
+                        const SizedBox(width: 12),
                         Expanded(
-                          child: Text(
-                            zone?.name ?? 'No Operational Location',
-                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                zone?.name ?? 'No Operational Location',
+                                style: const TextStyle(
+                                  color: TerraTheme.textPrimary,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                '${zone?.state.toUpperCase() ?? "GLOBAL"} SECTOR',
+                                style: const TextStyle(
+                                  color: TerraTheme.textMuted,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                         if (risk?.riskLevel != null)
@@ -96,25 +111,26 @@ class RiskMapPage extends StatelessWidget {
                               border: Border.all(color: primaryColor),
                             ),
                             child: Text(
-                              risk!.riskLevel!,
+                              risk!.riskLevel!.replaceAll('_', ' '),
                               style: TextStyle(
                                 color: primaryColor,
                                 fontWeight: FontWeight.bold,
-                                fontSize: 12,
+                                fontSize: 11,
                               ),
                             ),
                           ),
                       ],
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 14),
                     Row(
                       children: [
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('State / Region', style: TextStyle(color: Colors.blueGrey.shade200, fontSize: 12)),
-                              Text(zone?.state.toUpperCase() ?? '-', style: const TextStyle(fontWeight: FontWeight.w600)),
+                              const Text('COORDINATES', style: TextStyle(color: TerraTheme.textMuted, fontSize: 10, fontWeight: FontWeight.bold)),
+                              const SizedBox(height: 2),
+                              Text('${lat.toStringAsFixed(4)}°, ${lng.toStringAsFixed(4)}°', style: const TextStyle(color: TerraTheme.secondary, fontSize: 12, fontFamily: 'monospace')),
                             ],
                           ),
                         ),
@@ -122,17 +138,12 @@ class RiskMapPage extends StatelessWidget {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('Coordinates', style: TextStyle(color: Colors.blueGrey.shade200, fontSize: 12)),
-                              Text('${lat.toStringAsFixed(4)}°, ${lng.toStringAsFixed(4)}°', style: const TextStyle(fontWeight: FontWeight.w600)),
-                            ],
-                          ),
-                        ),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('Risk Score', style: TextStyle(color: Colors.blueGrey.shade200, fontSize: 12)),
-                              Text(risk?.riskScore != null ? '${risk!.riskScore} / 100' : '-', style: const TextStyle(fontWeight: FontWeight.bold)),
+                              const Text('RISK SCORE', style: TextStyle(color: TerraTheme.textMuted, fontSize: 10, fontWeight: FontWeight.bold)),
+                              const SizedBox(height: 2),
+                              Text(
+                                risk?.riskScore != null ? '${risk!.riskScore} / 100' : '-',
+                                style: TextStyle(color: primaryColor, fontSize: 13, fontWeight: FontWeight.bold),
+                              ),
                             ],
                           ),
                         ),
@@ -143,9 +154,16 @@ class RiskMapPage extends StatelessWidget {
               ),
             ),
           ),
+
+          // Interactive Map View
           Expanded(
-            child: ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 16),
+              clipBehavior: Clip.antiAlias,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: TerraTheme.border, width: 1.5),
+              ),
               child: FlutterMap(
                 options: MapOptions(
                   initialCenter: center,
@@ -178,10 +196,10 @@ class RiskMapPage extends StatelessWidget {
                               point: LatLng(otherZone.latitude, otherZone.longitude),
                               width: 36,
                               height: 36,
-                              child: Icon(
+                              child: const Icon(
                                 Icons.location_on_outlined,
-                                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.7),
-                                size: 30,
+                                color: TerraTheme.primary,
+                                size: 28,
                               ),
                             ),
                           ),
@@ -191,17 +209,23 @@ class RiskMapPage extends StatelessWidget {
               ),
             ),
           ),
+
+          // Open Full Web Map Launcher
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.all(16.0),
               child: SizedBox(
                 width: double.infinity,
-                child: FilledButton.icon(
+                height: 50,
+                child: ElevatedButton.icon(
                   onPressed: () => _openFullWebMap(context),
-                  icon: const Icon(Icons.open_in_browser),
-                  label: const Text('Open Full Risk Map'),
-                  style: FilledButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  icon: const Icon(Icons.open_in_browser, size: 20),
+                  label: const Text('OPEN FULL WEB RISK MAP', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: TerraTheme.secondary,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    elevation: 0,
                   ),
                 ),
               ),
