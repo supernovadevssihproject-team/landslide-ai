@@ -98,7 +98,7 @@ export const TerraAlerts: React.FC<TerraAlertsProps> = ({
         isDark ? 'bg-[#090e17] text-slate-100' : 'bg-[#f4f7fa] text-slate-900'
       }`}
     >
-      <div className="max-w-7xl mx-auto space-y-6">
+      <div className="app-wide-container w-full space-y-6">
         {/* Page Header */}
         <div
           className={`p-6 rounded-2xl border transition-all ${

@@ -415,7 +415,7 @@ export const HillsMountainRegions: React.FC<HillsMountainRegionsProps> = ({
   };
 
   return (
-    <div className="mx-auto max-w-7xl px-3 pb-12 pt-4 sm:px-6">
+    <div className="app-wide-container w-full px-3 pb-12 pt-4 sm:px-6">
       <section className={`overflow-hidden rounded-2xl border ${panelClass}`}>
         <div
           className={`border-b px-5 py-6 sm:px-7 ${

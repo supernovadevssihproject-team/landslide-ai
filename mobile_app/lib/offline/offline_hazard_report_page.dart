@@ -52,7 +52,7 @@ class _OfflineHazardReportPageState extends State<OfflineHazardReportPage> {
             const Text('Photo, GPS coordinates, timestamp, and report are saved on this device first.'),
             const SizedBox(height: 24),
             DropdownButtonFormField<HazardType>(
-              value: _hazardType,
+              initialValue: _hazardType,
               decoration: const InputDecoration(labelText: 'Hazard type', border: OutlineInputBorder()),
               items: HazardType.values.map((type) => DropdownMenuItem(value: type, child: Text(type.name))).toList(),
               onChanged: (value) => setState(() => _hazardType = value ?? HazardType.other),

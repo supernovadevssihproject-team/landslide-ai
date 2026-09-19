@@ -165,7 +165,7 @@ export const Navigation: React.FC<NavigationProps> = ({
           : 'bg-white/95 backdrop-blur-md border-slate-200 shadow-sm'
       }`}
     >
-      <div className="max-w-7xl mx-auto px-3 sm:px-6">
+      <div className="app-wide-container w-full px-3 sm:px-6">
         <div className="flex min-w-0 items-center gap-1.5 py-2 sm:gap-2">
           <button
             type="button"

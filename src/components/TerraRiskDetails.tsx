@@ -206,7 +206,7 @@ export const TerraRiskDetails: React.FC<TerraRiskDetailsProps> = ({
         isDark ? 'bg-[#090e17] text-slate-100' : 'bg-[#f4f7fa] text-slate-900'
       }`}
     >
-      <div className="max-w-7xl mx-auto space-y-6">
+      <div className="app-wide-container w-full space-y-6">
         {/* Navigation Breadcrumb & Zone Selector */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <button

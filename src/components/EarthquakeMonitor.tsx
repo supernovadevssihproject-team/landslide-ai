@@ -166,7 +166,7 @@ export const EarthquakeMonitor: React.FC<EarthquakeMonitorProps> = ({ selectedZo
   const mutedClass = isDark ? 'text-slate-400' : 'text-slate-500';
 
   return (
-    <div className={`mx-auto max-w-7xl space-y-5 px-3 pb-16 pt-5 sm:px-6 ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
+    <div className={`app-wide-container w-full space-y-5 px-3 pb-16 pt-5 sm:px-6 ${isDark ? 'text-slate-100' : 'text-slate-900'}`}>
       {/* Top Banner with Dynamic Focal Toggle */}
       <section className={`relative overflow-hidden rounded-2xl border p-5 sm:p-7 ${isDark ? 'border-orange-400/25 bg-[radial-gradient(circle_at_85%_10%,rgba(249,115,22,0.18),transparent_40%),linear-gradient(120deg,#0d1c2d,#131b26)] shadow-xl' : 'border-orange-200 bg-[radial-gradient(circle_at_85%_10%,rgba(249,115,22,0.12),transparent_40%),linear-gradient(120deg,#ffffff,#fff7ed)] shadow-sm'}`}>
         <div className="relative flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">

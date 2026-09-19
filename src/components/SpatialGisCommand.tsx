@@ -151,14 +151,19 @@ export const SpatialGisCommand: React.FC<SpatialGisCommandProps> = ({
   useEffect(() => {
     let active = true;
     const controller = new AbortController();
-    LandslideApi.getHazardZones(selectedState, controller.signal).then((data) => {
-      if (data && data.length > 0) {
-        setZones(data);
-        if (!propSelectedZone) {
-          setInternalSelectedZone(data[0]);
+    LandslideApi.getHazardZones(selectedState, controller.signal)
+      .then((data) => {
+        if (data && data.length > 0) {
+          setZones(data);
+          if (!propSelectedZone) {
+            setInternalSelectedZone(data[0]);
+          }
         }
-      }
-    });
+      })
+      .catch((error: unknown) => {
+        if (error instanceof DOMException && error.name === 'AbortError') return;
+        console.warn('Failed to load GIS hazard zones:', error);
+      });
     LandslideApi.getSensors(selectedState).then((data) => {
       if (active && data && data.length > 0) {
         setSensors(data);

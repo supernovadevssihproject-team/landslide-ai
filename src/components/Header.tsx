@@ -103,7 +103,7 @@ export const Header: React.FC<HeaderProps> = ({
       </div>
 
       {/* Main Command Bar */}
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 py-2.5 flex items-center justify-between gap-2 sm:gap-4">
+      <div className="main-command-bar app-wide-container w-full px-3 sm:px-6 py-2.5 flex items-center justify-between gap-2 sm:gap-4">
         {/* Emblem & Branding */}
         <div className="flex items-center gap-2.5 sm:gap-3.5">
           <img

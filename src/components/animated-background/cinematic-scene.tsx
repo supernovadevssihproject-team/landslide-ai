@@ -1,6 +1,7 @@
 import { RainLayer } from "./rain-layer"
 import { NetworkLayer } from "./network-layer"
 import { LightningLayer } from "./lightning-layer"
+import { useEffect, useState } from "react"
 
 /**
  * Builds a seamless, tileable cloud texture from SVG fractal noise.
@@ -25,8 +26,20 @@ const VALLEY_MASK =
   "linear-gradient(to bottom, rgba(0,0,0,0) 38%, rgba(0,0,0,0.85) 58%, rgba(0,0,0,0.9) 80%, rgba(0,0,0,0) 96%)"
 
 export function CinematicScene() {
+  const [lowPower, setLowPower] = useState(false)
+
+  useEffect(() => {
+    const query = window.matchMedia(
+      "(prefers-reduced-motion: reduce), (max-width: 768px)"
+    )
+    const update = () => setLowPower(query.matches)
+    update()
+    query.addEventListener("change", update)
+    return () => query.removeEventListener("change", update)
+  }, [])
+
   return (
-    <div className="absolute inset-0 overflow-hidden bg-black pointer-events-none">
+    <div className={`scene-root absolute inset-0 overflow-hidden bg-black pointer-events-none${lowPower ? " scene-low-power" : ""}`}>
       {/* Ambient blurred fill — shown in portrait, behind the fully-fitted scene */}
       <div
         aria-hidden="true"
@@ -60,7 +73,7 @@ export function CinematicScene() {
 
           {/* Dark storm cloud mass — slow layer */}
           <div
-            className="cine-animated absolute inset-0"
+            className="cine-animated scene-effect absolute inset-0"
             style={{
               backgroundImage: cloudTile(false, "0.010 0.016", 11),
               backgroundSize: "800px 800px",
@@ -74,7 +87,7 @@ export function CinematicScene() {
           />
           {/* Dark storm cloud mass — faster, reshaping layer for depth */}
           <div
-            className="cine-animated absolute inset-0"
+            className="cine-animated scene-effect absolute inset-0"
             style={{
               backgroundImage: cloudTile(false, "0.016 0.024", 42),
               backgroundSize: "800px 800px",
@@ -90,7 +103,7 @@ export function CinematicScene() {
           />
           {/* Bright sunlit clouds drifting near the sun break */}
           <div
-            className="cine-animated absolute inset-0"
+            className="cine-animated scene-effect absolute inset-0"
             style={{
               backgroundImage: cloudTile(true, "0.013 0.02", 7),
               backgroundSize: "800px 800px",
@@ -107,7 +120,7 @@ export function CinematicScene() {
 
           {/* Warm sunlight breaking through the clouds */}
           <div
-            className="cine-animated absolute inset-0"
+            className="cine-animated scene-effect absolute inset-0"
             style={{
               background:
                 "radial-gradient(38% 32% at 72% 21%, rgba(255,180,90,0.55) 0%, rgba(255,150,70,0.25) 35%, rgba(255,120,50,0) 70%)",
@@ -118,7 +131,7 @@ export function CinematicScene() {
 
           {/* Soft valley fog drifting between the mountains */}
           <div
-            className="cine-animated absolute inset-0"
+            className="cine-animated scene-effect absolute inset-0"
             style={{
               backgroundImage: cloudTile(true, "0.006 0.012", 23),
               backgroundSize: "1100px 1100px",
@@ -131,7 +144,7 @@ export function CinematicScene() {
           />
 
           {/* Blue terrain-monitoring network pulses + traveling particles */}
-          <NetworkLayer />
+          {!lowPower && <NetworkLayer />}
 
           {/* River flowing downstream */}
           <svg
@@ -149,7 +162,7 @@ export function CinematicScene() {
               strokeLinecap="round"
             />
             <path
-              className="cine-animated"
+              className="cine-animated scene-effect"
               d="M 985 515 C 1035 548 1002 590 1058 614 C 1120 640 1150 668 1214 702 C 1290 742 1330 772 1402 806 C 1470 838 1502 852 1548 872"
               fill="none"
               stroke="rgba(210,240,255,0.7)"
@@ -162,7 +175,7 @@ export function CinematicScene() {
 
           {/* Red / orange landslide-risk zone active glow */}
           <div
-            className="cine-animated absolute inset-0"
+            className="cine-animated scene-effect absolute inset-0"
             style={{
               background:
                 "radial-gradient(18% 20% at 76% 42%, rgba(255,90,30,0.55) 0%, rgba(255,60,20,0.22) 45%, rgba(255,50,20,0) 75%)",
@@ -173,10 +186,10 @@ export function CinematicScene() {
         </div>
 
         {/* Rainfall — kept crisp across the full frame */}
-        <RainLayer />
+        {!lowPower && <RainLayer />}
 
         {/* Thunderstorm lightning — random flashes and forked bolts */}
-        <LightningLayer />
+        {!lowPower && <LightningLayer />}
 
         {/* Cinematic grade + vignette */}
         <div

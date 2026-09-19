@@ -30,6 +30,8 @@ export function RainLayer() {
     let dpr = 1
     let drops: Drop[] = []
     let raf = 0
+    let lastFrame = 0
+    let resizeTimer: ReturnType<typeof setTimeout> | null = null
 
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches
 
@@ -38,7 +40,7 @@ export function RainLayer() {
 
     const buildDrops = () => {
       // density scales with the visible area but stays elegant
-      const count = Math.round((width * height) / 5200)
+      const count = Math.min(180, Math.round((width * height) / 9000))
       drops = Array.from({ length: count }, () => makeDrop(true))
     }
 
@@ -55,7 +57,7 @@ export function RainLayer() {
     }
 
     const resize = () => {
-      dpr = Math.min(window.devicePixelRatio || 1, 2)
+      dpr = Math.min(window.devicePixelRatio || 1, 1.5)
       width = canvas.clientWidth
       height = canvas.clientHeight
       canvas.width = Math.floor(width * dpr)
@@ -64,7 +66,12 @@ export function RainLayer() {
       buildDrops()
     }
 
-    const render = () => {
+    const render = (now = performance.now()) => {
+      if (!reduced && now - lastFrame < 33) {
+        raf = requestAnimationFrame(render)
+        return
+      }
+      lastFrame = now
       ctx.clearRect(0, 0, width, height)
       ctx.lineCap = "round"
       for (const d of drops) {
@@ -87,7 +94,15 @@ export function RainLayer() {
     }
 
     resize()
-    window.addEventListener("resize", resize)
+    const scheduleResize = () => {
+      if (resizeTimer !== null) clearTimeout(resizeTimer)
+      resizeTimer = setTimeout(() => {
+        resizeTimer = null
+        resize()
+      }, 120)
+    }
+
+    window.addEventListener("resize", scheduleResize, { passive: true })
     if (!reduced) {
       raf = requestAnimationFrame(render)
     } else {
@@ -96,7 +111,8 @@ export function RainLayer() {
     }
 
     return () => {
-      window.removeEventListener("resize", resize)
+      window.removeEventListener("resize", scheduleResize)
+      if (resizeTimer !== null) clearTimeout(resizeTimer)
       cancelAnimationFrame(raf)
     }
   }, [])

@@ -1,7 +1,6 @@
 import 'dart:convert';
 
 enum ReportSyncStatus { draft, pendingSync, uploading, synced, processing, analyzed, syncFailed }
-en
 enum HazardType { landslide, rockfall, roadBlockage, slopeFailure, flood, other }
 
 class OfflineHazardReport {

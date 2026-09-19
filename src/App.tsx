@@ -71,26 +71,31 @@ export default function App() {
   useEffect(() => {
     let active = true;
     const controller = new AbortController();
-    LandslideApi.getHazardZones(selectedState, controller.signal).then((data) => {
-      if (active) {
-        if (data && data.length > 0) {
-          setZones(data);
-          const stateKey = selectedState.toLowerCase();
-          setSelectedZone((prev) => {
-            if (stateKey !== 'all' && prev && prev.state?.toLowerCase() !== stateKey) {
-              return data[0];
-            }
-            return prev && data.some((z) => z.id === prev.id) ? prev : data[0];
-          });
-          setContextSelectedZone((prev: any) => {
-            if (stateKey !== 'all' && prev && prev.state?.toLowerCase() !== stateKey) {
-              return data[0];
-            }
-            return prev && data.some((z) => z.id === prev.id) ? prev : data[0];
-          });
+    LandslideApi.getHazardZones(selectedState, controller.signal)
+      .then((data) => {
+        if (active) {
+          if (data && data.length > 0) {
+            setZones(data);
+            const stateKey = selectedState.toLowerCase();
+            setSelectedZone((prev) => {
+              if (stateKey !== 'all' && prev && prev.state?.toLowerCase() !== stateKey) {
+                return data[0];
+              }
+              return prev && data.some((z) => z.id === prev.id) ? prev : data[0];
+            });
+            setContextSelectedZone((prev: any) => {
+              if (stateKey !== 'all' && prev && prev.state?.toLowerCase() !== stateKey) {
+                return data[0];
+              }
+              return prev && data.some((z) => z.id === prev.id) ? prev : data[0];
+            });
+          }
         }
-      }
-    });
+      })
+      .catch((error: unknown) => {
+        if (error instanceof DOMException && error.name === 'AbortError') return;
+        console.warn('Failed to load hazard zones:', error);
+      });
     return () => {
       active = false;
       controller.abort();
@@ -286,7 +291,7 @@ export default function App() {
 
         {/* Screen 3: Risk Map (Spatial GIS Command) */}
         {(activeModule === 'risk-map' || activeModule === 'spatial-gis-command') && (
-          <div className="max-w-7xl mx-auto px-3 sm:px-6 pt-4">
+          <div className="app-wide-container w-full px-3 sm:px-6 pt-4">
             <SpatialGisCommand
               selectedState={selectedState}
               selectedZone={selectedZone}
@@ -356,7 +361,7 @@ export default function App() {
 
         {/* Sub-Module: Temporal LSTM Predictor */}
         {activeModule === 'temporal-lstm-predictor' && (
-          <div className="max-w-7xl mx-auto px-3 sm:px-6 pt-4 pb-12">
+          <div className="app-wide-container w-full px-3 sm:px-6 pt-4 pb-12">
             <TemporalLstmPredictor
               onArmEvacuation={() => handleNavigateModule('emergency-broadcast-and-dispatch')}
             />
@@ -365,7 +370,7 @@ export default function App() {
 
         {/* Sub-Module: Crowdsource CV Verification */}
         {activeModule === 'crowdsource-cv-verification' && (
-          <div className="max-w-7xl mx-auto px-3 sm:px-6 pt-4 pb-12">
+          <div className="app-wide-container w-full px-3 sm:px-6 pt-4 pb-12">
             <CrowdsourceCvVerification
               onForwardToCap={(reportCode) => {
                 handleNavigateModule('emergency-broadcast-and-dispatch');
@@ -377,7 +382,7 @@ export default function App() {
 
         {/* Sub-Module: Emergency Broadcast & Dispatch */}
         {activeModule === 'emergency-broadcast-and-dispatch' && (
-          <div className="max-w-7xl mx-auto px-3 sm:px-6 pt-4 pb-12">
+          <div className="app-wide-container w-full px-3 sm:px-6 pt-4 pb-12">
             <BroadcastAndDispatch
               onSirenTriggered={() =>
                 triggerGlobalToast('Stage 3 High-Decibel Acoustic Warning Siren Active across 6 towers')
@@ -388,14 +393,14 @@ export default function App() {
 
         {/* Sub-Module: ML Models & Pipeline */}
         {activeModule === 'ml-models-pipeline' && (
-          <div className="max-w-7xl mx-auto px-3 sm:px-6 pt-4 pb-12">
+          <div className="app-wide-container w-full px-3 sm:px-6 pt-4 pb-12">
             <MlPipelineCommand />
           </div>
         )}
 
         {/* Feature: Real Landslide Risk Prediction Simulator */}
         {activeModule === 'risk-simulator' && (
-          <div className="max-w-7xl mx-auto px-3 sm:px-6 pt-4 pb-12">
+          <div className="app-wide-container w-full px-3 sm:px-6 pt-4 pb-12">
             <LandslideRiskSimulator
               theme={theme}
               onNavigateToMap={() => handleNavigateModule('risk-map')}
@@ -477,7 +482,7 @@ export default function App() {
             : 'bg-white border-slate-200 text-slate-600'
         }`}
       >
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+        <div className="app-wide-container w-full flex flex-col md:flex-row items-center justify-between gap-4 px-3 sm:px-6">
           <div className="flex items-center gap-3">
             <img
               src={ASSET_URLS.emblem}

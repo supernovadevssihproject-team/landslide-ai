@@ -68,6 +68,8 @@ export function NetworkLayer() {
     let sy = 1
     let raf = 0
     let start = performance.now()
+    let lastFrame = 0
+    let resizeTimer: ReturnType<typeof setTimeout> | null = null
 
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches
 
@@ -85,7 +87,7 @@ export function NetworkLayer() {
     })
 
     const resize = () => {
-      dpr = Math.min(window.devicePixelRatio || 1, 2)
+      dpr = Math.min(window.devicePixelRatio || 1, 1.25)
       width = canvas.clientWidth
       height = canvas.clientHeight
       canvas.width = Math.floor(width * dpr)
@@ -107,6 +109,11 @@ export function NetworkLayer() {
     }
 
     const render = (now: number) => {
+      if (!reduced && now - lastFrame < 33) {
+        raf = requestAnimationFrame(render)
+        return
+      }
+      lastFrame = now
       const elapsed = (now - start) / 1000
       ctx.clearRect(0, 0, width, height)
 
@@ -170,7 +177,15 @@ export function NetworkLayer() {
     }
 
     resize()
-    window.addEventListener("resize", resize)
+    const scheduleResize = () => {
+      if (resizeTimer !== null) clearTimeout(resizeTimer)
+      resizeTimer = setTimeout(() => {
+        resizeTimer = null
+        resize()
+      }, 120)
+    }
+
+    window.addEventListener("resize", scheduleResize, { passive: true })
     if (!reduced) {
       start = performance.now()
       raf = requestAnimationFrame(render)
@@ -180,7 +195,8 @@ export function NetworkLayer() {
     }
 
     return () => {
-      window.removeEventListener("resize", resize)
+      window.removeEventListener("resize", scheduleResize)
+      if (resizeTimer !== null) clearTimeout(resizeTimer)
       cancelAnimationFrame(raf)
     }
   }, [])

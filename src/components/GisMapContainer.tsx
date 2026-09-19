@@ -633,8 +633,12 @@ export const GisMapContainer: React.FC<GisMapContainerProps> = ({
     }
 
     let renderTimeout: ReturnType<typeof setTimeout> | null = null;
+    let renderFrame = 0;
+    const offCanvas = document.createElement('canvas');
+    const offCtx = offCanvas.getContext('2d');
 
     const renderHeatmap = () => {
+      if (!offCtx) return;
       const size = map.getSize();
       if (canvas.width !== size.x || canvas.height !== size.y) {
         canvas.width = size.x;
@@ -645,11 +649,12 @@ export const GisMapContainer: React.FC<GisMapContainerProps> = ({
 
       // Render the expensive density pass at half resolution, then upscale it.
       const renderScale = 0.5;
-      const offCanvas = document.createElement('canvas');
-      offCanvas.width = Math.max(1, Math.ceil(size.x * renderScale));
-      offCanvas.height = Math.max(1, Math.ceil(size.y * renderScale));
-      const offCtx = offCanvas.getContext('2d');
-      if (!offCtx) return;
+      const renderWidth = Math.max(1, Math.ceil(size.x * renderScale));
+      const renderHeight = Math.max(1, Math.ceil(size.y * renderScale));
+      if (offCanvas.width !== renderWidth || offCanvas.height !== renderHeight) {
+        offCanvas.width = renderWidth;
+        offCanvas.height = renderHeight;
+      }
 
       // Draw radial gradients for each ML point
       heatmapPoints.forEach((pt) => {
@@ -690,7 +695,7 @@ export const GisMapContainer: React.FC<GisMapContainerProps> = ({
       });
 
       // Colorize the alpha accumulation using the Institutional ML Risk Palette
-      const imgData = offCtx.getImageData(0, 0, size.x, size.y);
+      const imgData = offCtx.getImageData(0, 0, renderWidth, renderHeight);
       const data = imgData.data;
 
       // Palette lookup
@@ -742,7 +747,7 @@ export const GisMapContainer: React.FC<GisMapContainerProps> = ({
 
       renderTimeout = setTimeout(() => {
         renderTimeout = null;
-        renderHeatmap();
+        renderFrame = requestAnimationFrame(renderHeatmap);
       }, 60);
     };
 
@@ -756,6 +761,7 @@ export const GisMapContainer: React.FC<GisMapContainerProps> = ({
 
     return () => {
       if (renderTimeout !== null) clearTimeout(renderTimeout);
+      cancelAnimationFrame(renderFrame);
       map.off('move', scheduleHeatmapRender);
       map.off('moveend', scheduleHeatmapRender);
       map.off('zoom', scheduleHeatmapRender);
