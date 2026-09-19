@@ -1,6 +1,4 @@
-"use client"
-
-import { useEffect, useRef } from "react"
+import React, { useEffect, useRef } from "react"
 
 // Coordinates are authored in the image's native 1600 x 900 space and
 // scaled to the rendered stage, so pulses sit on top of the existing
@@ -52,13 +50,13 @@ const NODES: [number, number][] = [
 
 type Particle = { path: number; t: number; speed: number }
 
-export function NetworkLayer() {
+export const NetworkLayer = React.memo(function NetworkLayer() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
-    const ctx = canvas.getContext("2d")
+    const ctx = canvas.getContext("2d", { alpha: true })
     if (!ctx) return
 
     let width = 0
@@ -68,12 +66,11 @@ export function NetworkLayer() {
     let sy = 1
     let raf = 0
     let start = performance.now()
-    let lastFrame = 0
-    let resizeTimer: ReturnType<typeof setTimeout> | null = null
+    let isVisible = true
+    let isIntersecting = true
 
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches
 
-    // several light particles traveling along each path
     const particles: Particle[] = []
     PATHS.forEach((_, i) => {
       const n = 3
@@ -87,7 +84,7 @@ export function NetworkLayer() {
     })
 
     const resize = () => {
-      dpr = Math.min(window.devicePixelRatio || 1, 1.25)
+      dpr = Math.min(window.devicePixelRatio || 1, 1.5)
       width = canvas.clientWidth
       height = canvas.clientHeight
       canvas.width = Math.floor(width * dpr)
@@ -97,7 +94,6 @@ export function NetworkLayer() {
       sy = height / BASE_H
     }
 
-    // position along a polyline given t in [0,1]
     const pointOnPath = (path: [number, number][], t: number) => {
       const segCount = path.length - 1
       const scaled = t * segCount
@@ -109,30 +105,30 @@ export function NetworkLayer() {
     }
 
     const render = (now: number) => {
-      if (!reduced && now - lastFrame < 33) {
-        raf = requestAnimationFrame(render)
+      if (!isVisible || !isIntersecting) {
+        raf = 0
         return
       }
-      lastFrame = now
+
       const elapsed = (now - start) / 1000
       ctx.clearRect(0, 0, width, height)
 
-      // faint flowing lines beneath the pulses
       ctx.lineCap = "round"
       ctx.lineJoin = "round"
-      for (const path of PATHS) {
+      ctx.strokeStyle = "rgba(70, 190, 255, 0.12)"
+      ctx.lineWidth = 1.4
+      for (let pIdx = 0; pIdx < PATHS.length; pIdx++) {
+        const path = PATHS[pIdx]
         ctx.beginPath()
         ctx.moveTo(path[0][0] * sx, path[0][1] * sy)
         for (let i = 1; i < path.length; i++) {
           ctx.lineTo(path[i][0] * sx, path[i][1] * sy)
         }
-        ctx.strokeStyle = "rgba(70, 190, 255, 0.12)"
-        ctx.lineWidth = 1.4
         ctx.stroke()
       }
 
-      // traveling light particles
-      for (const p of particles) {
+      for (let i = 0; i < particles.length; i++) {
+        const p = particles[i]
         p.t += p.speed * 0.016
         if (p.t > 1) p.t -= 1
         const path = PATHS[p.path]
@@ -150,10 +146,10 @@ export function NetworkLayer() {
         ctx.fill()
       }
 
-      // pulsing nodes
-      NODES.forEach(([nx, ny], i) => {
+      for (let i = 0; i < NODES.length; i++) {
+        const [nx, ny] = NODES[i]
         const phase = elapsed * 1.6 + i * 0.9
-        const pulse = (Math.sin(phase) + 1) / 2 // 0..1
+        const pulse = (Math.sin(phase) + 1) / 2
         const x = nx * sx
         const y = ny * sy
         const r = 5 + pulse * 9
@@ -166,38 +162,70 @@ export function NetworkLayer() {
         ctx.arc(x, y, r, 0, Math.PI * 2)
         ctx.fill()
 
-        // bright core
         ctx.fillStyle = `rgba(220, 250, 255, ${0.6 + pulse * 0.4})`
         ctx.beginPath()
         ctx.arc(x, y, 1.6, 0, Math.PI * 2)
         ctx.fill()
-      })
+      }
 
       raf = requestAnimationFrame(render)
+    }
+
+    const startAnimation = () => {
+      if (!raf && !reduced && isVisible && isIntersecting) {
+        start = performance.now()
+        raf = requestAnimationFrame(render)
+      }
+    }
+
+    const stopAnimation = () => {
+      if (raf) {
+        cancelAnimationFrame(raf)
+        raf = 0
+      }
+    }
+
+    const handleVisibilityChange = () => {
+      isVisible = !document.hidden
+      if (isVisible) {
+        startAnimation()
+      } else {
+        stopAnimation()
+      }
+    }
+
+    let observer: IntersectionObserver | null = null
+    if (typeof IntersectionObserver !== "undefined") {
+      observer = new IntersectionObserver(
+        (entries) => {
+          isIntersecting = entries[0]?.isIntersecting ?? true
+          if (isIntersecting) {
+            startAnimation()
+          } else {
+            stopAnimation()
+          }
+        },
+        { threshold: 0.05 }
+      )
+      observer.observe(canvas)
     }
 
     resize()
-    const scheduleResize = () => {
-      if (resizeTimer !== null) clearTimeout(resizeTimer)
-      resizeTimer = setTimeout(() => {
-        resizeTimer = null
-        resize()
-      }, 120)
-    }
+    window.addEventListener("resize", resize)
+    document.addEventListener("visibilitychange", handleVisibilityChange)
 
-    window.addEventListener("resize", scheduleResize, { passive: true })
     if (!reduced) {
-      start = performance.now()
-      raf = requestAnimationFrame(render)
+      startAnimation()
     } else {
       render(performance.now())
-      cancelAnimationFrame(raf)
+      stopAnimation()
     }
 
     return () => {
-      window.removeEventListener("resize", scheduleResize)
-      if (resizeTimer !== null) clearTimeout(resizeTimer)
-      cancelAnimationFrame(raf)
+      window.removeEventListener("resize", resize)
+      document.removeEventListener("visibilitychange", handleVisibilityChange)
+      if (observer) observer.disconnect()
+      stopAnimation()
     }
   }, [])
 
@@ -209,4 +237,6 @@ export function NetworkLayer() {
       style={{ mixBlendMode: "screen" }}
     />
   )
-}
+})
+
+NetworkLayer.displayName = "NetworkLayer"

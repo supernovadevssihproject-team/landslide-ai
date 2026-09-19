@@ -161,8 +161,8 @@ export const Navigation: React.FC<NavigationProps> = ({
     <nav
       className={`border-b sticky top-[73px] z-40 transition-colors duration-200 ${
         isDark
-          ? 'bg-[#0a121e]/95 backdrop-blur-md border-slate-800'
-          : 'bg-white/95 backdrop-blur-md border-slate-200 shadow-sm'
+          ? 'bg-[#051424]/65 backdrop-blur-md border-slate-800/80'
+          : 'bg-white/85 backdrop-blur-md border-slate-200/80 shadow-sm'
       }`}
     >
       <div className="app-wide-container w-full px-3 sm:px-6">

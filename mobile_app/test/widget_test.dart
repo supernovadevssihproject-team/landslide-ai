@@ -14,11 +14,11 @@ import 'package:terraguard_mobile/offline/terraguard_offline_services.dart';
 void main() {
   testWidgets('TerraGuardApp smoke test', (WidgetTester tester) async {
     final services = TerraGuardOfflineServices(
-      api: TerraGuardHttpSyncApi(reportsEndpoint: Uri.parse('http://localhost:8000/api/reports/submit')),
+      api: TerraGuardHttpSyncApi(reportsEndpoint: Uri.parse('http://localhost:8001/api/reports/submit')),
     );
     await tester.pumpWidget(TerraGuardApp(
       offlineServices: services,
-      riskApi: OperationalRiskApi(baseUri: Uri.parse('http://localhost:8000')),
+      riskApi: OperationalRiskApi(baseUri: Uri.parse('http://localhost:8001')),
     ));
     expect(find.text('TerraGuard'), findsOneWidget);
   });

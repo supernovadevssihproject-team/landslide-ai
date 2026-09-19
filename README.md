@@ -960,7 +960,7 @@ The backend supports:
 When the backend is running locally, FastAPI interactive API documentation is available at:
 
 ```text
-http://localhost:8000/docs
+http://localhost:8001/docs
 ```
 
 ---
@@ -1177,13 +1177,13 @@ pip install -r requirements.txt
 Start FastAPI:
 
 ```bash
-python -m uvicorn backend.main:app --reload --port 8000
+python -m uvicorn backend.main:app --reload --port 8001
 ```
 
 API documentation:
 
 ```text
-http://localhost:8000/docs
+http://localhost:8001/docs
 ```
 
 ---
@@ -1349,7 +1349,7 @@ Example production workflow:
 The FastAPI backend can be started with:
 
 ```bash
-python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000
+python -m uvicorn backend.main:app --host 0.0.0.0 --port 8001
 ```
 
 For a production deployment, the backend should run behind a production-capable process manager or application platform.

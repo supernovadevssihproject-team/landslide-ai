@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --port=3000 --host=0.0.0.0",
-    "backend": "python -m uvicorn backend.main:app --reload --port 8000",
+    "backend": "python -m uvicorn backend.main:app --reload --port 8001",
     "test:backend": "python backend/test_api.py",
     "ml:train": "python ml/train_model.py",
     "ml:evaluate": "python ml/evaluate_model.py",

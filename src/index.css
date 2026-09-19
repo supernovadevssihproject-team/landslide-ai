@@ -63,14 +63,6 @@
   * {
     border-color: var(--color-outline-variant);
   }
-  #root {
-    width: 100%;
-    max-width: 100%;
-    overflow-x: clip;
-  }
-  .app-wide-container {
-    max-width: none;
-  }
   body {
     font-family: 'Public Sans', sans-serif;
     background-color: var(--color-surface);
@@ -280,25 +272,6 @@
 }
 .scene-ambient {
   display: none;
-}
-.scene-low-power .scene-effect {
-  display: none;
-}
-.scene-low-power .cine-animated {
-  animation: none !important;
-}
-.scene-low-power .scene-stage {
-  contain: paint;
-}
-
-@media (max-width: 480px) {
-  .main-command-bar {
-    flex-wrap: wrap;
-  }
-  .main-command-bar > :last-child {
-    flex: 1 1 100%;
-    justify-content: flex-end;
-  }
 }
 /* Portrait / mobile: fit the ENTIRE 16:9 scene so nothing is cropped,
    with an ambient blurred fill behind it so it still fills the screen. */

@@ -8,6 +8,7 @@ import { OperationalModule, NerState, HazardZone } from './types';
 import { Header } from './components/Header';
 import { Navigation } from './components/Navigation';
 import { TerraHome } from './components/TerraHome';
+import { CinematicScene } from './components/animated-background/cinematic-scene';
 import { FieldReportModal } from './components/FieldReportModal';
 import { sirenPlayer } from './utils/audioSiren';
 import { HAZARD_ZONES, ASSET_URLS } from './data/mockData';
@@ -228,17 +229,23 @@ export default function App() {
     setActiveModule('risk-map');
   };
 
-
   const isDark = theme === 'dark';
 
   return (
     <div
-      className={`min-h-screen flex flex-col font-sans transition-colors duration-300 ${
+      className={`relative min-h-screen flex flex-col font-sans transition-colors duration-300 ${
         isDark
           ? 'bg-[#090e17] text-slate-100 selection:bg-emerald-900 selection:text-emerald-100'
           : 'bg-[#f4f7fa] text-slate-900 selection:bg-emerald-200 selection:text-emerald-900'
       }`}
     >
+      {/* Single Authoritative Continuous Cinematic Scene for Home View */}
+      {activeModule === 'home' && (
+        <div className="absolute top-0 left-0 right-0 h-[820px] pointer-events-none overflow-hidden z-0">
+          <CinematicScene />
+        </div>
+      )}
+
       {/* Top Header with TerraGuard Brand, State Filter, Live Clock, Theme & Siren */}
       <Header
         selectedState={selectedState}

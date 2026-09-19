@@ -1,6 +1,4 @@
-"use client"
-
-import { useEffect, useMemo, useRef, useState } from "react"
+import React, { useEffect, useMemo, useRef, useState } from "react"
 
 type Strike = {
   id: number
@@ -45,7 +43,7 @@ function makeBolt(x: number) {
   return [d, ...branches]
 }
 
-export function LightningLayer() {
+export const LightningLayer = React.memo(function LightningLayer() {
   const [strike, setStrike] = useState<Strike | null>(null)
   const idRef = useRef(0)
 
@@ -59,9 +57,10 @@ export function LightningLayer() {
     let timeout: ReturnType<typeof setTimeout>
 
     const schedule = () => {
-      // random gaps between distant rumbles and close strikes
-      const delay = 2600 + Math.random() * 6000
+      if (document.hidden) return
+      const delay = 3200 + Math.random() * 5500
       timeout = setTimeout(() => {
+        if (document.hidden) return
         const x = 200 + Math.random() * 1200
         idRef.current += 1
         setStrike({
@@ -74,8 +73,21 @@ export function LightningLayer() {
         schedule()
       }, delay)
     }
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        clearTimeout(timeout)
+      } else {
+        schedule()
+      }
+    }
+
     schedule()
-    return () => clearTimeout(timeout)
+    document.addEventListener("visibilitychange", handleVisibilityChange)
+    return () => {
+      clearTimeout(timeout)
+      document.removeEventListener("visibilitychange", handleVisibilityChange)
+    }
   }, [reduced])
 
   if (!strike) return null
@@ -150,4 +162,6 @@ export function LightningLayer() {
       )}
     </div>
   )
-}
+})
+
+LightningLayer.displayName = "LightningLayer"

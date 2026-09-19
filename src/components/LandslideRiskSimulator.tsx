@@ -963,7 +963,7 @@ export function LandslideRiskSimulator({
                     </div>
 
                     <div className="text-xs text-slate-400 mt-2">
-                      Verify the backend server is running on port 8000.
+                      Verify the backend server is running on port 8001.
                     </div>
 
                   </div>

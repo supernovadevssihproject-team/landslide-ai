@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { OperationalModule, HazardZone } from '../types';
 import { useI18n } from '../i18n/index.tsx';
 import {
@@ -11,10 +11,9 @@ import {
   MapPin,
   AlertTriangle,
   ChevronRight,
-  Zap,
 } from 'lucide-react';
 
-import { CinematicScene } from './animated-background/cinematic-scene';
+
 
 interface TerraHomeProps {
   onCheckLocationRisk: (zone: HazardZone) => void;
@@ -25,7 +24,7 @@ interface TerraHomeProps {
   language?: 'en' | 'hi';
 }
 
-export const TerraHome: React.FC<TerraHomeProps> = ({
+export const TerraHome: React.FC<TerraHomeProps> = React.memo(({
   onCheckLocationRisk,
   onNavigate,
   zones,
@@ -36,58 +35,56 @@ export const TerraHome: React.FC<TerraHomeProps> = ({
   const { t } = useI18n();
   const [searchQuery, setSearchQuery] = useState(selectedZone.name);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
 
   useEffect(() => {
     setSearchQuery(selectedZone.name);
   }, [selectedZone.id, selectedZone.name]);
 
-  useEffect(() => {
-    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const updateMotionPreference = () => setPrefersReducedMotion(mediaQuery.matches);
-    updateMotionPreference();
-    mediaQuery.addEventListener('change', updateMotionPreference);
-    return () => mediaQuery.removeEventListener('change', updateMotionPreference);
-  }, []);
+  const matchingZones = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return [];
+    return zones.filter(
+      (z) =>
+        z.name.toLowerCase().includes(query) ||
+        z.subDivision.toLowerCase().includes(query) ||
+        z.corridor.toLowerCase().includes(query)
+    );
+  }, [zones, searchQuery]);
 
-  const matchingZones = zones.filter(
-    (z) =>
-      z.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      z.subDivision.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      z.corridor.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const handleSearchSubmit = (e: React.FormEvent) => {
+  const handleSearchSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault();
-    const selectedMatch = zones.find((zone) => zone.name === searchQuery.trim()) ?? matchingZones[0];
+    const queryTrimmed = searchQuery.trim();
+    const selectedMatch = zones.find((zone) => zone.name === queryTrimmed) ?? matchingZones[0];
     if (selectedMatch) {
       onCheckLocationRisk(selectedMatch);
     } else if (zones.length > 0) {
       onCheckLocationRisk(zones[0]);
     }
     setShowSuggestions(false);
-  };
+  }, [searchQuery, zones, matchingZones, onCheckLocationRisk]);
 
-  const highAndMedZones = zones.filter(
-    (z) => z.riskStatus === 'CRITICAL RED' || z.riskStatus === 'ADVISORY ORANGE'
-  );
+  const highAndMedZonesCount = useMemo(() => {
+    return zones.filter(
+      (z) => z.riskStatus === 'CRITICAL RED' || z.riskStatus === 'ADVISORY ORANGE'
+    ).length;
+  }, [zones]);
+
+  const popularZones = useMemo(() => {
+    return zones.slice(0, 4);
+  }, [zones]);
 
   return (
     <div className="space-y-8 pb-16 font-sans">
       {/* Hero Section */}
       <div className="relative min-h-[560px] overflow-hidden rounded-3xl border border-emerald-500/20 shadow-2xl shadow-black/30 sm:min-h-[620px]">
-        {/* Local mountain video with the existing mountain image as a static fallback. */}
-        <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
-  <CinematicScene />
-</div>
         <div
-          className={`absolute inset-0 ${
+          className={`absolute inset-0 pointer-events-none ${
             theme === 'light'
-              ? 'bg-gradient-to-r from-slate-950/45 via-[#051424]/30 to-[#051424]/15'
-              : 'bg-gradient-to-r from-[#030d18]/50 via-[#051424]/35 to-[#051424]/20'
+              ? 'bg-gradient-to-r from-slate-950/40 via-[#051424]/25 to-[#051424]/10'
+              : 'bg-gradient-to-r from-[#030d18]/45 via-[#051424]/30 to-[#051424]/15'
           }`}
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#030d18]/90 via-transparent to-[#051424]/25" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#030d18]/85 via-transparent to-[#051424]/20 pointer-events-none" />
 
         {/* Content Container */}
         <div className="relative z-10 flex min-h-[560px] max-w-5xl flex-col justify-center px-5 py-12 text-white sm:min-h-[620px] sm:px-12 sm:py-20">
@@ -111,7 +108,7 @@ export const TerraHome: React.FC<TerraHomeProps> = ({
             <div className="rounded-2xl border border-white/20 bg-[#051424]/55 p-2 shadow-2xl shadow-black/30 backdrop-blur-xl transition-all focus-within:border-emerald-400/80 focus-within:ring-2 focus-within:ring-emerald-400/20">
               <div className="flex items-center">
                 <div className="pl-3 pr-2 text-emerald-400">
-                <Search className="w-5 h-5" />
+                  <Search className="w-5 h-5" />
                 </div>
                 <input
                   type="text"
@@ -175,7 +172,7 @@ export const TerraHome: React.FC<TerraHomeProps> = ({
           {/* Quick Location Pills */}
           <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-slate-300">
             <span className="font-mono text-slate-400">{t('home.popularCorridors')}</span>
-            {zones.slice(0, 4).map((z) => (
+            {popularZones.map((z) => (
               <button
                 key={z.id}
                 type="button"
@@ -300,7 +297,7 @@ export const TerraHome: React.FC<TerraHomeProps> = ({
               <div className="flex items-center gap-2">
                 <span className="font-bold text-sm">ACTIVE MONITORING NOTICE</span>
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-red-500 text-white font-bold">
-                  {highAndMedZones.length} ZONES AT RISK
+                  {highAndMedZonesCount} ZONES AT RISK
                 </span>
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
@@ -368,4 +365,6 @@ export const TerraHome: React.FC<TerraHomeProps> = ({
       </div>
     </div>
   );
-};
+});
+
+TerraHome.displayName = 'TerraHome';

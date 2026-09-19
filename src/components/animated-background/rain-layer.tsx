@@ -1,6 +1,4 @@
-"use client"
-
-import { useEffect, useRef } from "react"
+import React, { useEffect, useRef } from "react"
 
 type Drop = {
   x: number
@@ -16,13 +14,13 @@ type Drop = {
  * Fine, transparent streaks with a slight wind-driven angle so the
  * mountains stay clearly visible behind them.
  */
-export function RainLayer() {
+export const RainLayer = React.memo(function RainLayer() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
-    const ctx = canvas.getContext("2d")
+    const ctx = canvas.getContext("2d", { alpha: true })
     if (!ctx) return
 
     let width = 0
@@ -30,30 +28,31 @@ export function RainLayer() {
     let dpr = 1
     let drops: Drop[] = []
     let raf = 0
-    let lastFrame = 0
-    let resizeTimer: ReturnType<typeof setTimeout> | null = null
+    let isVisible = true
+    let isIntersecting = true
 
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches
-
-    // gentle wind angle (drops fall slightly to the left/right)
     const windX = 1.1
 
-    const buildDrops = () => {
-      // density scales with the visible area but stays elegant
-      const count = Math.min(180, Math.round((width * height) / 9000))
-      drops = Array.from({ length: count }, () => makeDrop(true))
+    function resetDrop(d: Drop, randomY: boolean) {
+      const depth = Math.random()
+      d.x = Math.random() * (width + 200) - 100
+      d.y = randomY ? Math.random() * height : -20
+      d.len = 10 + depth * 26
+      d.speed = 6 + depth * 12
+      d.thickness = 0.5 + depth * 1.1
+      d.alpha = 0.08 + depth * 0.22
     }
 
-    function makeDrop(randomY: boolean): Drop {
-      const depth = Math.random() // 0 = far, 1 = near
-      return {
-        x: Math.random() * (width + 200) - 100,
-        y: randomY ? Math.random() * height : -20,
-        len: 10 + depth * 26,
-        speed: 6 + depth * 12,
-        thickness: 0.5 + depth * 1.1,
-        alpha: 0.08 + depth * 0.22,
-      }
+    function createDrop(randomY: boolean): Drop {
+      const d = { x: 0, y: 0, len: 0, speed: 0, thickness: 0, alpha: 0 }
+      resetDrop(d, randomY)
+      return d
+    }
+
+    const buildDrops = () => {
+      const count = Math.min(Math.round((width * height) / 5400), 200)
+      drops = Array.from({ length: count }, () => createDrop(true))
     }
 
     const resize = () => {
@@ -66,15 +65,16 @@ export function RainLayer() {
       buildDrops()
     }
 
-    const render = (now = performance.now()) => {
-      if (!reduced && now - lastFrame < 33) {
-        raf = requestAnimationFrame(render)
+    const render = () => {
+      if (!isVisible || !isIntersecting) {
+        raf = 0
         return
       }
-      lastFrame = now
+
       ctx.clearRect(0, 0, width, height)
       ctx.lineCap = "round"
-      for (const d of drops) {
+      for (let i = 0; i < drops.length; i++) {
+        const d = drops[i]
         ctx.beginPath()
         ctx.strokeStyle = `rgba(200, 220, 255, ${d.alpha})`
         ctx.lineWidth = d.thickness
@@ -86,34 +86,66 @@ export function RainLayer() {
         d.x -= windX
 
         if (d.y - d.len > height) {
-          Object.assign(d, makeDrop(false))
-          d.x = Math.random() * (width + 200) - 100
+          resetDrop(d, false)
         }
       }
       raf = requestAnimationFrame(render)
     }
 
-    resize()
-    const scheduleResize = () => {
-      if (resizeTimer !== null) clearTimeout(resizeTimer)
-      resizeTimer = setTimeout(() => {
-        resizeTimer = null
-        resize()
-      }, 120)
+    const startAnimation = () => {
+      if (!raf && !reduced && isVisible && isIntersecting) {
+        raf = requestAnimationFrame(render)
+      }
     }
 
-    window.addEventListener("resize", scheduleResize, { passive: true })
+    const stopAnimation = () => {
+      if (raf) {
+        cancelAnimationFrame(raf)
+        raf = 0
+      }
+    }
+
+    const handleVisibilityChange = () => {
+      isVisible = !document.hidden
+      if (isVisible) {
+        startAnimation()
+      } else {
+        stopAnimation()
+      }
+    }
+
+    let observer: IntersectionObserver | null = null;
+    if (typeof IntersectionObserver !== "undefined") {
+      observer = new IntersectionObserver(
+        (entries) => {
+          isIntersecting = entries[0]?.isIntersecting ?? true
+          if (isIntersecting) {
+            startAnimation()
+          } else {
+            stopAnimation()
+          }
+        },
+        { threshold: 0.05 }
+      )
+      observer.observe(canvas)
+    }
+
+    resize()
+    window.addEventListener("resize", resize)
+    document.addEventListener("visibilitychange", handleVisibilityChange)
+
     if (!reduced) {
-      raf = requestAnimationFrame(render)
+      startAnimation()
     } else {
-      render() // draw a single static frame
-      cancelAnimationFrame(raf)
+      render()
+      stopAnimation()
     }
 
     return () => {
-      window.removeEventListener("resize", scheduleResize)
-      if (resizeTimer !== null) clearTimeout(resizeTimer)
-      cancelAnimationFrame(raf)
+      window.removeEventListener("resize", resize)
+      document.removeEventListener("visibilitychange", handleVisibilityChange)
+      if (observer) observer.disconnect()
+      stopAnimation()
     }
   }, [])
 
@@ -125,4 +157,6 @@ export function RainLayer() {
       style={{ mixBlendMode: "screen" }}
     />
   )
-}
+})
+
+RainLayer.displayName = "RainLayer"

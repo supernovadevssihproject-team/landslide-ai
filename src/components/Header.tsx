@@ -62,8 +62,8 @@ export const Header: React.FC<HeaderProps> = ({
     <header
       className={`sticky top-0 z-50 border-b backdrop-blur-md transition-colors duration-200 ${
         isDark
-          ? 'bg-[#051424]/95 border-[#1c2b3c] text-white'
-          : 'bg-white/95 border-slate-200 text-slate-900 shadow-sm'
+          ? 'bg-[#051424]/75 border-[#1c2b3c]/80 text-white'
+          : 'bg-white/85 border-slate-200/80 text-slate-900 shadow-sm'
       }`}
     >
       {/* Top Emergency Action Marquee */}
