@@ -250,3 +250,94 @@
   background: #94a3b8;
 }
 
+
+
+/* River light traveling downstream */
+@keyframes river-flow {
+  from {
+    stroke-dashoffset: 0;
+  }
+  to {
+    stroke-dashoffset: -220;
+  }
+}
+
+/* Cinematic stage sizing.
+   Landscape / desktop: cover the viewport (fills edge to edge).
+   Portrait / mobile: fit the whole 16:9 scene so nothing is cropped,
+   with an ambient blurred fill behind it. */
+.scene-stage {
+  width: max(100vw, calc(100vh * 16 / 9));
+  height: max(100vh, calc(100vw * 9 / 16));
+}
+.scene-ambient {
+  display: none;
+}
+/* Portrait / mobile: fit the ENTIRE 16:9 scene so nothing is cropped,
+   with an ambient blurred fill behind it so it still fills the screen. */
+@media (orientation: portrait) {
+  .scene-stage {
+    width: 100vw;
+    height: calc(100vw * 9 / 16);
+  }
+  .scene-ambient {
+    display: block;
+  }
+}
+
+/* Lightning: a quick multi-strobe illumination of the whole sky */
+@keyframes lightning-flash {
+  0% {
+    opacity: 0;
+  }
+  2% {
+    opacity: 0.9;
+  }
+  5% {
+    opacity: 0.15;
+  }
+  8% {
+    opacity: 0.75;
+  }
+  12% {
+    opacity: 0.05;
+  }
+  15% {
+    opacity: 0.55;
+  }
+  22% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* The bolt itself: appears with the flash, then snaps out */
+@keyframes lightning-bolt {
+  0% {
+    opacity: 0;
+  }
+  2% {
+    opacity: 1;
+  }
+  9% {
+    opacity: 0.3;
+  }
+  14% {
+    opacity: 0.9;
+  }
+  20% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cine-animated {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

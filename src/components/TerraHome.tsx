@@ -14,6 +14,8 @@ import {
   Zap,
 } from 'lucide-react';
 
+import { CinematicScene } from './animated-background/cinematic-scene';
+
 interface TerraHomeProps {
   onCheckLocationRisk: (zone: HazardZone) => void;
   onNavigate: (module: OperationalModule) => void;
@@ -75,31 +77,14 @@ export const TerraHome: React.FC<TerraHomeProps> = ({
       {/* Hero Section */}
       <div className="relative min-h-[560px] overflow-hidden rounded-3xl border border-emerald-500/20 shadow-2xl shadow-black/30 sm:min-h-[620px]">
         {/* Local mountain video with the existing mountain image as a static fallback. */}
-        <div
-          className="absolute inset-0 bg-cover bg-center transition-transform duration-1000 motion-reduce:transition-none"
-          style={{
-            backgroundImage: `url('https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=2000&q=80')`,
-          }}
-        >
-          {!prefersReducedMotion && (
-            <video
-              className="h-full w-full object-cover object-center"
-              autoPlay
-              muted
-              loop
-              playsInline
-              poster="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=2000&q=80"
-              aria-hidden="true"
-            >
-              <source src="/assets/mountain-sunset.mp4" type="video/mp4" />
-            </video>
-          )}
-        </div>
+        <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+  <CinematicScene />
+</div>
         <div
           className={`absolute inset-0 ${
             theme === 'light'
-              ? 'bg-gradient-to-r from-slate-950/95 via-[#051424]/85 to-[#051424]/65'
-              : 'bg-gradient-to-r from-[#030d18]/95 via-[#051424]/88 to-[#051424]/72'
+              ? 'bg-gradient-to-r from-slate-950/45 via-[#051424]/30 to-[#051424]/15'
+              : 'bg-gradient-to-r from-[#030d18]/50 via-[#051424]/35 to-[#051424]/20'
           }`}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-[#030d18]/90 via-transparent to-[#051424]/25" />
