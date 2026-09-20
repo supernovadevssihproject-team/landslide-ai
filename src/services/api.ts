@@ -82,6 +82,16 @@ export interface WeatherRequestOptions {
 
 const BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/+$/, '');
 
+export class ApiError extends Error {
+  status: number;
+
+  constructor(status: number, statusText: string) {
+    super(`API error ${status}: ${statusText}`);
+    this.name = 'ApiError';
+    this.status = status;
+  }
+}
+
 async function fetchJson<T>(url: string, options?: RequestInit, fallback?: T): Promise<T> {
   try {
     const res = await fetch(`${BASE_URL}${url}`, {
@@ -92,7 +102,7 @@ async function fetchJson<T>(url: string, options?: RequestInit, fallback?: T): P
       },
     });
     if (!res.ok) {
-      throw new Error(`API error ${res.status}: ${res.statusText}`);
+      throw new ApiError(res.status, res.statusText);
     }
     return (await res.json()) as T;
   } catch (err) {
@@ -399,6 +409,17 @@ export const LandslideApi = {
     return fetchJson<AuditLogEntry[]>('/api/alerts/audit-logs', undefined, AUDIT_LOGS);
   },
 
+  async getSmsStatus(): Promise<{
+    provider: string;
+    demo_mode: boolean;
+    configured: boolean;
+    dlt_status: 'Configured' | 'Pending activation';
+    sender_id: string | null;
+    template_id: string | null;
+  }> {
+    return fetchJson('/api/alerts/sms-status');
+  },
+
   // Real-Time Meteorological Telemetry (IMD / Open-Meteo)
   async getLiveWeather(
     options: string | WeatherRequestOptions = 'sikkim',
@@ -455,13 +476,6 @@ export const LandslideApi = {
       {
         method: 'POST',
         body: JSON.stringify(payload),
-      },
-      {
-        status: 'demo',
-        gateway: 'SMSHorizon DEMO',
-        message: 'Demo dispatch only. No real SMS was sent.',
-        request_id: 'sms-demo-fallback',
-        recipients_count: 0,
       }
     );
   },

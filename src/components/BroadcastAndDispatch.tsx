@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   CAP_LANGUAGES,
   ALERT_TEMPLATES,
+  HAZARD_ZONES,
   TACTICAL_UNITS,
   RELIEF_SHELTERS,
   AUDIT_LOGS,
@@ -9,7 +10,7 @@ import {
 } from '../data/mockData';
 import { AuditLogEntry, TacticalUnit, ReliefShelter } from '../types';
 import { sirenPlayer } from '../utils/audioSiren';
-import { LandslideApi } from '../services/api';
+import { ApiError, LandslideApi } from '../services/api';
 import {
   BellRing,
   Radio,
@@ -28,6 +29,7 @@ import {
   Volume2,
   VolumeX,
   Zap,
+  X,
 } from 'lucide-react';
 
 interface BroadcastAndDispatchProps {
@@ -37,14 +39,39 @@ interface BroadcastAndDispatchProps {
 export const BroadcastAndDispatch: React.FC<BroadcastAndDispatchProps> = ({
   onSirenTriggered,
 }) => {
+  const selectedTarget = HAZARD_ZONES.find((zone) => zone.state === 'sikkim') || HAZARD_ZONES[0];
   const [selectedLang, setSelectedLang] = useState<string>('en');
   const [messageText, setMessageText] = useState<string>(ALERT_TEMPLATES['en']);
+  const [recipientText, setRecipientText] = useState<string>('');
+  const [targetId, setTargetId] = useState<string>(selectedTarget.id);
   const [isArmed, setIsArmed] = useState<boolean>(true);
   const [auditList, setAuditList] = useState<AuditLogEntry[]>(AUDIT_LOGS);
   const [tacticalUnits, setTacticalUnits] = useState<TacticalUnit[]>(TACTICAL_UNITS);
   const [reliefShelters, setReliefShelters] = useState<ReliefShelter[]>(RELIEF_SHELTERS);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isSirenActive, setIsSirenActive] = useState<boolean>(false);
+  const [isConfirmOpen, setIsConfirmOpen] = useState<boolean>(false);
+  const [isDispatching, setIsDispatching] = useState<boolean>(false);
+  const [dispatchResult, setDispatchResult] = useState<{
+    status: 'sent' | 'demo' | 'provider_not_configured' | 'provider_unavailable' | 'dispatch_failed';
+    gateway: string;
+    message: string;
+    request_id?: string;
+    recipients_count: number;
+  } | null>(null);
+  const [dispatchError, setDispatchError] = useState<string | null>(null);
+  const [smsStatus, setSmsStatus] = useState<{
+    provider: string;
+    demo_mode: boolean;
+    configured: boolean;
+    dlt_status: 'Configured' | 'Pending activation';
+    sender_id: string | null;
+    template_id: string | null;
+  } | null>(null);
+
+  const activeTarget = HAZARD_ZONES.find((zone) => zone.id === targetId) || selectedTarget;
+  const recipientNumbers = recipientText.split(/[\s,;]+/).map((value) => value.trim()).filter(Boolean);
+  const smsSegments = Math.max(1, Math.ceil(messageText.length / 160));
 
   useEffect(() => {
     return sirenPlayer.subscribe(setIsSirenActive);
@@ -61,6 +88,11 @@ export const BroadcastAndDispatch: React.FC<BroadcastAndDispatchProps> = ({
     LandslideApi.getReliefShelters().then((shelters) => {
       if (active && shelters && shelters.length > 0) setReliefShelters(shelters);
     });
+    LandslideApi.getSmsStatus().then((status) => {
+      if (active) setSmsStatus(status);
+    }).catch(() => {
+      if (active) setSmsStatus(null);
+    });
     return () => {
       active = false;
     };
@@ -76,54 +108,76 @@ export const BroadcastAndDispatch: React.FC<BroadcastAndDispatchProps> = ({
     setMessageText(ALERT_TEMPLATES[langId] || ALERT_TEMPLATES['en']);
   };
 
-  const handleExecuteDispatch = async () => {
-    const now = new Date();
-    const timeStr = now.toLocaleTimeString('en-IN', {
-      hour12: false,
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-    }) + ' IST';
+  const statusLabel = (status: string) => {
+    switch (status) {
+      case 'sent':
+        return 'SMS request accepted by provider.';
+      case 'demo':
+        return 'DEMO MODE — No real SMS was sent.';
+      case 'provider_not_configured':
+        return 'SMSHorizon is not configured or DLT activation is pending.';
+      case 'provider_unavailable':
+        return 'SMS provider is currently unavailable.';
+      default:
+        return 'SMS dispatch failed.';
+    }
+  };
 
-    let statusNotice = 'SMS Broadcast Triggered';
+  const handleExecuteDispatch = async () => {
+    if (!messageText.trim()) {
+      showToast('SMS message cannot be empty.');
+      return;
+    }
+
+    setIsDispatching(true);
+    setDispatchResult(null);
+    setDispatchError(null);
     try {
       const smsRes = await LandslideApi.sendSmsBroadcast({
         headline: 'MANDATORY EVACUATION ALERT',
         instruction: messageText,
-        state: 'sikkim',
+        phoneNumbers: recipientNumbers,
+        state: activeTarget.state,
       });
-
-      if (smsRes.status === 'sent') {
-        statusNotice = `SUCCESS: SMS accepted by SMSHorizon for ${smsRes.recipients_count} recipient(s).`;
-      } else if (smsRes.status === 'demo') {
-        statusNotice = `DEMO MODE: ${smsRes.message}`;
-      } else if (smsRes.status === 'provider_not_configured') {
-        statusNotice = `CONFIG: ${smsRes.message}`;
-      } else if (smsRes.status === 'provider_unavailable') {
-        statusNotice = `UNAVAILABLE: ${smsRes.message}`;
-      } else {
-        statusNotice = `FAILED: ${smsRes.message}`;
-      }
+      const normalizedResult = {
+        ...smsRes,
+        status: smsRes.status as 'sent' | 'demo' | 'provider_not_configured' | 'provider_unavailable' | 'dispatch_failed',
+      };
+      setDispatchResult(normalizedResult);
+      showToast(statusLabel(smsRes.status));
+      const refreshedLogs = await LandslideApi.getAuditLogs();
+      if (refreshedLogs.length > 0) setAuditList(refreshedLogs);
+      sirenPlayer.start();
+      LandslideApi.triggerSiren(activeTarget.corridor, 6).catch(console.warn);
+      if (onSirenTriggered) onSirenTriggered();
     } catch (err) {
-      statusNotice = `ERROR: Failed to contact backend SMS service.`;
+      const httpStatus = err instanceof ApiError ? err.status : null;
+      const errorMessage = httpStatus === 400
+        ? 'Message validation failed. Review the SMS content.'
+        : httpStatus === 401
+        ? 'Operator authentication is required.'
+        : httpStatus === 403
+        ? 'Operator is not authorized to dispatch SMS.'
+        : httpStatus === 408
+        ? 'The SMS request timed out.'
+        : httpStatus === 429
+        ? 'Dispatch rate limit reached. Try again later.'
+        : httpStatus && httpStatus >= 500
+        ? 'SMS backend is currently unavailable.'
+        : 'Unable to connect to the backend SMS service.';
+      const failedResult = {
+        status: httpStatus && httpStatus !== 408 ? 'dispatch_failed' as const : 'provider_unavailable' as const,
+        gateway: 'SMSHorizon',
+        message: errorMessage,
+        recipients_count: 0,
+      };
+      setDispatchError(errorMessage);
+      setDispatchResult(failedResult);
+      showToast(errorMessage);
+    } finally {
+      setIsDispatching(false);
+      setIsConfirmOpen(false);
     }
-
-    const newLog: AuditLogEntry = {
-      id: `log-${Date.now()}`,
-      code: `CAP-NER-${Math.floor(1000 + Math.random() * 9000)}`,
-      title: `CAP High-Priority Broadcast (${CAP_LANGUAGES.find((l) => l.id === selectedLang)?.name})`,
-      timestamp: timeStr,
-      message: `${statusNotice} Content: "${messageText.slice(0, 75)}..."`,
-      authority: 'Duty Disaster Operations Officer / SDMA Sikkim',
-      type: 'broadcast',
-      highlight: true,
-    };
-
-    setAuditList([newLog, ...auditList]);
-    sirenPlayer.start();
-    LandslideApi.triggerSiren('NH-10 Singtam-Rangpo Corridor', 6).catch(console.warn);
-    showToast(statusNotice);
-    if (onSirenTriggered) onSirenTriggered();
   };
 
   return (
@@ -133,6 +187,37 @@ export const BroadcastAndDispatch: React.FC<BroadcastAndDispatchProps> = ({
         <div className="fixed bottom-6 right-6 z-50 bg-[#122131] text-[#90cfec] border border-[#44d8f1] px-4 py-3 rounded-lg shadow-2xl shadow-cyan-950/80 flex items-center gap-3 font-sans text-xs sm:text-sm animate-bounce">
           <Zap className="w-4 h-4 text-[#ffb870] flex-shrink-0" />
           <span>{toastMessage}</span>
+        </div>
+      )}
+
+      {isConfirmOpen && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/70 p-4" role="dialog" aria-modal="true" aria-labelledby="broadcast-confirm-title">
+          <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-[#0d1c2d] border border-[#44d8f1]/50 rounded-xl p-5 shadow-2xl">
+            <div className="flex items-start justify-between gap-4 border-b border-[#1c2b3c] pb-3">
+              <div>
+                <h2 id="broadcast-confirm-title" className="text-base font-bold text-white">Confirm Emergency Broadcast</h2>
+                <p className="text-xs text-[#8a9297] mt-1">Review the operator dispatch before sending the request.</p>
+              </div>
+              <button onClick={() => setIsConfirmOpen(false)} className="text-[#8a9297] hover:text-white" aria-label="Close confirmation">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 py-4 text-xs">
+              <div><span className="text-[#8a9297] block">Target state / area</span><span className="text-white font-semibold">{activeTarget.state.toUpperCase()} / {activeTarget.name}</span></div>
+              <div><span className="text-[#8a9297] block">Recipient count</span><span className="text-white font-semibold">{recipientNumbers.length} provided to backend</span></div>
+              <div><span className="text-[#8a9297] block">Sender ID</span><span className="text-white font-semibold">{smsStatus?.sender_id || 'Not configured'}</span></div>
+              <div><span className="text-[#8a9297] block">DLT template ID</span><span className="text-white font-semibold">{smsStatus?.template_id || 'Not configured'}</span></div>
+              <div><span className="text-[#8a9297] block">Estimated SMS segments</span><span className="text-white font-semibold">{smsSegments}</span></div>
+              <div><span className="text-[#8a9297] block">Dispatch mode</span><span className={`font-semibold ${smsStatus?.demo_mode ? 'text-[#ffb870]' : 'text-[#44d8f1]'}`}>{smsStatus?.demo_mode ? 'DEMO' : 'PRODUCTION'}</span></div>
+            </div>
+            <div className="bg-[#051424] border border-[#273647] rounded-lg p-3 text-sm text-[#d4e4fa] whitespace-pre-wrap break-words">{messageText}</div>
+            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 mt-4">
+              <button onClick={() => setIsConfirmOpen(false)} className="px-4 py-2.5 rounded-lg border border-[#273647] text-xs font-bold text-[#bfc8cd] hover:text-white">CANCEL</button>
+              <button onClick={handleExecuteDispatch} disabled={isDispatching} className="px-4 py-2.5 rounded-lg bg-[#93000a] hover:bg-[#b00020] disabled:opacity-50 text-white text-xs font-bold flex items-center justify-center gap-2">
+                <Send className="w-4 h-4" /> {isDispatching ? 'DISPATCHING...' : 'CONFIRM DISPATCH'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -154,7 +239,7 @@ export const BroadcastAndDispatch: React.FC<BroadcastAndDispatchProps> = ({
               Emergency Broadcast &amp; Evacuation Corridor Management
             </h2>
             <p className="text-xs sm:text-sm text-[#bfc8cd] max-w-3xl">
-              Targeted Cell Broadcast (CMSP) delivers geo-fenced audible emergency overrides to all active handsets regardless of network provider. Multi-lingual Bhashini templates ensure immediate comprehension.
+              Authorized operators can prepare and review a multilingual emergency SMS request for the selected area. Provider acceptance and delivery are reported only when verified by SMSHorizon.
             </p>
           </div>
 
@@ -172,8 +257,8 @@ export const BroadcastAndDispatch: React.FC<BroadcastAndDispatchProps> = ({
             </button>
 
             <button
-              onClick={handleExecuteDispatch}
-              disabled={!isArmed}
+              onClick={() => setIsConfirmOpen(true)}
+              disabled={!isArmed || !messageText.trim() || isDispatching}
               className={`px-4 py-2.5 rounded-lg text-xs sm:text-sm font-bold text-white flex items-center gap-2 shadow-lg transition-all cursor-pointer ${
                 isArmed
                   ? 'bg-[#93000a] hover:bg-[#b00020] shadow-red-950/60 animate-pulse'
@@ -213,6 +298,31 @@ export const BroadcastAndDispatch: React.FC<BroadcastAndDispatchProps> = ({
                   Multi-Lingual Alert Matrix (7 Regional Languages)
                 </h3>
               </div>
+
+            {smsStatus?.demo_mode && (
+              <div className="mb-3 rounded-lg border border-[#ffb870]/60 bg-[#7d4800]/20 px-3 py-2 text-xs font-bold text-[#ffb870]">DEMO MODE — No real SMS will be sent.</div>
+            )}
+
+            {dispatchResult && (
+              <div className={`mb-3 rounded-lg border px-3 py-2.5 text-xs ${dispatchResult.status === 'sent' ? 'border-[#44d8f1]/60 bg-[#00363e]/30 text-[#44d8f1]' : dispatchResult.status === 'demo' ? 'border-[#ffb870]/60 bg-[#7d4800]/20 text-[#ffb870]' : 'border-[#ffb4ab]/60 bg-[#93000a]/20 text-[#ffb4ab]'}`}>
+                <div className="font-bold">{statusLabel(dispatchResult.status)}</div>
+                <div className="mt-1 text-current/80">Request ID: {dispatchResult.request_id || 'Unavailable'} · Recipients: {dispatchResult.recipients_count}</div>
+              </div>
+            )}
+            {dispatchError && <div className="mb-3 text-xs text-[#ffb4ab]">{dispatchError}</div>}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+              <label className="text-[10px] font-mono uppercase text-[#8a9297]">Target area
+                <select value={targetId} onChange={(event) => setTargetId(event.target.value)} className="mt-1 w-full bg-[#051424] text-white border border-[#273647] rounded-lg p-2.5 text-xs focus:outline-none focus:border-[#44d8f1]">
+                  {HAZARD_ZONES.map((zone) => <option key={zone.id} value={zone.id}>{zone.state.toUpperCase()} / {zone.name}</option>)}
+                </select>
+              </label>
+              <div className="rounded-lg border border-[#1c2b3c] bg-[#122131] p-2.5 text-xs">
+                <span className="text-[10px] font-mono uppercase text-[#8a9297]">SMS Provider</span>
+                <div className="text-white font-semibold mt-1">{smsStatus?.provider || 'SMSHorizon'}</div>
+                <div className="text-[#bfc8cd] mt-0.5">DLT Status: <span className={smsStatus?.configured ? 'text-[#44d8f1]' : 'text-[#ffb870]'}>{smsStatus?.dlt_status || 'Status unavailable'}</span></div>
+              </div>
+            </div>
               <span className="text-[10px] font-mono text-[#90cfec] bg-[#0d5c75]/40 px-2 py-0.5 rounded border border-[#0d5c75]">
                 BHASHINI VERIFIED
               </span>
@@ -251,7 +361,7 @@ export const BroadcastAndDispatch: React.FC<BroadcastAndDispatchProps> = ({
                     messageText.length > 160 ? 'text-[#ffb870]' : 'text-[#44d8f1]'
                   }
                 >
-                  Length: {messageText.length} characters ({Math.ceil(messageText.length / 160)} SMS)
+                  Length: {messageText.length} characters ({smsSegments} SMS)
                 </span>
               </div>
             </div>
@@ -377,30 +487,23 @@ export const BroadcastAndDispatch: React.FC<BroadcastAndDispatchProps> = ({
 
         {/* Right Column: Geofence Stats, Relief Shelters, Tactical Units (5 cols) */}
         <div className="lg:col-span-5 space-y-4">
-          {/* Target Geofence Cellular BTS Stats */}
+          {/* Target and provider status */}
           <div className="bg-[#0d1c2d] border border-[#1c2b3c] rounded-xl p-4 shadow-xl">
             <div className="flex items-center justify-between border-b border-[#1c2b3c] pb-2.5 mb-3">
               <span className="font-mono text-xs font-bold uppercase text-white flex items-center gap-1.5">
                 <Radio className="w-3.5 h-3.5 text-[#44d8f1]" />
-                Target Geofence Polygon (Mangan Sector)
+                Broadcast Target
               </span>
               <span className="text-[10px] font-mono text-[#ffb4ab] bg-[#93000a]/40 px-2 py-0.5 rounded">
-                STAGE 3 DISPATCH
+                OPERATOR CONTROLLED
               </span>
             </div>
-
-            <div className="grid grid-cols-2 gap-2.5 font-mono text-xs">
-              <div className="bg-[#122131] p-2.5 rounded-lg border border-[#1c2b3c]">
-                <span className="text-[10px] text-[#8a9297] block">REACHABLE SIMS</span>
-                <span className="text-lg font-bold text-[#44d8f1]">142,800</span>
-                <span className="text-[9px] text-[#bfc8cd] block">Airtel, Jio, BSNL CMSP</span>
-              </div>
-
-              <div className="bg-[#122131] p-2.5 rounded-lg border border-[#1c2b3c]">
-                <span className="text-[10px] text-[#8a9297] block">CELL TOWERS</span>
-                <span className="text-lg font-bold text-white">48 BTS</span>
-                <span className="text-[9px] text-[#bfc8cd] block">25 km Radius Locked</span>
-              </div>
+            <div className="space-y-2 text-xs">
+              <div className="bg-[#122131] p-2.5 rounded-lg border border-[#1c2b3c]"><span className="text-[10px] text-[#8a9297] block">STATE / AREA</span><span className="font-semibold text-white">{activeTarget.state.toUpperCase()} / {activeTarget.name}</span></div>
+              <label className="block bg-[#122131] p-2.5 rounded-lg border border-[#1c2b3c] text-[10px] text-[#8a9297]">RECIPIENTS PROVIDED
+                <input value={recipientText} onChange={(event) => setRecipientText(event.target.value)} placeholder="Phone numbers, separated by commas" className="mt-1 w-full bg-[#051424] text-white border border-[#273647] rounded p-2 text-xs focus:outline-none focus:border-[#44d8f1]" />
+                <span className="block mt-1 text-[10px] text-[#bfc8cd]">{recipientNumbers.length} recipient(s) ready for review</span>
+              </label>
             </div>
           </div>
 

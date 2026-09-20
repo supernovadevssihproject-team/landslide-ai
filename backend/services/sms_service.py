@@ -18,6 +18,26 @@ class SmsBroadcastService:
     def __init__(self):
         self.provider_name = getattr(config, "SMS_PROVIDER", "sms_horizon")
 
+    def get_status(self) -> Dict[str, Any]:
+        demo_mode = getattr(config, "SMS_DEMO_MODE", True)
+        configured = all(
+            getattr(config, field, "")
+            for field in (
+                "SMSHORIZON_API_KEY",
+                "SMSHORIZON_SENDER_ID",
+                "SMSHORIZON_DLT_ENTITY_ID",
+                "SMSHORIZON_TEMPLATE_ID",
+            )
+        )
+        return {
+            "provider": "SMSHorizon",
+            "demo_mode": demo_mode,
+            "configured": configured,
+            "dlt_status": "Configured" if configured else "Pending activation",
+            "sender_id": getattr(config, "SMSHORIZON_SENDER_ID", "") or None,
+            "template_id": getattr(config, "SMSHORIZON_TEMPLATE_ID", "") or None,
+        }
+
     def send_broadcast_alert(
         self,
         headline: str,
@@ -81,7 +101,7 @@ class SmsBroadcastService:
             return {
                 "status": "provider_not_configured",
                 "gateway": "SMSHorizon",
-                "message": f"SMSHorizon is not configured or DLT activation is pending. Missing: {', '.join(missing_fields)}",
+                "message": "SMSHorizon is not configured or DLT activation is pending.",
                 "request_id": req_id,
                 "recipients_count": 0,
             }
@@ -121,7 +141,7 @@ class SmsBroadcastService:
                     return {
                         "status": "dispatch_failed",
                         "gateway": "SMSHorizon",
-                        "message": f"SMS dispatch rejected by SMSHorizon: {resp_text}",
+                        "message": "SMS dispatch failed.",
                         "request_id": req_id,
                         "recipients_count": 0,
                     }
@@ -132,7 +152,7 @@ class SmsBroadcastService:
                 return {
                     "status": "sent",
                     "gateway": "SMSHorizon",
-                    "message": f"SMS accepted by SMSHorizon gateway for dispatch (ID: {resp_text}).",
+                    "message": "SMS request accepted by provider.",
                     "request_id": req_id,
                     "recipients_count": len(clean_numbers),
                 }
@@ -143,7 +163,7 @@ class SmsBroadcastService:
                 return {
                     "status": "dispatch_failed",
                     "gateway": "SMSHorizon",
-                    "message": f"SMSHorizon API returned HTTP status {resp.status_code}.",
+                    "message": "SMS dispatch failed.",
                     "request_id": req_id,
                     "recipients_count": 0,
                 }
@@ -156,12 +176,12 @@ class SmsBroadcastService:
                 "request_id": req_id,
                 "recipients_count": 0,
             }
-        except Exception as ex:
-            logger.error(f"[SMS Gateway] request_id={req_id} status=dispatch_failed err={ex}")
+        except Exception:
+            logger.exception(f"[SMS Gateway] request_id={req_id} status=dispatch_failed")
             return {
                 "status": "dispatch_failed",
                 "gateway": "SMSHorizon",
-                "message": f"SMS dispatch failed due to internal exception: {str(ex)}",
+                "message": "SMS dispatch failed.",
                 "request_id": req_id,
                 "recipients_count": 0,
             }

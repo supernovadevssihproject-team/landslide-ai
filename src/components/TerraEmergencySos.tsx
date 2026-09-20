@@ -22,6 +22,7 @@ import {
   Building,
 } from 'lucide-react';
 import { useI18n } from '../i18n/index.tsx';
+import { LandslideApi } from '../services/api';
 
 interface TerraEmergencySosProps {
   selectedZone: HazardZone;
@@ -41,16 +42,29 @@ export const TerraEmergencySos: React.FC<TerraEmergencySosProps> = ({
   const { t } = useI18n();
   const [activeCategory, setActiveCategory] = useState<'all' | 'government' | 'local' | 'medical' | 'rescue'>('all');
   const [sosSent, setSosSent] = useState(false);
+  const [sosStatus, setSosStatus] = useState<'sent' | 'demo' | 'provider_not_configured' | 'provider_unavailable' | 'dispatch_failed' | null>(null);
   const [copiedCoords, setCopiedCoords] = useState(false);
   const [copiedNumber, setCopiedNumber] = useState<string | null>(null);
 
   const isDark = theme === 'dark';
 
-  const handleTriggerSos = () => {
+  const handleTriggerSos = async () => {
     setSosSent(true);
+    setSosStatus(null);
     // Auto turn on siren if available and not already playing
     if (onToggleSiren && !sirenActive) {
       onToggleSiren();
+    }
+
+    try {
+      const response = await LandslideApi.sendSmsBroadcast({
+        headline: 'MOBILE EMERGENCY FIELD ALERT',
+        instruction: `Emergency assistance requested at ${selectedZone.name}. Coordinates: ${selectedZone.coords}.`,
+        state: selectedZone.state,
+      });
+      setSosStatus(response.status as 'sent' | 'demo' | 'provider_not_configured' | 'provider_unavailable' | 'dispatch_failed');
+    } catch {
+      setSosStatus('provider_unavailable');
     }
   };
 
@@ -73,6 +87,18 @@ export const TerraEmergencySos: React.FC<TerraEmergencySosProps> = ({
   const smsText = encodeURIComponent(
     `EMERGENCY: Landslide hazard reported at ${selectedZone.name}. Coordinates: ${selectedZone.coords}, Elevation: ${selectedZone.elevation}. Requesting emergency assistance.`
   );
+
+  const sosStatusMessage = sosStatus === 'sent'
+    ? 'SMS request accepted by provider.'
+    : sosStatus === 'demo'
+    ? 'DEMO MODE — No real SMS was sent.'
+    : sosStatus === 'provider_not_configured'
+    ? 'SMSHorizon is not configured or DLT activation is pending.'
+    : sosStatus === 'provider_unavailable'
+    ? 'SMS provider is currently unavailable.'
+    : sosStatus === 'dispatch_failed'
+    ? 'SMS dispatch failed.'
+    : 'Submitting emergency SMS request...';
 
   return (
     <div
@@ -162,10 +188,10 @@ export const TerraEmergencySos: React.FC<TerraEmergencySosProps> = ({
               <div className="mt-4 p-4 rounded-xl bg-red-500/15 border border-red-500/30 text-red-500 text-xs text-center space-y-1">
                 <div className="font-bold flex items-center justify-center gap-1.5 text-sm">
                   <Radio className="w-4 h-4 animate-spin" />
-                  <span>{t('emergencySos.dispatchTransmitted')}</span>
+                  <span>{sosStatusMessage}</span>
                 </div>
                 <p className="text-[11px] text-slate-300">
-                  {t('emergencySos.coordinatesSent')}
+                  The request was sent through the shared SMSHorizon service. Use the official hotline actions below when SMS is unavailable.
                 </p>
                 <button
                   onClick={() => setSosSent(false)}

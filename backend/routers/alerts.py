@@ -158,10 +158,19 @@ class SmsBroadcastRequest(BaseModel):
     dlt_entity_id: Optional[str] = None
     template_id: Optional[str] = None
 
-@router.post("/sms-broadcast")
-def broadcast_emergency_sms(req: SmsBroadcastRequest):
+
+@router.get("/sms-status")
+def get_sms_status():
     from backend.services.sms_service import sms_service
-    return sms_service.send_broadcast_alert(
+    return sms_service.get_status()
+
+@router.post("/sms-broadcast")
+def broadcast_emergency_sms(req: SmsBroadcastRequest, db: Session = Depends(get_db)):
+    from backend.services.sms_service import sms_service
+    if not req.instruction.strip():
+        raise HTTPException(status_code=400, detail="SMS message cannot be empty.")
+
+    result = sms_service.send_broadcast_alert(
         headline=req.headline,
         instruction=req.instruction,
         phone_numbers=req.phone_numbers,
@@ -170,5 +179,20 @@ def broadcast_emergency_sms(req: SmsBroadcastRequest):
         dlt_entity_id=req.dlt_entity_id,
         template_id=req.template_id,
     )
+    db.add(AuditLogModel(
+        id=f"log-{uuid.uuid4().hex[:6]}",
+        code=result.get("request_id", f"SMS-{uuid.uuid4().hex[:6].upper()}"),
+        title="Emergency SMS Broadcast",
+        timestamp=datetime.now().strftime("%H:%M:%S IST"),
+        message=(
+            f"Target: {req.state or 'unspecified'} | Recipients: {result.get('recipients_count', 0)} | "
+            f"Status: {result.get('status', 'dispatch_failed')} | Provider: {result.get('gateway', 'SMSHorizon')}"
+        ),
+        authority="Disaster Operations Command",
+        type="broadcast",
+        highlight=result.get("status") in {"sent", "demo"},
+    ))
+    db.commit()
+    return result
 
 
