@@ -1,0 +1,7 @@
+{
+  "model_version": "v1",
+  "type": "deterministic-feature-classifier",
+  "labels": ["landslide", "rockfall", "roadBlockage", "slopeFailure", "flood", "other"],
+  "low_confidence_threshold": 0.55,
+  "invalid_image_policy": "reject"
+}
