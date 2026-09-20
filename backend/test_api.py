@@ -153,13 +153,16 @@ def test_report_submission_and_cv():
         "location": "NH-10 Near Dikchu Bend (Km 36.2)",
         "subDivision": "Mangan Sub-Division",
         "state": "sikkim",
+        "latitude": 27.2388,
+        "longitude": 88.5012,
         "description": "Active rotational blowout with tension cracks across roadway."
     }
     response = client.post("/api/reports/submit", json=payload)
     assert response.status_code == 200
     data = response.json()
     assert data["urgency"] == "CRITICAL"
-    assert len(data["boundingBoxes"]) > 0
+    assert data["classification"] == "landslide"
+    assert data["confidence"] > 0
     print(f"[PASS] Citizen report upload + AI CV vision passed: {data['code']} ({data['cvLabel']})")
 
 def test_sensor_nodes():

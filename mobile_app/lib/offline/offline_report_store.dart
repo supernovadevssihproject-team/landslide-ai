@@ -3,8 +3,8 @@ import 'package:sqflite/sqflite.dart';
 
 import 'offline_hazard_report.dart';
 
-/// Single local database for the existing offline report workflow.
-/// Images stay in the filesystem; SQLite stores image_path and classification metadata.
+/// Single local database for reports and offline operational caches.
+/// Images remain in the filesystem; SQLite stores their paths and metadata.
 class OfflineReportStore {
   Database? _database;
 
@@ -12,7 +12,7 @@ class OfflineReportStore {
     if (_database != null) return _database!;
     _database = await openDatabase(
       path.join(await getDatabasesPath(), 'terraguard_offline.db'),
-      version: 4,
+      version: 5,
       onCreate: (db, _) async {
         await db.execute('''CREATE TABLE hazard_reports (
           report_id TEXT PRIMARY KEY,
@@ -43,6 +43,7 @@ class OfflineReportStore {
           created_at TEXT NOT NULL,
           updated_at TEXT NOT NULL
         )''');
+        await _createCacheTables(db);
         await _createIndexes(db);
       },
       onUpgrade: (db, oldVersion, _) async {
@@ -70,6 +71,7 @@ class OfflineReportStore {
           await db.execute("UPDATE hazard_reports SET created_at = captured_at WHERE created_at = ''");
           await db.execute("UPDATE hazard_reports SET updated_at = captured_at WHERE updated_at = ''");
         }
+        if (oldVersion < 5) await _createCacheTables(db);
         await _createIndexes(db);
       },
     );
@@ -84,6 +86,19 @@ class OfflineReportStore {
     }
   }
 
+  static Future<void> _createCacheTables(Database db) async {
+    await db.execute('''CREATE TABLE IF NOT EXISTS risk_cache (
+      cache_key TEXT PRIMARY KEY,
+      payload TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    )''');
+    await db.execute('''CREATE TABLE IF NOT EXISTS shelter_cache (
+      cache_key TEXT PRIMARY KEY,
+      payload TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    )''');
+  }
+
   static Future<void> _createIndexes(Database db) async {
     await db.execute('CREATE INDEX IF NOT EXISTS idx_hazard_reports_status ON hazard_reports(status)');
     await db.execute('CREATE INDEX IF NOT EXISTS idx_hazard_reports_zone ON hazard_reports(zone_id)');
@@ -94,10 +109,18 @@ class OfflineReportStore {
         'hazard_reports', report.toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
 
   Future<List<OfflineHazardReport>> pending() async {
-    final rows = await (await database).query('hazard_reports',
-        where: 'status IN (?, ?, ?)',
-        whereArgs: [ReportSyncStatus.pendingSync.name, ReportSyncStatus.syncFailed.name, ReportSyncStatus.draft.name],
-        orderBy: 'captured_at ASC');
+    final rows = await (await database).query(
+      'hazard_reports',
+      where: 'status IN (?, ?, ?, ?, ?)',
+      whereArgs: [
+        ReportSyncStatus.pendingSync.name,
+        ReportSyncStatus.syncFailed.name,
+        ReportSyncStatus.draft.name,
+        ReportSyncStatus.syncing.name,
+        ReportSyncStatus.uploading.name,
+      ],
+      orderBy: 'captured_at ASC',
+    );
     return rows.map((row) => OfflineHazardReport.fromMap(row)).toList();
   }
 
@@ -108,6 +131,32 @@ class OfflineReportStore {
 
   Future<void> update(OfflineHazardReport report) async => (await database).update(
         'hazard_reports', report.toMap(), where: 'report_id = ?', whereArgs: [report.reportId]);
+
+  Future<void> saveRiskCache(String key, String payload) async {
+    await (await database).insert(
+      'risk_cache',
+      {'cache_key': key, 'payload': payload, 'updated_at': DateTime.now().toUtc().toIso8601String()},
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<String?> riskCache(String key) async {
+    final rows = await (await database).query('risk_cache', where: 'cache_key = ?', whereArgs: [key], limit: 1);
+    return rows.firstOrNull?['payload'] as String?;
+  }
+
+  Future<void> saveShelterCache(String key, String payload) async {
+    await (await database).insert(
+      'shelter_cache',
+      {'cache_key': key, 'payload': payload, 'updated_at': DateTime.now().toUtc().toIso8601String()},
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<String?> shelterCache(String key) async {
+    final rows = await (await database).query('shelter_cache', where: 'cache_key = ?', whereArgs: [key], limit: 1);
+    return rows.firstOrNull?['payload'] as String?;
+  }
 
   Future<int> pendingCount() async => (await pending()).length;
 }

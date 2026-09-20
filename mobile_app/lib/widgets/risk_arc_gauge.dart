@@ -23,6 +23,8 @@ class RiskArcGauge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final severityColor = TerraTheme.getSeverityColor(risk?.riskLevel);
+    final isCached = risk?.dataSource == RiskDataSource.cached;
+    final isUnavailable = risk?.dataSource == RiskDataSource.unavailable;
     final score = risk?.riskScore ?? 0;
     final levelStr = risk?.riskLevel?.replaceAll('_', ' ').toUpperCase() ?? 'PENDING';
 
@@ -87,36 +89,72 @@ class RiskArcGauge extends StatelessWidget {
                   ),
                 ),
                 if (risk?.riskLevel != null && !loading)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                    decoration: BoxDecoration(
-                      color: severityColor.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: severityColor, width: 1.2),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 6,
-                          height: 6,
-                          decoration: BoxDecoration(
-                            color: severityColor,
-                            shape: BoxShape.circle,
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: severityColor.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: severityColor, width: 1.2),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 6,
+                              height: 6,
+                              decoration: BoxDecoration(
+                                color: severityColor,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              levelStr,
+                              style: TextStyle(
+                                color: severityColor,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 11,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                            color: isCached
+                              ? TerraTheme.warning.withValues(alpha: 0.18)
+                              : isUnavailable
+                                ? TerraTheme.textMuted.withValues(alpha: 0.18)
+                                : TerraTheme.primary.withValues(alpha: 0.18),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: isCached
+                                ? TerraTheme.warning.withValues(alpha: 0.5)
+                              : isUnavailable
+                                ? TerraTheme.textMuted.withValues(alpha: 0.5)
+                                : TerraTheme.primary.withValues(alpha: 0.5),
                           ),
                         ),
-                        const SizedBox(width: 6),
-                        Text(
-                          levelStr,
+                        child: Text(
+                          risk!.dataSourceLabel,
                           style: TextStyle(
-                            color: severityColor,
+                            color: isCached
+                              ? TerraTheme.warning
+                              : isUnavailable
+                                ? TerraTheme.textMuted
+                                : TerraTheme.primary,
+                            fontSize: 9,
                             fontWeight: FontWeight.bold,
-                            fontSize: 11,
-                            letterSpacing: 0.5,
+                            letterSpacing: 0.8,
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
               ],
             ),

@@ -3,11 +3,15 @@ import '../theme/app_theme.dart';
 
 class CommandHeader extends StatelessWidget {
   final int pendingCount;
+  final bool isOffline;
+  final String dataSourceLabel;
   final VoidCallback? onSosPressed;
 
   const CommandHeader({
     super.key,
     required this.pendingCount,
+    this.isOffline = false,
+    this.dataSourceLabel = 'LIVE',
     this.onSosPressed,
   });
 
@@ -57,16 +61,16 @@ class CommandHeader extends StatelessWidget {
                       Container(
                         width: 6,
                         height: 6,
-                        decoration: const BoxDecoration(
-                          color: TerraTheme.primary,
+                        decoration: BoxDecoration(
+                          color: isOffline ? TerraTheme.warning : TerraTheme.primary,
                           shape: BoxShape.circle,
                         ),
                       ),
                       const SizedBox(width: 6),
-                      const Text(
-                        'FIELD COMMAND ONLINE',
+                      Text(
+                        isOffline ? 'FIELD COMMAND OFFLINE' : 'FIELD COMMAND $dataSourceLabel',
                         style: TextStyle(
-                          color: TerraTheme.primary,
+                          color: isOffline ? TerraTheme.warning : TerraTheme.primary,
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
                           letterSpacing: 0.5,

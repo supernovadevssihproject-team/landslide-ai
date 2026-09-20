@@ -1,6 +1,9 @@
 import 'dart:convert';
 
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:http/http.dart' as http;
+
+import 'offline/offline_report_store.dart';
 
 class OperationalState {
   final String key;
@@ -88,6 +91,8 @@ class OperationalZone {
   }
 }
 
+enum RiskDataSource { live, cached, unavailable }
+
 class RiskEvaluation {
   final String locationName;
   final String state;
@@ -97,8 +102,23 @@ class RiskEvaluation {
   final double? baseProbability;
   final double? probabilityPercentage;
   final String? riskLevel;
+  final RiskDataSource dataSource;
   final Map<String, dynamic> rainfall;
   final Map<String, dynamic> seismic;
+
+  factory RiskEvaluation.unavailable(OperationalZone zone) => RiskEvaluation(
+        locationName: zone.name,
+        state: zone.state,
+        latitude: zone.latitude,
+        longitude: zone.longitude,
+        riskScore: null,
+        baseProbability: null,
+        probabilityPercentage: null,
+        riskLevel: 'UNAVAILABLE',
+        dataSource: RiskDataSource.unavailable,
+        rainfall: const {},
+        seismic: const {},
+      );
 
   const RiskEvaluation({
     required this.locationName,
@@ -109,6 +129,7 @@ class RiskEvaluation {
     required this.baseProbability,
     required this.probabilityPercentage,
     required this.riskLevel,
+    required this.dataSource,
     required this.rainfall,
     required this.seismic,
   });
@@ -125,9 +146,21 @@ class RiskEvaluation {
       baseProbability: _number(json['base_ml_probability']),
       probabilityPercentage: _number(json['probability_percentage']),
       riskLevel: json['risk_level']?.toString(),
+      dataSource: RiskDataSource.live,
       rainfall: _asMap(inputs['rainfall']),
       seismic: _asMap(inputs['seismic']),
     );
+  }
+
+  String get dataSourceLabel {
+    switch (dataSource) {
+      case RiskDataSource.live:
+        return 'LIVE';
+      case RiskDataSource.cached:
+        return 'CACHED';
+      case RiskDataSource.unavailable:
+        return 'UNAVAILABLE';
+    }
   }
 
   static Map<String, dynamic> _asMap(Object? value) => value is Map ? Map<String, dynamic>.from(value) : <String, dynamic>{};
@@ -147,10 +180,22 @@ class OperationalRiskApiException implements Exception {
 class OperationalRiskApi {
   final Uri baseUri;
   final http.Client client;
+  final Future<List<ConnectivityResult>> Function()? connectivityChecker;
+  final OfflineReportStore store;
 
-  OperationalRiskApi({required this.baseUri, http.Client? client}) : client = client ?? http.Client();
+  OperationalRiskApi({
+    required this.baseUri,
+    http.Client? client,
+    this.connectivityChecker,
+    OfflineReportStore? store,
+  })  : client = client ?? http.Client(),
+        store = store ?? OfflineReportStore();
 
   Future<List<OperationalZone>> getZones(String state) async {
+    if (await _isOffline()) {
+      return _offlineZones(state);
+    }
+
     final uri = baseUri.replace(path: '${baseUri.path}/api/zones', queryParameters: {'state': state});
     final response = await _get(uri);
     final decoded = jsonDecode(response.body);
@@ -163,6 +208,11 @@ class OperationalRiskApi {
   }
 
   Future<RiskEvaluation> getLocationRisk(OperationalZone zone) async {
+    final cachedRisk = await _cachedRisk(zone);
+    if (await _isOffline()) {
+      return cachedRisk ?? RiskEvaluation.unavailable(zone);
+    }
+
     final uri = baseUri.replace(path: '${baseUri.path}/api/ml/location-risk');
     try {
       final response = await client
@@ -182,14 +232,22 @@ class OperationalRiskApi {
           )
           .timeout(const Duration(seconds: 10));
       if (response.statusCode < 200 || response.statusCode >= 300) {
+        if (cachedRisk != null) return cachedRisk;
         throw OperationalRiskApiException('Risk API failed (${response.statusCode}).');
       }
       final decoded = jsonDecode(response.body);
-      if (decoded is! Map) throw const OperationalRiskApiException('The risk response was invalid.');
-      return RiskEvaluation.fromJson(Map<String, dynamic>.from(decoded));
+      if (decoded is! Map) {
+        if (cachedRisk != null) return cachedRisk;
+        throw const OperationalRiskApiException('The risk response was invalid.');
+      }
+      final risk = RiskEvaluation.fromJson(Map<String, dynamic>.from(decoded));
+      await store.saveRiskCache(_riskCacheKey(zone), response.body);
+      return risk;
     } on OperationalRiskApiException {
+      if (cachedRisk != null) return cachedRisk;
       rethrow;
     } catch (_) {
+      if (cachedRisk != null) return cachedRisk;
       throw const OperationalRiskApiException('Risk evaluation request timed out or network failed.');
     }
   }
@@ -207,4 +265,93 @@ class OperationalRiskApi {
       throw const OperationalRiskApiException('Backend unavailable or request timed out.');
     }
   }
+
+  Future<bool> isOffline() async {
+    final checker = connectivityChecker ?? Connectivity().checkConnectivity;
+    final statuses = await checker();
+    return statuses.every((status) => status == ConnectivityResult.none);
+  }
+
+  Future<bool> _isOffline() => isOffline();
+
+  Future<RiskEvaluation?> _cachedRisk(OperationalZone zone) async {
+    final payload = await store.riskCache(_riskCacheKey(zone));
+    if (payload == null || payload.trim().isEmpty) return null;
+    try {
+      final decoded = jsonDecode(payload);
+      if (decoded is! Map) return null;
+      final risk = RiskEvaluation.fromJson(Map<String, dynamic>.from(decoded));
+      return RiskEvaluation(
+        locationName: risk.locationName,
+        state: risk.state,
+        latitude: risk.latitude,
+        longitude: risk.longitude,
+        riskScore: risk.riskScore,
+        baseProbability: risk.baseProbability,
+        probabilityPercentage: risk.probabilityPercentage,
+        riskLevel: risk.riskLevel,
+        dataSource: RiskDataSource.cached,
+        rainfall: risk.rainfall,
+        seismic: risk.seismic,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  String _riskCacheKey(OperationalZone zone) => '${zone.state}:${zone.id}';
+
+  List<OperationalZone> _offlineZones(String state) {
+    final normalized = state.trim().toLowerCase();
+    final base = <Map<String, dynamic>>[
+      {
+        'id': 'offline-utt-1',
+        'name': 'Rishikesh Corridor',
+        'state': 'uttarakhand',
+        'coords': '30.0869° N, 78.2676° E',
+        'elevation': 350,
+        'slopeGradient': 34.0,
+      },
+      {
+        'id': 'offline-utt-2',
+        'name': 'Nainital Ridge',
+        'state': 'uttarakhand',
+        'coords': '29.3806° N, 79.4535° E',
+        'elevation': 1938,
+        'slopeGradient': 42.0,
+      },
+      {
+        'id': 'offline-utt-3',
+        'name': 'Chamoli Valley',
+        'state': 'uttarakhand',
+        'coords': '30.4144° N, 79.3227° E',
+        'elevation': 1200,
+        'slopeGradient': 38.0,
+      },
+    ];
+
+    final selected = normalized.contains('sikkim')
+        ? <Map<String, dynamic>>[
+            {
+              'id': 'offline-sik-1',
+              'name': 'Gangtok Hills',
+              'state': 'sikkim',
+              'coords': '27.3389° N, 88.6065° E',
+              'elevation': 1700,
+              'slopeGradient': 40.0,
+            },
+            {
+              'id': 'offline-sik-2',
+              'name': 'Namchi Ridge',
+              'state': 'sikkim',
+              'coords': '27.1641° N, 88.3573° E',
+              'elevation': 1500,
+              'slopeGradient': 37.5,
+            },
+          ]
+        : base;
+
+    return selected.map((item) => OperationalZone.fromJson(item)).toList();
+  }
+
 }

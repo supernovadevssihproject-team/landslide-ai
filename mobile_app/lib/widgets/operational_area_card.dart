@@ -8,6 +8,7 @@ class OperationalAreaCard extends StatelessWidget {
   final List<OperationalZone> zones;
   final List<OperationalState> states;
   final bool locationsLoading;
+  final bool isOffline;
   final ValueChanged<String> onStateChanged;
   final ValueChanged<OperationalZone?> onZoneChanged;
 
@@ -18,6 +19,7 @@ class OperationalAreaCard extends StatelessWidget {
     required this.zones,
     required this.states,
     required this.locationsLoading,
+    this.isOffline = false,
     required this.onStateChanged,
     required this.onZoneChanged,
   });
@@ -112,7 +114,7 @@ class OperationalAreaCard extends StatelessWidget {
                 decoration: InputDecoration(
                   labelText: 'SPECIFIC MONITORING LOCATION',
                   labelStyle: const TextStyle(color: TerraTheme.textMuted, fontSize: 11, fontWeight: FontWeight.bold),
-                  helperText: 'Dynamic location telemetry feeds from backend',
+                  helperText: isOffline ? 'Cached local operational sectors and fallback data' : 'Dynamic location telemetry feeds from backend',
                   helperStyle: const TextStyle(color: TerraTheme.textMuted, fontSize: 10),
                   filled: true,
                   fillColor: TerraTheme.background,

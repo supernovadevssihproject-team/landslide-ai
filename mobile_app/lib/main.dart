@@ -30,7 +30,7 @@ void main() async {
   await services.start();
   runApp(TerraGuardApp(
     offlineServices: services,
-    riskApi: OperationalRiskApi(baseUri: Uri.parse(baseUrl)),
+    riskApi: OperationalRiskApi(baseUri: Uri.parse(baseUrl), store: services.store),
   ));
 }
 
@@ -61,15 +61,29 @@ class TerraGuardMainScreen extends StatefulWidget {
 
 class _TerraGuardMainScreenState extends State<TerraGuardMainScreen> {
   int _currentIndex = 0;
+  bool _isOffline = false;
+  String _dataSourceLabel = 'CHECKING';
 
   void _showSosDialog(BuildContext context) => SafetyEmergencySheet.show(context);
+
+  Future<void> _refreshConnectivityState() async {
+    final isOffline = await widget.riskApi.isOffline();
+    if (!mounted) return;
+    setState(() {
+      _isOffline = isOffline;
+      _dataSourceLabel = isOffline ? 'CACHED' : 'LIVE';
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final capture = FieldReportCaptureService(syncManager: widget.offlineServices.sync);
 
     return StreamBuilder<int>(
-      stream: Stream.periodic(const Duration(seconds: 2)).asyncMap((_) => widget.offlineServices.pendingCount()),
+      stream: Stream.periodic(const Duration(seconds: 2)).asyncMap((_) async {
+        await _refreshConnectivityState();
+        return widget.offlineServices.pendingCount();
+      }),
       builder: (context, pendingSnapshot) {
         final pendingCount = pendingSnapshot.data ?? 0;
 
@@ -78,6 +92,8 @@ class _TerraGuardMainScreenState extends State<TerraGuardMainScreen> {
             key: const ValueKey('home'),
             riskApi: widget.riskApi,
             pendingCount: pendingCount,
+            isOffline: _isOffline,
+            dataSourceLabel: _dataSourceLabel,
             onReportHazard: () => setState(() => _currentIndex = 1),
             onMyReportsPressed: () => setState(() => _currentIndex = 2),
             onSosPressed: () => _showSosDialog(context),
@@ -105,6 +121,8 @@ class _TerraGuardMainScreenState extends State<TerraGuardMainScreen> {
 class _HomePage extends StatefulWidget {
   final OperationalRiskApi riskApi;
   final int pendingCount;
+  final bool isOffline;
+  final String dataSourceLabel;
   final VoidCallback onReportHazard;
   final VoidCallback onMyReportsPressed;
   final VoidCallback onSosPressed;
@@ -113,6 +131,8 @@ class _HomePage extends StatefulWidget {
     super.key,
     required this.riskApi,
     required this.pendingCount,
+    required this.isOffline,
+    required this.dataSourceLabel,
     required this.onReportHazard,
     required this.onMyReportsPressed,
     required this.onSosPressed,
@@ -140,6 +160,7 @@ class _HomePageState extends State<_HomePage> {
 
   Future<void> _loadZones(String state) async {
     final requestVersion = ++_requestVersion;
+    final isOffline = await widget.riskApi.isOffline();
     setState(() {
       _selectedState = state;
       _locationsLoading = true;
@@ -148,6 +169,9 @@ class _HomePageState extends State<_HomePage> {
       _selectedZone = null;
       _risk = null;
       _error = null;
+      if (isOffline) {
+        _error = null;
+      }
     });
     try {
       final zones = await widget.riskApi.getZones(state);
@@ -224,6 +248,8 @@ class _HomePageState extends State<_HomePage> {
       children: [
         CommandHeader(
           pendingCount: widget.pendingCount,
+          isOffline: widget.isOffline,
+          dataSourceLabel: widget.dataSourceLabel,
           onSosPressed: widget.onSosPressed,
         ),
         Expanded(
@@ -241,6 +267,7 @@ class _HomePageState extends State<_HomePage> {
                   zones: _zones,
                   states: operationalStates,
                   locationsLoading: _locationsLoading,
+                  isOffline: widget.isOffline,
                   onStateChanged: _loadZones,
                   onZoneChanged: (zone) {
                     if (zone != null) _selectZone(zone);

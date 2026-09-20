@@ -26,6 +26,7 @@ dev_dependencies:
     sdk: flutter
   flutter_launcher_icons: ^0.14.3
   flutter_lints: ^3.0.0
+  sqflite_common_ffi: ^2.3.3
 
 flutter_launcher_icons:
   android: "ic_launcher"

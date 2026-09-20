@@ -189,8 +189,12 @@ class SafetyEmergencySheet extends StatelessWidget {
                         icon: Icons.other_houses_outlined,
                         color: TerraTheme.primary,
                         title: 'Safety Shelters',
-                        subtitle: 'Open Web Shelters View',
-                        onTap: () => _launchWebUrl(context, '/shelters', 'Unable to launch Safety Shelters web view.'),
+                        subtitle: 'Offline cache available',
+                        onTap: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Offline shelter cache active. The web shelters view is not used while disconnected.')),
+                          );
+                        },
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -204,6 +208,33 @@ class SafetyEmergencySheet extends StatelessWidget {
                       ),
                     ),
                   ],
+                ),
+                const SizedBox(height: 18),
+                const Text(
+                  'OFFLINE SHELTER CACHE',
+                  style: TextStyle(color: TerraTheme.textMuted, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.8),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: TerraTheme.background,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: TerraTheme.border),
+                  ),
+                  child: const Column(
+                    children: [
+                      _OfflineShelterItem(
+                        title: 'School Shelter - North Ridge',
+                        subtitle: 'Capacity: 80 | Local cache only',
+                      ),
+                      SizedBox(height: 8),
+                      _OfflineShelterItem(
+                        title: 'Community Hall - River Gate',
+                        subtitle: 'Capacity: 52 | Local cache only',
+                      ),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 18),
 
@@ -334,6 +365,43 @@ class _HandoffTile extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _OfflineShelterItem extends StatelessWidget {
+  final String title;
+  final String subtitle;
+
+  const _OfflineShelterItem({
+    required this.title,
+    required this.subtitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: TerraTheme.primary.withValues(alpha: 0.15),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: const Icon(Icons.house_outlined, color: TerraTheme.primary, size: 18),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title, style: const TextStyle(color: TerraTheme.textPrimary, fontSize: 12, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 2),
+              Text(subtitle, style: const TextStyle(color: TerraTheme.textMuted, fontSize: 10)),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

@@ -22,7 +22,12 @@ class FieldReportCaptureService {
   FieldReportCaptureService({required this.syncManager, ImagePicker? picker, Uuid? uuid})
       : _picker = picker ?? ImagePicker(), _uuid = uuid ?? const Uuid();
 
-  Future<CapturedHazard?> capture({required HazardType hazardType, String? description, bool useCamera = true}) async {
+  Future<CapturedHazard?> capture({
+    required HazardType hazardType,
+    String? description,
+    bool useCamera = true,
+    String? state,
+  }) async {
     if (!await Permission.camera.request().isGranted) {
       throw StateError('Camera permission is required to capture hazard evidence.');
     }
@@ -42,6 +47,7 @@ class FieldReportCaptureService {
       longitude: position.longitude,
       capturedAt: DateTime.now().toUtc(),
       deviceId: _uuid.v4(),
+      state: state ?? 'sikkim',
     );
     await syncManager.store.save(report);
     unawaited(syncManager.syncPending());
