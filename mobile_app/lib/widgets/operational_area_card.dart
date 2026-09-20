@@ -38,13 +38,20 @@ class OperationalAreaCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                const Icon(Icons.location_on_outlined, color: TerraTheme.secondary, size: 20),
-                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: TerraTheme.secondary.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(Icons.location_on_outlined, color: TerraTheme.secondary, size: 18),
+                ),
+                const SizedBox(width: 10),
                 const Text(
-                  'OPERATIONAL AREA',
+                  'OPERATIONAL SECTOR SELECTOR',
                   style: TextStyle(
                     color: TerraTheme.secondary,
-                    fontSize: 12,
+                    fontSize: 11,
                     fontWeight: FontWeight.bold,
                     letterSpacing: 0.8,
                   ),
@@ -132,10 +139,10 @@ class OperationalAreaCard extends StatelessWidget {
                 runSpacing: 8,
                 children: [
                   if (selectedZone!.elevation != null)
-                    _InfoChip(label: 'ELEVATION', value: '${selectedZone!.elevation!.toStringAsFixed(0)} m'),
+                    _InfoChip(label: 'ELEVATION', value: '${selectedZone!.elevation!.toStringAsFixed(0)} m', icon: Icons.landscape_outlined),
                   if (selectedZone!.slope != null)
-                    _InfoChip(label: 'SLOPE', value: '${selectedZone!.slope!.toStringAsFixed(1)}°'),
-                  _InfoChip(label: 'SECTOR ID', value: selectedZone!.id.toUpperCase()),
+                    _InfoChip(label: 'SLOPE', value: '${selectedZone!.slope!.toStringAsFixed(1)}°', icon: Icons.trending_up_rounded),
+                  _InfoChip(label: 'SECTOR ID', value: selectedZone!.id.toUpperCase(), icon: Icons.fingerprint_rounded),
                 ],
               ),
             ],
@@ -149,13 +156,14 @@ class OperationalAreaCard extends StatelessWidget {
 class _InfoChip extends StatelessWidget {
   final String label;
   final String value;
+  final IconData icon;
 
-  const _InfoChip({required this.label, required this.value});
+  const _InfoChip({required this.label, required this.value, required this.icon});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
         color: TerraTheme.background,
         borderRadius: BorderRadius.circular(8),
@@ -164,6 +172,8 @@ class _InfoChip extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
+          Icon(icon, color: TerraTheme.textMuted, size: 12),
+          const SizedBox(width: 4),
           Text('$label: ', style: const TextStyle(color: TerraTheme.textMuted, fontSize: 10, fontWeight: FontWeight.bold)),
           Text(value, style: const TextStyle(color: TerraTheme.secondary, fontSize: 11, fontWeight: FontWeight.bold)),
         ],

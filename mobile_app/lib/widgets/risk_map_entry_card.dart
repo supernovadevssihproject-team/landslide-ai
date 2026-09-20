@@ -80,7 +80,7 @@ class RiskMapEntryCard extends StatelessWidget {
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
-                              risk?.riskLevel ?? 'LIVE GPS',
+                              risk?.riskLevel ?? 'SECTOR MAP',
                               style: TextStyle(
                                 color: severityColor,
                                 fontSize: 9,

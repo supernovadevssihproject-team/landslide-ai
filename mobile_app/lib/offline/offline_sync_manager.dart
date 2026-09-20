@@ -7,7 +7,7 @@ import 'offline_hazard_report.dart';
 import 'offline_report_store.dart';
 
 abstract class TerraGuardSyncApi {
-  Future<void> uploadReport(OfflineHazardReport report);
+  Future<String?> uploadReport(OfflineHazardReport report);
 }
 
 class OfflineSyncManager {
@@ -33,8 +33,11 @@ class OfflineSyncManager {
         final uploading = report.copyWith(status: ReportSyncStatus.uploading, lastError: null);
         await store.update(uploading);
         try {
-          await api.uploadReport(uploading);
-          await store.update(uploading.copyWith(status: ReportSyncStatus.synced));
+          final responseBody = await api.uploadReport(uploading);
+          await store.update(uploading.copyWith(
+            status: ReportSyncStatus.synced,
+            backendResponse: responseBody,
+          ));
         } catch (error) {
           await store.update(uploading.copyWith(
             status: ReportSyncStatus.syncFailed,

@@ -23,7 +23,7 @@ class CommandHeader extends StatelessWidget {
         bottom: false,
         child: Row(
           children: [
-            // Emblem Badge
+            // Shield Emblem
             Container(
               width: 38,
               height: 38,
@@ -32,7 +32,7 @@ class CommandHeader extends StatelessWidget {
                 shape: BoxShape.circle,
                 border: Border.all(color: TerraTheme.primary.withValues(alpha: 0.4)),
               ),
-              child: const Icon(Icons.shield, color: TerraTheme.primary, size: 20),
+              child: const Icon(Icons.shield_outlined, color: TerraTheme.primary, size: 20),
             ),
             const SizedBox(width: 12),
 
@@ -55,8 +55,8 @@ class CommandHeader extends StatelessWidget {
                   Row(
                     children: [
                       Container(
-                        width: 7,
-                        height: 7,
+                        width: 6,
+                        height: 6,
                         decoration: const BoxDecoration(
                           color: TerraTheme.primary,
                           shape: BoxShape.circle,
@@ -78,11 +78,11 @@ class CommandHeader extends StatelessWidget {
               ),
             ),
 
-            // Pending sync pill
+            // Sync Status Pill
             if (pendingCount > 0)
               Container(
                 margin: const EdgeInsets.only(right: 8),
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 decoration: BoxDecoration(
                   color: TerraTheme.warning.withValues(alpha: 0.18),
                   borderRadius: BorderRadius.circular(12),
@@ -91,7 +91,7 @@ class CommandHeader extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.cloud_upload_outlined, color: TerraTheme.warning, size: 13),
+                    const Icon(Icons.cloud_upload_outlined, color: TerraTheme.warning, size: 12),
                     const SizedBox(width: 4),
                     Text(
                       '$pendingCount PENDING',
@@ -107,28 +107,46 @@ class CommandHeader extends StatelessWidget {
             else
               Container(
                 margin: const EdgeInsets.only(right: 8),
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 decoration: BoxDecoration(
                   color: TerraTheme.primary.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: TerraTheme.primary.withValues(alpha: 0.3)),
                 ),
-                child: const Text(
-                  'SYNCED',
-                  style: TextStyle(
-                    color: TerraTheme.primary,
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 0.5,
-                  ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.check_circle_outline, color: TerraTheme.primary, size: 12),
+                    SizedBox(width: 4),
+                    Text(
+                      'SYNCED',
+                      style: TextStyle(
+                        color: TerraTheme.primary,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ],
                 ),
               ),
 
-            // Emergency trigger button
-            IconButton(
-              onPressed: onSosPressed,
-              tooltip: 'Emergency SOS',
-              icon: const Icon(Icons.emergency_outlined, color: TerraTheme.critical, size: 22),
+            // Safety & Emergency Trigger Button
+            Material(
+              color: TerraTheme.critical.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(12),
+              child: InkWell(
+                onTap: onSosPressed,
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: TerraTheme.critical.withValues(alpha: 0.4)),
+                  ),
+                  child: const Icon(Icons.emergency_outlined, color: TerraTheme.critical, size: 20),
+                ),
+              ),
             ),
           ],
         ),

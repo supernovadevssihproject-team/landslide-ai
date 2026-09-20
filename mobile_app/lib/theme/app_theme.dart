@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 
 class TerraTheme {
+  // Surface Color Tokens
   static const Color background = Color(0xFF060B13);
   static const Color surface = Color(0xFF0D1624);
   static const Color surfaceElevated = Color(0xFF132034);
+  static const Color interactiveSurface = Color(0xFF1A2B44);
   static const Color border = Color(0xFF1E2D42);
   static const Color borderLight = Color(0xFF2A3D58);
 
+  // Palette Tokens
   static const Color primary = Color(0xFF10B981); // Emerald
   static const Color secondary = Color(0xFF06B6D4); // Cyan
   static const Color warning = Color(0xFFF59E0B); // Amber
@@ -56,10 +59,19 @@ class TerraTheme {
         iconTheme: IconThemeData(color: textPrimary),
         titleTextStyle: TextStyle(
           color: textPrimary,
-          fontSize: 18,
+          fontSize: 17,
           fontWeight: FontWeight.bold,
-          letterSpacing: 0.3,
+          letterSpacing: 0.5,
         ),
+      ),
+      snackBarTheme: SnackBarThemeData(
+        backgroundColor: surfaceElevated,
+        contentTextStyle: const TextStyle(color: textPrimary, fontSize: 13),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+          side: const BorderSide(color: border),
+        ),
+        behavior: SnackBarBehavior.floating,
       ),
     );
   }

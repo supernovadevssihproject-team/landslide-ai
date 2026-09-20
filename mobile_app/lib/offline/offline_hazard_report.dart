@@ -15,6 +15,8 @@ class OfflineHazardReport {
   final ReportSyncStatus status;
   final int retryCount;
   final String? lastError;
+  final String? backendResponse;
+  final String? classificationResult;
 
   const OfflineHazardReport({
     required this.reportId,
@@ -28,9 +30,18 @@ class OfflineHazardReport {
     this.status = ReportSyncStatus.pendingSync,
     this.retryCount = 0,
     this.lastError,
+    this.backendResponse,
+    this.classificationResult,
   });
 
-  OfflineHazardReport copyWith({ReportSyncStatus? status, int? retryCount, String? lastError}) => OfflineHazardReport(
+  OfflineHazardReport copyWith({
+    ReportSyncStatus? status,
+    int? retryCount,
+    String? lastError,
+    String? backendResponse,
+    String? classificationResult,
+  }) =>
+      OfflineHazardReport(
         reportId: reportId,
         hazardType: hazardType,
         description: description,
@@ -41,7 +52,9 @@ class OfflineHazardReport {
         deviceId: deviceId,
         status: status ?? this.status,
         retryCount: retryCount ?? this.retryCount,
-        lastError: lastError,
+        lastError: lastError ?? this.lastError,
+        backendResponse: backendResponse ?? this.backendResponse,
+        classificationResult: classificationResult ?? this.classificationResult,
       );
 
   Map<String, Object?> toMap() => {
@@ -56,6 +69,8 @@ class OfflineHazardReport {
         'status': status.name,
         'retry_count': retryCount,
         'last_error': lastError,
+        'backend_response': backendResponse,
+        'classification_result': classificationResult,
       };
 
   factory OfflineHazardReport.fromMap(Map<String, Object?> map) => OfflineHazardReport(
@@ -70,6 +85,8 @@ class OfflineHazardReport {
         status: ReportSyncStatus.values.byName(map['status']! as String),
         retryCount: (map['retry_count'] as num?)?.toInt() ?? 0,
         lastError: map['last_error'] as String?,
+        backendResponse: map['backend_response'] as String?,
+        classificationResult: map['classification_result'] as String?,
       );
 
   String toJson() => jsonEncode(toMap());

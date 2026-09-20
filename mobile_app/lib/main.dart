@@ -17,6 +17,8 @@ import 'widgets/quick_actions.dart';
 import 'widgets/risk_arc_gauge.dart';
 import 'widgets/risk_map_entry_card.dart';
 
+import 'widgets/safety_emergency_sheet.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final baseUrl = AppConfig.apiBaseUrl;
@@ -60,110 +62,7 @@ class TerraGuardMainScreen extends StatefulWidget {
 class _TerraGuardMainScreenState extends State<TerraGuardMainScreen> {
   int _currentIndex = 0;
 
-  void _showSosDialog(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: TerraTheme.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: TerraTheme.critical.withValues(alpha: 0.15),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.emergency, color: TerraTheme.critical, size: 28),
-                ),
-                const SizedBox(width: 14),
-                const Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'EMERGENCY DISPATCH',
-                        style: TextStyle(
-                          color: TerraTheme.critical,
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 1.0,
-                        ),
-                      ),
-                      SizedBox(height: 2),
-                      Text(
-                        'State Disaster Management Hotlines',
-                        style: TextStyle(
-                          color: TerraTheme.textPrimary,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: TerraTheme.background,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: TerraTheme.border),
-              ),
-              child: const Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  Column(
-                    children: [
-                      Text('SDMA HOTLINE', style: TextStyle(color: TerraTheme.textMuted, fontSize: 10, fontWeight: FontWeight.bold)),
-                      SizedBox(height: 4),
-                      Text('1077', style: TextStyle(color: TerraTheme.textPrimary, fontSize: 20, fontWeight: FontWeight.bold)),
-                    ],
-                  ),
-                  SizedBox(height: 30, child: VerticalDivider(color: TerraTheme.border)),
-                  Column(
-                    children: [
-                      Text('NDMA HOTLINE', style: TextStyle(color: TerraTheme.textMuted, fontSize: 10, fontWeight: FontWeight.bold)),
-                      SizedBox(height: 4),
-                      Text('1078', style: TextStyle(color: TerraTheme.textPrimary, fontSize: 20, fontWeight: FontWeight.bold)),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'One-touch CAP cell-broadcast SOS messaging & mesh location broadcast support are enabled on verified field devices.',
-              style: TextStyle(color: TerraTheme.textSecondary, fontSize: 12, height: 1.4),
-            ),
-            const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () => Navigator.pop(ctx),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: TerraTheme.border,
-                  foregroundColor: TerraTheme.textPrimary,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                ),
-                child: const Text('DISMISS'),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  void _showSosDialog(BuildContext context) => SafetyEmergencySheet.show(context);
 
   @override
   Widget build(BuildContext context) {

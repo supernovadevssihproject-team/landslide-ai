@@ -102,23 +102,22 @@ class RiskMapPage extends StatelessWidget {
                             ],
                           ),
                         ),
-                        if (risk?.riskLevel != null)
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: primaryColor.withValues(alpha: 0.2),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: primaryColor),
-                            ),
-                            child: Text(
-                              risk!.riskLevel!.replaceAll('_', ' '),
-                              style: TextStyle(
-                                color: primaryColor,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 11,
-                              ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: (risk?.riskLevel != null ? primaryColor : TerraTheme.textMuted).withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: risk?.riskLevel != null ? primaryColor : TerraTheme.border),
+                          ),
+                          child: Text(
+                            risk?.riskLevel?.replaceAll('_', ' ') ?? (selectedZone == null ? 'NO SECTOR' : 'SECTOR OVERVIEW'),
+                            style: TextStyle(
+                              color: risk?.riskLevel != null ? primaryColor : TerraTheme.textSecondary,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 11,
                             ),
                           ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 14),
@@ -130,7 +129,11 @@ class RiskMapPage extends StatelessWidget {
                             children: [
                               const Text('COORDINATES', style: TextStyle(color: TerraTheme.textMuted, fontSize: 10, fontWeight: FontWeight.bold)),
                               const SizedBox(height: 2),
-                              Text('${lat.toStringAsFixed(4)}°, ${lng.toStringAsFixed(4)}°', style: const TextStyle(color: TerraTheme.secondary, fontSize: 12, fontFamily: 'monospace')),
+                              FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.centerLeft,
+                                child: Text('${lat.toStringAsFixed(4)}°, ${lng.toStringAsFixed(4)}°', style: const TextStyle(color: TerraTheme.secondary, fontSize: 12, fontFamily: 'monospace')),
+                              ),
                             ],
                           ),
                         ),
@@ -140,9 +143,13 @@ class RiskMapPage extends StatelessWidget {
                             children: [
                               const Text('RISK SCORE', style: TextStyle(color: TerraTheme.textMuted, fontSize: 10, fontWeight: FontWeight.bold)),
                               const SizedBox(height: 2),
-                              Text(
-                                risk?.riskScore != null ? '${risk!.riskScore} / 100' : '-',
-                                style: TextStyle(color: primaryColor, fontSize: 13, fontWeight: FontWeight.bold),
+                              FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.centerLeft,
+                                child: Text(
+                                  risk?.riskScore != null ? '${risk!.riskScore} / 100' : '-',
+                                  style: TextStyle(color: primaryColor, fontSize: 13, fontWeight: FontWeight.bold),
+                                ),
                               ),
                             ],
                           ),
@@ -183,10 +190,14 @@ class RiskMapPage extends StatelessWidget {
                           point: center,
                           width: 50,
                           height: 50,
-                          child: Icon(
-                            Icons.location_pin,
-                            color: primaryColor,
-                            size: 44,
+                          alignment: Alignment.topCenter,
+                          child: Tooltip(
+                            message: '${zone.name} (Selected)',
+                            child: Icon(
+                              Icons.location_pin,
+                              color: primaryColor,
+                              size: 44,
+                            ),
                           ),
                         ),
                       ...zones
@@ -196,10 +207,27 @@ class RiskMapPage extends StatelessWidget {
                               point: LatLng(otherZone.latitude, otherZone.longitude),
                               width: 36,
                               height: 36,
-                              child: const Icon(
-                                Icons.location_on_outlined,
-                                color: TerraTheme.primary,
-                                size: 28,
+                              alignment: Alignment.topCenter,
+                              child: GestureDetector(
+                                onTap: () {
+                                  ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      duration: const Duration(seconds: 2),
+                                      content: Text(
+                                        'Sector: ${otherZone.name} (${otherZone.latitude.toStringAsFixed(4)}°, ${otherZone.longitude.toStringAsFixed(4)}°)',
+                                      ),
+                                    ),
+                                  );
+                                },
+                                child: Tooltip(
+                                  message: otherZone.name,
+                                  child: const Icon(
+                                    Icons.location_on_outlined,
+                                    color: TerraTheme.primary,
+                                    size: 28,
+                                  ),
+                                ),
                               ),
                             ),
                           ),

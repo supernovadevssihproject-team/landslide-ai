@@ -19,7 +19,7 @@ class TerraGuardHttpSyncApi implements TerraGuardSyncApi {
   }) : client = client ?? http.Client();
 
   @override
-  Future<void> uploadReport(OfflineHazardReport report) async {
+  Future<String?> uploadReport(OfflineHazardReport report) async {
     final token = accessToken == null ? null : await accessToken!();
     final hasImage = report.imagePath != null &&
         report.imagePath!.isNotEmpty &&
@@ -57,6 +57,7 @@ class TerraGuardHttpSyncApi implements TerraGuardSyncApi {
       if (response.statusCode < 200 || response.statusCode >= 300) {
         throw StateError('Multipart report upload failed (${response.statusCode}): ${response.body}');
       }
+      return response.body;
     } else {
       final headers = <String, String>{
         'Accept': 'application/json',
@@ -81,6 +82,7 @@ class TerraGuardHttpSyncApi implements TerraGuardSyncApi {
       if (response.statusCode < 200 || response.statusCode >= 300) {
         throw StateError('Report upload failed (${response.statusCode}): ${response.body}');
       }
+      return response.body;
     }
   }
 }
