@@ -15,7 +15,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from backend.config import ALLOWED_ORIGINS, UPLOAD_DIR
 from backend.database.database import engine, Base
 from backend.database.seeds import seed_database
-from backend.routers import susceptibility, predict, reports, sensors, alerts, weather, ml_model, earthquakes, chatbot
+from backend.routers import susceptibility, predict, reports, sensors, alerts, weather, ml_model, earthquakes, chatbot, field_classification
 
 # Initialize database schema & seed initial state
 Base.metadata.create_all(bind=engine)
@@ -54,6 +54,7 @@ if ML_FIGURES_DIR.exists():
 app.include_router(susceptibility.router)
 app.include_router(predict.router)
 app.include_router(reports.router)
+app.include_router(field_classification.router)
 app.include_router(sensors.router)
 app.include_router(alerts.router)
 app.include_router(weather.router)
@@ -86,6 +87,7 @@ def root():
             "ml_comparison": "/api/ml/comparison",
             "ml_datasets": "/api/ml/datasets",
             "crowdsource_reports": "/api/reports",
+            "field_classification": "/api/reports/classify",
             "sensors": "/api/sensors",
             "alerts": "/api/alerts/cap",
             "earthquakes": "/api/earthquakes",
@@ -103,6 +105,7 @@ def health_check():
         "ai_models": {
             "susceptibility_engine": "online",
             "temporal_lstm": "online",
+            "field_report_classifier": "v1",
             "yolov8_geotech_vision": "online"
         }
     }
