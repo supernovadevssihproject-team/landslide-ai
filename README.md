@@ -960,7 +960,7 @@ The backend supports:
 When the backend is running locally, FastAPI interactive API documentation is available at:
 
 ```text
-http://localhost:8001/docs
+http://127.0.0.1:8000/docs
 ```
 
 ---
@@ -1174,16 +1174,39 @@ Install Python dependencies:
 pip install -r requirements.txt
 ```
 
-Start FastAPI:
+TerraGuard uses one FastAPI application implementation. For local development, run separate Uvicorn instances for the web and mobile workflows:
+
+Web backend:
 
 ```bash
-python -m uvicorn backend.main:app --reload --port 8001
+python -m uvicorn backend.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
-API documentation:
+Web API documentation:
 
 ```text
-http://localhost:8001/docs
+http://127.0.0.1:8000/docs
+```
+
+Mobile backend instance:
+
+```bash
+python -m uvicorn backend.main:app --reload --host 127.0.0.1 --port 8001
+```
+
+Mobile API documentation:
+
+```text
+http://127.0.0.1:8001/docs
+```
+
+These are two processes of the same FastAPI application, with separate ports for the current local web and mobile workflows. The web browser uses Vite at `http://127.0.0.1:3000`, whose API proxy targets port `8000`. The Flutter app targets port `8001` (`10.0.2.2:8001` from an Android emulator).
+
+The local endpoint split is:
+
+```text
+WEB:    http://127.0.0.1:3000 -> http://127.0.0.1:8000
+MOBILE: Flutter app          -> http://127.0.0.1:8001
 ```
 
 ---
@@ -1349,7 +1372,7 @@ Example production workflow:
 The FastAPI backend can be started with:
 
 ```bash
-python -m uvicorn backend.main:app --host 0.0.0.0 --port 8001
+python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000
 ```
 
 For a production deployment, the backend should run behind a production-capable process manager or application platform.
@@ -1506,7 +1529,7 @@ Once SMSHorizon account approval and TRAI DLT template registration are granted:
    ```
 5. **Restart Backend Server**:
    ```bash
-   python -m uvicorn backend.main:app --host 0.0.0.0 --port 8001
+      python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000
    ```
 6. **Execute Verification**:
    Send a test dispatch via mobile app emergency sheet or web operator console. The backend will transmit the request to SMSHorizon and return `status: "sent"` upon provider confirmation.
