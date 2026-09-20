@@ -35,3 +35,12 @@ ALLOWED_ORIGINS = (
 # Gemini Chatbot Integration
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 
+# SMS & Emergency Gateway Integration (SMSHorizon / DLT)
+SMS_PROVIDER = os.getenv("SMS_PROVIDER", "sms_horizon").strip()
+SMSHORIZON_API_KEY = os.getenv("SMSHORIZON_API_KEY", os.getenv("SMS_API_KEY", "")).strip()
+SMSHORIZON_SENDER_ID = os.getenv("SMSHORIZON_SENDER_ID", os.getenv("SMS_SENDER_ID", "")).strip()
+SMSHORIZON_DLT_ENTITY_ID = os.getenv("SMSHORIZON_DLT_ENTITY_ID", os.getenv("SMS_DLT_ENTITY_ID", "")).strip()
+SMSHORIZON_TEMPLATE_ID = os.getenv("SMSHORIZON_TEMPLATE_ID", os.getenv("SMS_TEMPLATE_ID", "")).strip()
+SMSHORIZON_API_URL = os.getenv("SMSHORIZON_API_URL", "https://smshorizon.in/api/sendsms.php").strip()
+SMS_DEMO_MODE = os.getenv("SMS_DEMO_MODE", "true").strip().lower() in ("true", "1", "yes")
+

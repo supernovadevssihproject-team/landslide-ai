@@ -81,6 +81,7 @@ async def upload_report_image(
 @router.post("/")
 @router.post("/submit")
 async def submit_report(
+    request: Request,
     file: Optional[UploadFile] = File(None),
     location: Optional[str] = Form(None),
     subDivision: Optional[str] = Form("Sub-Division HQ"),
@@ -93,15 +94,22 @@ async def submit_report(
     englishTranslation: Optional[str] = Form(""),
     db: Session = Depends(get_db)
 ):
-    loc = location or "Unspecified location"
-    sub_div = subDivision or "Sub-Division HQ"
-    st = state or "sikkim"
-    desc = description or "Field hazard report"
-    coords = coordinates or "27.2388° N, 88.5012° E"
-    elev = elevation or "1,420 m"
-    slp = slope or "48.5°"
-    vernacular = vernacularText or ""
-    english = englishTranslation or ""
+    json_body = {}
+    if request.headers.get("content-type", "").startswith("application/json"):
+        try:
+            json_body = await request.json()
+        except Exception:
+            json_body = {}
+
+    loc = location or json_body.get("location") or "Unspecified location"
+    sub_div = subDivision if location else (json_body.get("subDivision") or "Sub-Division HQ")
+    st = state if location else (json_body.get("state") or "sikkim")
+    desc = description or json_body.get("description") or "Field hazard report"
+    coords = coordinates or json_body.get("coordinates") or "27.2388° N, 88.5012° E"
+    elev = elevation if location else (json_body.get("elevation") or "1,420 m")
+    slp = slope if location else (json_body.get("slope") or "48.5°")
+    vernacular = vernacularText or json_body.get("vernacularText") or ""
+    english = englishTranslation or json_body.get("englishTranslation") or ""
 
     report_id = f"rep-{uuid.uuid4().hex[:8]}"
     code = f"NER-FLD-2026-{uuid.uuid4().hex[:4].upper()}"
@@ -186,7 +194,9 @@ async def submit_report(
         "imageUrl": new_report.imageUrl,
         "urgency": new_report.urgency,
         "cvRisk": new_report.cvRisk,
+        "cvLabel": new_report.cvLabel,
         "summary": new_report.summary,
+        "boundingBoxes": new_report.boundingBoxes,
         "alert": alert,
         "created_at": datetime.now().isoformat(),
     }

@@ -1478,6 +1478,39 @@ TerraGuard is currently a prototype and can be deployed as a demonstration appli
 - High-availability infrastructure
 - Independent verification of authoritative data sources
 
+## SMS Gateway Setup & India DLT Activation
+
+TerraGuard's emergency dispatch pipeline uses **SMSHorizon** (India Bulk DLT gateway) for localized emergency SMS alerts.
+
+> [!NOTE]
+> Real SMS dispatch requires active SMSHorizon account credentials and TRAI DLT activation (Entity ID, Sender ID, and Approved Template ID). SMSHorizon activation requests are currently pending. Until activation is complete, TerraGuard runs with `SMS_DEMO_MODE=true` to demonstrate full end-to-end emergency workflows truthfully without sending fake SMS or displaying unverified delivery receipts.
+
+### Production Activation Steps
+
+Once SMSHorizon account approval and TRAI DLT template registration are granted:
+
+1. **Log in to SMSHorizon Console** and copy your API Key.
+2. **Register TRAI DLT Entity & Header (Sender ID)** (e.g. Entity ID `100123...`, Sender ID `GSISIK`).
+3. **Register DLT Approved SMS Template**:
+   - Approved Text: `[GSI-LEWS ALERT] {#var#}. {#var#} Call 1077.`
+   - Note down the approved `DLT_TEMPLATE_ID`.
+4. **Update Environment Variables** in `backend/.env` or environment:
+   ```env
+   SMS_PROVIDER=sms_horizon
+   SMS_DEMO_MODE=false
+   SMSHORIZON_API_KEY="your_api_key_here"
+   SMSHORIZON_SENDER_ID="GSISIK"
+   SMSHORIZON_DLT_ENTITY_ID="100123..."
+   SMSHORIZON_TEMPLATE_ID="200456..."
+   SMSHORIZON_API_URL="https://smshorizon.in/api/sendsms.php"
+   ```
+5. **Restart Backend Server**:
+   ```bash
+   python -m uvicorn backend.main:app --host 0.0.0.0 --port 8001
+   ```
+6. **Execute Verification**:
+   Send a test dispatch via mobile app emergency sheet or web operator console. The backend will transmit the request to SMSHorizon and return `status: "sent"` upon provider confirmation.
+
 ---
 
 # Team

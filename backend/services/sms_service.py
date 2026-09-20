@@ -1,70 +1,171 @@
 """
 Emergency Broadcast & SMS Dispatch Gateway (SIH 26001)
-Supports Fast2SMS (India Bulk DLT) & Twilio Cellular Gateways
+Supports SMSHorizon (India Bulk DLT) & Truthful Provider States
 """
 
-import os
+import logging
+import uuid
+from datetime import datetime, timezone
+from typing import List, Dict, Any, Optional
 import requests
-from typing import List, Dict, Any
+
+from backend import config
+
+logger = logging.getLogger("terraguard.sms_service")
+
 
 class SmsBroadcastService:
     def __init__(self):
-        self.fast2sms_api_key = os.getenv("FAST2SMS_API_KEY", "")
-        self.twilio_account_sid = os.getenv("TWILIO_ACCOUNT_SID", "")
-        self.twilio_auth_token = os.getenv("TWILIO_AUTH_TOKEN", "")
-        self.twilio_from = os.getenv("TWILIO_FROM_NUMBER", "")
+        self.provider_name = getattr(config, "SMS_PROVIDER", "sms_horizon")
 
     def send_broadcast_alert(
         self,
         headline: str,
         instruction: str,
-        phone_numbers: List[str] = None,
-        state: str = "sikkim"
+        phone_numbers: Optional[List[str]] = None,
+        state: str = "sikkim",
+        sender_id: Optional[str] = None,
+        dlt_entity_id: Optional[str] = None,
+        template_id: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
-        Pushes localized evacuation SMS to citizen and duty officer numbers.
-        Runs live if credentials provided, otherwise returns authenticated test dispatch.
+        Dispatches localized evacuation SMS using SMSHorizon DLT or truthful fallback states.
+        Never claims 'delivered' or fake recipient counts unless real provider confirmed acceptance.
+        
+        NOTE: The live HTTP request contract is isolated within this adapter.
+        Official SMSHorizon API contract verification remains pending until account credentials
+        and provider documentation are issued.
         """
-        message = f"[GSI-LEWS CRITICAL ALERT] {headline}. {instruction} Call 1070/1077."
-        recipients = phone_numbers or ["+919800012345", "+919436098765"]
+        req_id = f"sms-req-{uuid.uuid4().hex[:8]}"
+        timestamp = datetime.now(timezone.utc).isoformat()
 
-        # Fast2SMS Live Integration (India DLT SMS)
-        if self.fast2sms_api_key:
-            try:
-                url = "https://www.fast2sms.com/dev/bulkV2"
-                payload = {
-                    "route": "q",
-                    "message": message,
-                    "language": "english",
-                    "flash": 0,
-                    "numbers": ",".join([p.replace("+91", "") for p in recipients]),
-                }
-                headers = {
-                    "authorization": self.fast2sms_api_key,
-                    "Content-Type": "application/x-www-form-urlencoded"
-                }
-                resp = requests.post(url, data=payload, headers=headers, timeout=5)
-                if resp.status_code == 200:
-                    return {
-                        "status": "delivered",
-                        "gateway": "Fast2SMS (India DLT Direct)",
-                        "recipients_count": len(recipients),
-                        "message_sample": message,
-                        "raw": resp.json()
-                    }
-            except Exception as e:
-                print(f"[SMS Gateway] Fast2SMS error: {e}")
+        # Sanitize & extract phone numbers
+        recipients = [p.strip() for p in (phone_numbers or []) if p and p.strip()]
+        
+        message_text = f"[GSI-LEWS ALERT] {headline}. {instruction} Call 1077."
 
-        # Test / Verified Sandbox Mode
-        return {
-            "status": "delivered",
-            "gateway": "Twilio / Fast2SMS National LEWS Gateway (Sandbox Dispatched)",
-            "recipients_count": 142800,
-            "bts_towers_flashed": 48,
-            "state": state,
-            "message_sample": message,
-            "emergency_toll_free": "1070 / 1077",
-            "delivery_timestamp": "Instantaneous (GSAT-7A Cellular Cell-Broadcast)"
+        # Check DEMO Mode flag
+        if getattr(config, "SMS_DEMO_MODE", True):
+            logger.info(
+                f"[SMS Gateway] request_id={req_id} status=demo provider={self.provider_name} recipients={len(recipients)}"
+            )
+            return {
+                "status": "demo",
+                "gateway": "SMSHorizon DEMO",
+                "message": "Demo dispatch only. No real SMS was sent.",
+                "request_id": req_id,
+                "recipients_count": 0,
+            }
+
+        # Resolve DLT configuration
+        api_key = getattr(config, "SMSHORIZON_API_KEY", "")
+        resolved_sender = sender_id or getattr(config, "SMSHORIZON_SENDER_ID", "")
+        resolved_entity = dlt_entity_id or getattr(config, "SMSHORIZON_DLT_ENTITY_ID", "")
+        resolved_template = template_id or getattr(config, "SMSHORIZON_TEMPLATE_ID", "")
+
+        # Verify Configuration
+        if not api_key or not resolved_sender or not resolved_entity or not resolved_template:
+            missing_fields = []
+            if not api_key:
+                missing_fields.append("SMSHORIZON_API_KEY")
+            if not resolved_sender:
+                missing_fields.append("SMSHORIZON_SENDER_ID")
+            if not resolved_entity:
+                missing_fields.append("SMSHORIZON_DLT_ENTITY_ID")
+            if not resolved_template:
+                missing_fields.append("SMSHORIZON_TEMPLATE_ID")
+
+            logger.warning(
+                f"[SMS Gateway] request_id={req_id} status=provider_not_configured missing={','.join(missing_fields)}"
+            )
+            return {
+                "status": "provider_not_configured",
+                "gateway": "SMSHorizon",
+                "message": f"SMSHorizon is not configured or DLT activation is pending. Missing: {', '.join(missing_fields)}",
+                "request_id": req_id,
+                "recipients_count": 0,
+            }
+
+        if not recipients:
+            logger.warning(f"[SMS Gateway] request_id={req_id} status=dispatch_failed reason=no_recipients")
+            return {
+                "status": "dispatch_failed",
+                "gateway": "SMSHorizon",
+                "message": "SMS dispatch failed: No valid recipient phone numbers provided.",
+                "request_id": req_id,
+                "recipients_count": 0,
+            }
+
+        # Real SMSHorizon DLT HTTP API Dispatch
+        clean_numbers = [num.replace("+91", "").replace(" ", "").replace("-", "") for num in recipients]
+        payload = {
+            "apikey": api_key,
+            "mobile": ",".join(clean_numbers),
+            "message": message_text,
+            "sender": resolved_sender,
+            "type": "txt",
+            "entityid": resolved_entity,
+            "templateid": resolved_template,
         }
 
+        api_url = getattr(config, "SMSHORIZON_API_URL", "https://smshorizon.in/api/sendsms.php")
+        try:
+            resp = requests.post(api_url, data=payload, timeout=8)
+            if resp.status_code >= 200 and resp.status_code < 300:
+                resp_text = resp.text.strip()
+                # SMSHorizon returns response string (e.g. numeric message ID or error code)
+                if "error" in resp_text.lower() or "fail" in resp_text.lower():
+                    logger.error(
+                        f"[SMS Gateway] request_id={req_id} status=dispatch_failed provider_msg={resp_text[:100]}"
+                    )
+                    return {
+                        "status": "dispatch_failed",
+                        "gateway": "SMSHorizon",
+                        "message": f"SMS dispatch rejected by SMSHorizon: {resp_text}",
+                        "request_id": req_id,
+                        "recipients_count": 0,
+                    }
+                
+                logger.info(
+                    f"[SMS Gateway] request_id={req_id} status=sent recipients={len(clean_numbers)}"
+                )
+                return {
+                    "status": "sent",
+                    "gateway": "SMSHorizon",
+                    "message": f"SMS accepted by SMSHorizon gateway for dispatch (ID: {resp_text}).",
+                    "request_id": req_id,
+                    "recipients_count": len(clean_numbers),
+                }
+            else:
+                logger.error(
+                    f"[SMS Gateway] request_id={req_id} status=dispatch_failed http_code={resp.status_code}"
+                )
+                return {
+                    "status": "dispatch_failed",
+                    "gateway": "SMSHorizon",
+                    "message": f"SMSHorizon API returned HTTP status {resp.status_code}.",
+                    "request_id": req_id,
+                    "recipients_count": 0,
+                }
+        except (requests.Timeout, requests.ConnectionError) as net_err:
+            logger.error(f"[SMS Gateway] request_id={req_id} status=provider_unavailable err={net_err}")
+            return {
+                "status": "provider_unavailable",
+                "gateway": "SMSHorizon",
+                "message": "SMSHorizon gateway timeout or network connection error.",
+                "request_id": req_id,
+                "recipients_count": 0,
+            }
+        except Exception as ex:
+            logger.error(f"[SMS Gateway] request_id={req_id} status=dispatch_failed err={ex}")
+            return {
+                "status": "dispatch_failed",
+                "gateway": "SMSHorizon",
+                "message": f"SMS dispatch failed due to internal exception: {str(ex)}",
+                "request_id": req_id,
+                "recipients_count": 0,
+            }
+
+
 sms_service = SmsBroadcastService()
+

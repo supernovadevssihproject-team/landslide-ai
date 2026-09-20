@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 
 import '../config/app_config.dart';
@@ -205,6 +207,15 @@ class SafetyEmergencySheet extends StatelessWidget {
                 ),
                 const SizedBox(height: 18),
 
+                // Emergency SMS Dispatch Section
+                const Text(
+                  'EMERGENCY SMS DISPATCH GATEWAY',
+                  style: TextStyle(color: TerraTheme.textMuted, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.8),
+                ),
+                const SizedBox(height: 8),
+                const _EmergencySmsSection(),
+                const SizedBox(height: 18),
+
                 // Field Safety Guidance
                 const Text(
                   'FIELD SAFETY PROTOCOLS',
@@ -352,6 +363,242 @@ class _GuidelineItem extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _EmergencySmsSection extends StatefulWidget {
+  const _EmergencySmsSection();
+
+  @override
+  State<_EmergencySmsSection> createState() => _EmergencySmsSectionState();
+}
+
+class _EmergencySmsSectionState extends State<_EmergencySmsSection> {
+  bool _sending = false;
+  String? _status;
+  String? _statusMessage;
+
+  Future<void> _sendEmergencySms() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: TerraTheme.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: const BorderSide(color: TerraTheme.border),
+        ),
+        title: const Text(
+          'CONFIRM EMERGENCY SMS DISPATCH',
+          style: TextStyle(color: TerraTheme.critical, fontSize: 14, fontWeight: FontWeight.bold),
+        ),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Recipient Target:', style: TextStyle(color: TerraTheme.textMuted, fontSize: 11, fontWeight: FontWeight.bold)),
+            Text('SDMA Emergency Desk (1077 / Duty Officer)', style: TextStyle(color: TerraTheme.textPrimary, fontSize: 13, fontWeight: FontWeight.bold)),
+            SizedBox(height: 10),
+            Text('Message Payload:', style: TextStyle(color: TerraTheme.textMuted, fontSize: 11, fontWeight: FontWeight.bold)),
+            Text('[GSI-LEWS ALERT] Field Emergency Evacuation Order & SDRF dispatch request.', style: TextStyle(color: TerraTheme.textSecondary, fontSize: 12)),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('CANCEL', style: TextStyle(color: TerraTheme.textMuted, fontWeight: FontWeight.bold)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: TerraTheme.critical,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text('DISPATCH SMS', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    setState(() {
+      _sending = true;
+      _status = null;
+      _statusMessage = null;
+    });
+
+    try {
+      final url = Uri.parse('${AppConfig.apiBaseUrl}/api/alerts/sms-broadcast');
+      final res = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
+        body: jsonEncode({
+          'headline': 'MOBILE EMERGENCY FIELD ALERT',
+          'instruction': 'Immediate SDRF assistance & evacuation requested.',
+          'state': 'sikkim',
+        }),
+      );
+
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body) as Map<String, dynamic>;
+        setState(() {
+          _status = data['status'] as String?;
+          _statusMessage = data['message'] as String?;
+        });
+      } else {
+        setState(() {
+          _status = 'dispatch_failed';
+          _statusMessage = 'Backend HTTP response ${res.statusCode}';
+        });
+      }
+    } catch (_) {
+      setState(() {
+        _status = 'provider_unavailable';
+        _statusMessage = 'Unable to connect to backend SMS service.';
+      });
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
+  }
+
+  Widget _buildStatusBadge() {
+    if (_sending) {
+      return Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: TerraTheme.secondary.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: TerraTheme.secondary.withValues(alpha: 0.3)),
+        ),
+        child: const Row(
+          children: [
+            SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: TerraTheme.secondary)),
+            SizedBox(width: 10),
+            Text('Sending emergency SMS request...', style: TextStyle(color: TerraTheme.secondary, fontSize: 12, fontWeight: FontWeight.bold)),
+          ],
+        ),
+      );
+    }
+
+    if (_status == null) return const SizedBox.shrink();
+
+    Color color;
+    String label;
+    IconData icon;
+
+    switch (_status) {
+      case 'sent':
+        color = TerraTheme.primary;
+        label = 'SMS sent';
+        icon = Icons.check_circle_outline;
+        break;
+      case 'demo':
+        color = TerraTheme.warning;
+        label = 'Demo only — no SMS sent';
+        icon = Icons.info_outline;
+        break;
+      case 'provider_not_configured':
+        color = TerraTheme.warning;
+        label = 'SMS service not configured';
+        icon = Icons.warning_amber_rounded;
+        break;
+      case 'provider_unavailable':
+        color = TerraTheme.critical;
+        label = 'SMS provider unavailable';
+        icon = Icons.cloud_off_rounded;
+        break;
+      case 'dispatch_failed':
+      default:
+        color = TerraTheme.critical;
+        label = 'SMS dispatch failed';
+        icon = Icons.error_outline;
+        break;
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: color, size: 16),
+              const SizedBox(width: 6),
+              Text(label, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.bold)),
+            ],
+          ),
+          if (_statusMessage != null) ...[
+            const SizedBox(height: 4),
+            Text(_statusMessage!, style: const TextStyle(color: TerraTheme.textSecondary, fontSize: 11)),
+          ],
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: TerraTheme.background,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: TerraTheme.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: TerraTheme.critical.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.sms_outlined, color: TerraTheme.critical, size: 20),
+              ),
+              const SizedBox(width: 10),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('DISASTER SMS BROADCAST', style: TextStyle(color: TerraTheme.textPrimary, fontSize: 13, fontWeight: FontWeight.bold)),
+                    SizedBox(height: 2),
+                    Text('Target: State Helpline (1077 / Duty Officer)', style: TextStyle(color: TerraTheme.textMuted, fontSize: 10)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (_status != null || _sending) ...[
+            _buildStatusBadge(),
+            const SizedBox(height: 12),
+          ],
+          SizedBox(
+            width: double.infinity,
+            height: 44,
+            child: ElevatedButton.icon(
+              onPressed: _sending ? null : _sendEmergencySms,
+              icon: const Icon(Icons.send_rounded, size: 16),
+              label: const Text('DISPATCH EMERGENCY SMS ALERT', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: TerraTheme.critical,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

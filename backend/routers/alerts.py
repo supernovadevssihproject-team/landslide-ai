@@ -154,6 +154,9 @@ class SmsBroadcastRequest(BaseModel):
     instruction: str
     phone_numbers: Optional[List[str]] = None
     state: Optional[str] = "sikkim"
+    sender_id: Optional[str] = None
+    dlt_entity_id: Optional[str] = None
+    template_id: Optional[str] = None
 
 @router.post("/sms-broadcast")
 def broadcast_emergency_sms(req: SmsBroadcastRequest):
@@ -162,6 +165,10 @@ def broadcast_emergency_sms(req: SmsBroadcastRequest):
         headline=req.headline,
         instruction=req.instruction,
         phone_numbers=req.phone_numbers,
-        state=req.state
+        state=req.state or "sikkim",
+        sender_id=req.sender_id,
+        dlt_entity_id=req.dlt_entity_id,
+        template_id=req.template_id,
     )
+
 

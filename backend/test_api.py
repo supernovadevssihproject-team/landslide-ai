@@ -187,16 +187,77 @@ def test_live_weather():
     print(f"[PASS] Live meteorological & soil moisture feed passed: {data['station_name']} ({data['current_temperature_c']}C, {data['soil_saturation_pct']}% Saturation)")
 
 def test_sms_broadcast():
+    from backend import config
+
+    # 1. Test Demo Mode (default)
     payload = {
         "headline": "MANDATORY EVACUATION NH-10",
         "instruction": "Move to Singtam Relief Camp immediately.",
+        "phone_numbers": ["+919800012345"],
         "state": "sikkim"
     }
+    config.SMS_DEMO_MODE = True
     response = client.post("/api/alerts/sms-broadcast", json=payload)
     assert response.status_code == 200
     data = response.json()
-    assert data["status"] == "delivered"
-    print(f"[PASS] Emergency SMS Broadcast gateway passed: {data['gateway']}")
+    assert data["status"] == "demo"
+    assert data["gateway"] == "SMSHorizon DEMO"
+    assert data["recipients_count"] == 0
+    assert "Demo dispatch only" in data["message"]
+
+    # 2. Test Provider Not Configured (when demo mode is false and keys missing)
+    config.SMS_DEMO_MODE = False
+    config.SMSHORIZON_API_KEY = ""
+    config.SMSHORIZON_SENDER_ID = ""
+    res_unconf = client.post("/api/alerts/sms-broadcast", json=payload)
+    assert res_unconf.status_code == 200
+    data_unconf = res_unconf.json()
+    assert data_unconf["status"] == "provider_not_configured"
+    assert "SMSHorizon is not configured" in data_unconf["message"]
+
+    # 3. Test Missing Recipients (when config present)
+    config.SMSHORIZON_API_KEY = "test_key"
+    config.SMSHORIZON_SENDER_ID = "TESTSD"
+    config.SMSHORIZON_DLT_ENTITY_ID = "1001"
+    config.SMSHORIZON_TEMPLATE_ID = "2002"
+    res_norecip = client.post("/api/alerts/sms-broadcast", json={"headline": "Alert", "instruction": "Flee", "phone_numbers": []})
+    assert res_norecip.status_code == 200
+    assert res_norecip.json()["status"] == "dispatch_failed"
+
+    # 4. Test Mocked Successful Provider Response (status: sent)
+    from backend.services import sms_service as sms_module
+    orig_post = sms_module.requests.post
+    
+    class MockSuccessResponse:
+        status_code = 200
+        text = "MSG_ID_987654"
+
+    sms_module.requests.post = lambda *args, **kwargs: MockSuccessResponse()
+    try:
+        res_sent = client.post("/api/alerts/sms-broadcast", json=payload)
+        assert res_sent.status_code == 200
+        data_sent = res_sent.json()
+        assert data_sent["status"] == "sent"
+        assert data_sent["gateway"] == "SMSHorizon"
+        assert data_sent["recipients_count"] == 1
+    finally:
+        sms_module.requests.post = orig_post
+
+    # 5. Test Mocked Provider Unavailable Network Error
+    def mock_timeout(*args, **kwargs):
+        raise sms_module.requests.Timeout("Connection timed out")
+
+    sms_module.requests.post = mock_timeout
+    try:
+        res_unavail = client.post("/api/alerts/sms-broadcast", json=payload)
+        assert res_unavail.status_code == 200
+        assert res_unavail.json()["status"] == "provider_unavailable"
+    finally:
+        sms_module.requests.post = orig_post
+        config.SMS_DEMO_MODE = True  # Restore default
+
+    print(f"[PASS] Truthful SMS Broadcast provider states (demo, provider_not_configured, sent, provider_unavailable, dispatch_failed) passed")
+
 
 def test_ml_predict():
     payload = {

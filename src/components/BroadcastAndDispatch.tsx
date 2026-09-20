@@ -76,7 +76,7 @@ export const BroadcastAndDispatch: React.FC<BroadcastAndDispatchProps> = ({
     setMessageText(ALERT_TEMPLATES[langId] || ALERT_TEMPLATES['en']);
   };
 
-  const handleExecuteDispatch = () => {
+  const handleExecuteDispatch = async () => {
     const now = new Date();
     const timeStr = now.toLocaleTimeString('en-IN', {
       hour12: false,
@@ -85,12 +85,35 @@ export const BroadcastAndDispatch: React.FC<BroadcastAndDispatchProps> = ({
       second: '2-digit',
     }) + ' IST';
 
+    let statusNotice = 'SMS Broadcast Triggered';
+    try {
+      const smsRes = await LandslideApi.sendSmsBroadcast({
+        headline: 'MANDATORY EVACUATION ALERT',
+        instruction: messageText,
+        state: 'sikkim',
+      });
+
+      if (smsRes.status === 'sent') {
+        statusNotice = `SUCCESS: SMS accepted by SMSHorizon for ${smsRes.recipients_count} recipient(s).`;
+      } else if (smsRes.status === 'demo') {
+        statusNotice = `DEMO MODE: ${smsRes.message}`;
+      } else if (smsRes.status === 'provider_not_configured') {
+        statusNotice = `CONFIG: ${smsRes.message}`;
+      } else if (smsRes.status === 'provider_unavailable') {
+        statusNotice = `UNAVAILABLE: ${smsRes.message}`;
+      } else {
+        statusNotice = `FAILED: ${smsRes.message}`;
+      }
+    } catch (err) {
+      statusNotice = `ERROR: Failed to contact backend SMS service.`;
+    }
+
     const newLog: AuditLogEntry = {
       id: `log-${Date.now()}`,
       code: `CAP-NER-${Math.floor(1000 + Math.random() * 9000)}`,
-      title: `CAP High-Priority Broadcast Dispatched (${CAP_LANGUAGES.find((l) => l.id === selectedLang)?.name})`,
+      title: `CAP High-Priority Broadcast (${CAP_LANGUAGES.find((l) => l.id === selectedLang)?.name})`,
       timestamp: timeStr,
-      message: `Emergency evacuation notification flashed across 48 cellular BTS transmitters in Mangan & Dikchu. Content: "${messageText.slice(0, 75)}..."`,
+      message: `${statusNotice} Content: "${messageText.slice(0, 75)}..."`,
       authority: 'Duty Disaster Operations Officer / SDMA Sikkim',
       type: 'broadcast',
       highlight: true,
@@ -99,7 +122,7 @@ export const BroadcastAndDispatch: React.FC<BroadcastAndDispatchProps> = ({
     setAuditList([newLog, ...auditList]);
     sirenPlayer.start();
     LandslideApi.triggerSiren('NH-10 Singtam-Rangpo Corridor', 6).catch(console.warn);
-    showToast('SUCCESS: High-Priority CAP Emergency Alert pushed to 142,800 active cellular handsets in geofence!');
+    showToast(statusNotice);
     if (onSirenTriggered) onSirenTriggered();
   };
 

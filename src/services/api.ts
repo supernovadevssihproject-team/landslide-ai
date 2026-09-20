@@ -434,17 +434,21 @@ export const LandslideApi = {
     return fetchJson(`/api/weather/live?${params.toString()}`, { signal }, fallback);
   },
 
-  // Emergency SMS Broadcast (Twilio / Fast2SMS)
+  // Emergency SMS Broadcast (SMSHorizon DLT)
   async sendSmsBroadcast(payload: {
     headline: string;
     instruction: string;
     phoneNumbers?: string[];
     state?: string;
+    sender_id?: string;
+    dlt_entity_id?: string;
+    template_id?: string;
   }): Promise<{
-    status: string;
+    status: 'sent' | 'demo' | 'provider_not_configured' | 'provider_unavailable' | 'dispatch_failed' | string;
     gateway: string;
+    message: string;
+    request_id?: string;
     recipients_count: number;
-    message_sample: string;
   }> {
     return fetchJson(
       '/api/alerts/sms-broadcast',
@@ -453,10 +457,11 @@ export const LandslideApi = {
         body: JSON.stringify(payload),
       },
       {
-        status: 'delivered',
-        gateway: 'Twilio / Fast2SMS National LEWS Gateway (Sandbox Dispatched)',
-        recipients_count: 142800,
-        message_sample: `[GSI-LEWS CRITICAL ALERT] ${payload.headline}. ${payload.instruction} Call 1070/1077.`,
+        status: 'demo',
+        gateway: 'SMSHorizon DEMO',
+        message: 'Demo dispatch only. No real SMS was sent.',
+        request_id: 'sms-demo-fallback',
+        recipients_count: 0,
       }
     );
   },
