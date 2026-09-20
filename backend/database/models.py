@@ -2,6 +2,7 @@ from sqlalchemy import Column, String, Float, Integer, Boolean, DateTime, Text, 
 from datetime import datetime
 from backend.database.database import Base
 
+
 class HazardZoneModel(Base):
     __tablename__ = "hazard_zones"
 
@@ -71,6 +72,9 @@ class CrowdsourceReportModel(Base):
     summary = Column(Text, nullable=False)
     description = Column(Text, nullable=False)
     coordinates = Column(String, nullable=False)
+    latitude = Column(Float, nullable=True)
+    longitude = Column(Float, nullable=True)
+    deviceId = Column(String, nullable=True)
     elevation = Column(String, default="1,420 m")
     slope = Column(String, default="48.5°")
     precipitation = Column(String, default="84 mm/h (IMD Extreme Influx)")
@@ -87,7 +91,15 @@ class CrowdsourceReportModel(Base):
     imageSizeBytes = Column(Integer, nullable=True)
     aiClassificationStatus = Column(String, default="pending")
     aiConfidence = Column(Float, nullable=True)
-    status = Column(String, default="active") # active | dismissed | escalated
+    verificationStatus = Column(String, default="PENDING_VERIFICATION")
+    classification = Column(String, nullable=True)
+    confidence = Column(Float, nullable=True)
+    alertStatus = Column(String, default="not_triggered")
+    smsStatus = Column(String, default="not_started")
+    selectedRecipientsCount = Column(Integer, default=0)
+    alertRadiusKm = Column(Float, default=5.0)
+    verifiedAt = Column(DateTime, nullable=True)
+    status = Column(String, default="PENDING_VERIFICATION") # PENDING_VERIFICATION | CONFIRMED | REJECTED | NEEDS_REVIEW | ALERT_GENERATED
 
 
 class TacticalUnitModel(Base):
