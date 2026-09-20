@@ -379,6 +379,30 @@ class _EmergencySmsSectionState extends State<_EmergencySmsSection> {
   String? _status;
   String? _statusMessage;
 
+  Future<void> _openSmsApp(BuildContext context) async {
+    final uri = Uri(
+      scheme: 'sms',
+      path: '1078',
+      queryParameters: const {
+        'body': 'Emergency assistance requested. Please contact the disaster response desk.',
+      },
+    );
+    try {
+      final launched = await launchUrl(uri);
+      if (!launched && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Unable to open the device SMS app.')),
+        );
+      }
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Unable to open the device SMS app.')),
+        );
+      }
+    }
+  }
+
   Future<void> _sendEmergencySms() async {
     final confirm = await showDialog<bool>(
       context: context,
@@ -496,7 +520,7 @@ class _EmergencySmsSectionState extends State<_EmergencySmsSection> {
         break;
       case 'demo':
         color = TerraTheme.warning;
-        label = 'Demo only — no SMS sent';
+        label = 'DEMO — No real SMS was sent';
         icon = Icons.info_outline;
         break;
       case 'provider_not_configured':
@@ -593,6 +617,21 @@ class _EmergencySmsSectionState extends State<_EmergencySmsSection> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: TerraTheme.critical,
                 foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            width: double.infinity,
+            height: 42,
+            child: OutlinedButton.icon(
+              onPressed: () => _openSmsApp(context),
+              icon: const Icon(Icons.sms_outlined, size: 16),
+              label: const Text('Open SMS app → 1078', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: TerraTheme.secondary,
+                side: const BorderSide(color: TerraTheme.border),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
             ),

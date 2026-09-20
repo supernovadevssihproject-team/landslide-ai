@@ -23,6 +23,7 @@ void main() {
     expect(find.text('SAFETY & EMERGENCY RESPONSE'), findsOneWidget);
     expect(find.text('DISASTER SMS BROADCAST'), findsOneWidget);
     expect(find.text('DISPATCH EMERGENCY SMS ALERT'), findsOneWidget);
+    expect(find.text('Open SMS app → 1078'), findsOneWidget);
 
     // Tap dispatch button to ensure dialog confirmation is required
     final dispatchButton = find.text('DISPATCH EMERGENCY SMS ALERT');
