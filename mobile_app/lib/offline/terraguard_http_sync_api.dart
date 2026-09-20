@@ -6,7 +6,7 @@ import 'package:http/http.dart' as http;
 import 'offline_hazard_report.dart';
 import 'offline_sync_manager.dart';
 
-/// JSON & Multipart adapter for LandslideGuard's POST /api/reports endpoint.
+/// Multipart/JSON adapter for POST /api/reports/submit.
 class TerraGuardHttpSyncApi implements TerraGuardSyncApi {
   final Uri reportsEndpoint;
   final Future<String?> Function()? accessToken;
@@ -24,65 +24,56 @@ class TerraGuardHttpSyncApi implements TerraGuardSyncApi {
     final hasImage = report.imagePath != null &&
         report.imagePath!.isNotEmpty &&
         File(report.imagePath!).existsSync();
-
+    final location = '${report.latitude.toStringAsFixed(5)}, ${report.longitude.toStringAsFixed(5)}';
+    final coordinates = '${report.latitude.toStringAsFixed(5)},${report.longitude.toStringAsFixed(5)}';
     final desc = [
       '[${report.hazardType.name.toUpperCase()}]',
       if (report.description?.isNotEmpty == true) report.description,
       'report_id=${report.reportId}',
       'captured_at=${report.capturedAt.toUtc().toIso8601String()}',
-      'device_id=${report.deviceId}',
     ].join(' ');
 
     if (hasImage) {
       final request = http.MultipartRequest('POST', reportsEndpoint);
-      if (token != null && token.isNotEmpty) {
-        request.headers['Authorization'] = 'Bearer $token';
-      }
+      if (token != null && token.isNotEmpty) request.headers['Authorization'] = 'Bearer $token';
       request.headers['Accept'] = 'application/json';
-
-      request.fields['location'] = '${report.latitude.toStringAsFixed(5)}, ${report.longitude.toStringAsFixed(5)}';
-      request.fields['subDivision'] = 'Mobile Field Report';
-      request.fields['state'] = 'sikkim';
-      request.fields['description'] = desc;
-      request.fields['coordinates'] = '${report.latitude.toStringAsFixed(5)}° N, ${report.longitude.toStringAsFixed(5)}° E';
-
-      request.files.add(await http.MultipartFile.fromPath(
-        'file',
-        report.imagePath!,
-      ));
-
-      final streamedResponse = await request.send();
-      final response = await http.Response.fromStream(streamedResponse);
-
+      request.fields.addAll({
+        'location': location,
+        'subDivision': 'Mobile Field Report',
+        'state': 'sikkim',
+        'description': desc,
+        'latitude': report.latitude.toString(),
+        'longitude': report.longitude.toString(),
+        'deviceId': report.deviceId,
+        'coordinates': coordinates,
+      });
+      request.files.add(await http.MultipartFile.fromPath('file', report.imagePath!));
+      final response = await http.Response.fromStream(await request.send());
       if (response.statusCode < 200 || response.statusCode >= 300) {
         throw StateError('Multipart report upload failed (${response.statusCode}): ${response.body}');
       }
       return response.body;
-    } else {
-      final headers = <String, String>{
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-      };
-      if (token != null && token.isNotEmpty) {
-        headers['Authorization'] = 'Bearer $token';
-      }
-
-      final response = await client.post(
-        reportsEndpoint,
-        headers: headers,
-        body: jsonEncode({
-          'location': '${report.latitude.toStringAsFixed(5)}, ${report.longitude.toStringAsFixed(5)}',
-          'subDivision': 'Mobile Field Report',
-          'state': 'sikkim',
-          'description': desc,
-          'coordinates': '${report.latitude.toStringAsFixed(5)}° N, ${report.longitude.toStringAsFixed(5)}° E',
-        }),
-      );
-
-      if (response.statusCode < 200 || response.statusCode >= 300) {
-        throw StateError('Report upload failed (${response.statusCode}): ${response.body}');
-      }
-      return response.body;
     }
+
+    final headers = <String, String>{'Accept': 'application/json', 'Content-Type': 'application/json'};
+    if (token != null && token.isNotEmpty) headers['Authorization'] = 'Bearer $token';
+    final response = await client.post(
+      reportsEndpoint,
+      headers: headers,
+      body: jsonEncode({
+        'location': location,
+        'subDivision': 'Mobile Field Report',
+        'state': 'sikkim',
+        'description': desc,
+        'latitude': report.latitude,
+        'longitude': report.longitude,
+        'deviceId': report.deviceId,
+        'coordinates': coordinates,
+      }),
+    );
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw StateError('Report upload failed (${response.statusCode}): ${response.body}');
+    }
+    return response.body;
   }
 }

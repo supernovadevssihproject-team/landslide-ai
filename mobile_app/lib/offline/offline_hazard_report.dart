@@ -17,6 +17,10 @@ class OfflineHazardReport {
   final String? lastError;
   final String? backendResponse;
   final String? classificationResult;
+  final String? lifecycleStatus;
+  final double? confidence;
+  final String? alertStatus;
+  final String? smsStatus;
 
   const OfflineHazardReport({
     required this.reportId,
@@ -32,6 +36,10 @@ class OfflineHazardReport {
     this.lastError,
     this.backendResponse,
     this.classificationResult,
+    this.lifecycleStatus,
+    this.confidence,
+    this.alertStatus,
+    this.smsStatus,
   });
 
   OfflineHazardReport copyWith({
@@ -40,8 +48,11 @@ class OfflineHazardReport {
     String? lastError,
     String? backendResponse,
     String? classificationResult,
-  }) =>
-      OfflineHazardReport(
+    String? lifecycleStatus,
+    double? confidence,
+    String? alertStatus,
+    String? smsStatus,
+  }) => OfflineHazardReport(
         reportId: reportId,
         hazardType: hazardType,
         description: description,
@@ -52,9 +63,13 @@ class OfflineHazardReport {
         deviceId: deviceId,
         status: status ?? this.status,
         retryCount: retryCount ?? this.retryCount,
-        lastError: lastError ?? this.lastError,
+        lastError: lastError,
         backendResponse: backendResponse ?? this.backendResponse,
         classificationResult: classificationResult ?? this.classificationResult,
+        lifecycleStatus: lifecycleStatus ?? this.lifecycleStatus,
+        confidence: confidence ?? this.confidence,
+        alertStatus: alertStatus ?? this.alertStatus,
+        smsStatus: smsStatus ?? this.smsStatus,
       );
 
   Map<String, Object?> toMap() => {
@@ -71,6 +86,10 @@ class OfflineHazardReport {
         'last_error': lastError,
         'backend_response': backendResponse,
         'classification_result': classificationResult,
+        'lifecycle_status': lifecycleStatus,
+        'confidence': confidence,
+        'alert_status': alertStatus,
+        'sms_status': smsStatus,
       };
 
   factory OfflineHazardReport.fromMap(Map<String, Object?> map) => OfflineHazardReport(
@@ -87,6 +106,10 @@ class OfflineHazardReport {
         lastError: map['last_error'] as String?,
         backendResponse: map['backend_response'] as String?,
         classificationResult: map['classification_result'] as String?,
+        lifecycleStatus: map['lifecycle_status'] as String?,
+        confidence: (map['confidence'] as num?)?.toDouble(),
+        alertStatus: map['alert_status'] as String?,
+        smsStatus: map['sms_status'] as String?,
       );
 
   String toJson() => jsonEncode(toMap());
