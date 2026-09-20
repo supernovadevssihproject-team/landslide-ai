@@ -6,8 +6,7 @@ import 'package:http/http.dart' as http;
 import 'offline_hazard_report.dart';
 import 'offline_sync_manager.dart';
 
-/// Uploads the existing report and, when an image exists, runs the separate
-/// field-report classifier. It never calls or changes location-risk inference.
+/// Uploads the report and leaves AI classification as a separate step.
 class TerraGuardHttpSyncApi implements TerraGuardSyncApi {
   final Uri reportsEndpoint;
   final Future<String?> Function()? accessToken;
@@ -26,16 +25,56 @@ class TerraGuardHttpSyncApi implements TerraGuardSyncApi {
     final response = hasImage
         ? await _submitMultipart(report, token, location, coordinates, desc)
         : await _submitJson(report, token, location, coordinates, desc);
-    if (hasImage) {
-      final classification = await _classify(report, token);
-      final server = jsonDecode(response.body) is Map ? Map<String, dynamic>.from(jsonDecode(response.body) as Map) : <String, dynamic>{};
-      server['classification'] = classification['predicted_class'];
-      server['confidence'] = classification['confidence'];
-      server['classification_result'] = jsonEncode(classification);
-      server['classifier_model_version'] = classification['model_version'];
-      return jsonEncode(server);
-    }
     return response.body;
+  }
+
+  @override
+  Future<Map<String, dynamic>> classifyReport(OfflineHazardReport report) async {
+    final token = accessToken == null ? null : await accessToken!();
+    final imagePath = report.imagePath;
+    if (imagePath == null || imagePath.isEmpty || !File(imagePath).existsSync()) {
+      throw StateError('A local image is required for AI classification.');
+    }
+    final endpoint = reportsEndpoint.replace(path: reportsEndpoint.path.replaceFirst(RegExp(r'/submit/?$'), '/classify'));
+    final request = http.MultipartRequest('POST', endpoint);
+    _auth(request.headers, token);
+    request.headers['Accept'] = 'application/json';
+    request.fields.addAll({
+      'report_id': report.reportId,
+      'hazard_type': report.hazardType.name,
+      'latitude': report.latitude.toString(),
+      'longitude': report.longitude.toString(),
+      'state': report.state ?? 'sikkim',
+      'zone_id': report.zoneId ?? '',
+      'description': report.description ?? '',
+      'timestamp': report.capturedAt.toUtc().toIso8601String(),
+    });
+    if (report.zoneId != null && report.zoneId!.isNotEmpty) {
+      request.fields['zone_id'] = report.zoneId!;
+    }
+    request.files.add(await http.MultipartFile.fromPath('image', imagePath));
+    final response = await http.Response.fromStream(await request.send());
+    if (response.statusCode == 503 || response.statusCode == 404 || response.statusCode == 500) {
+      throw StateError('AI classification unavailable (${response.statusCode})');
+    }
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw StateError('AI classification failed (${response.statusCode}): ${response.body}');
+    }
+    final decoded = jsonDecode(response.body);
+    if (decoded is! Map) throw const FormatException('Invalid classification response.');
+    final parsed = Map<String, dynamic>.from(decoded);
+    final reportId = parsed['report_id']?.toString();
+    final predictedClass = parsed['predicted_class']?.toString();
+    final confidence = parsed['confidence'];
+    final severity = parsed['severity']?.toString();
+    final modelVersion = parsed['model_version']?.toString();
+    final processedAt = parsed['processed_at']?.toString();
+    final validPrediction = const ['landslide', 'rockfall', 'roadBlockage', 'slopeFailure', 'flood', 'other']
+        .contains(predictedClass);
+    if (reportId == null || predictedClass == null || confidence is! num || severity == null || modelVersion == null || processedAt == null || !validPrediction) {
+      throw const FormatException('Malformed classification response.');
+    }
+    return parsed;
   }
 
   Future<http.Response> _submitMultipart(OfflineHazardReport report, String? token, String location, String coordinates, String desc) async {
@@ -59,22 +98,6 @@ class TerraGuardHttpSyncApi implements TerraGuardSyncApi {
       'coordinates': coordinates, if (report.zoneId != null) 'zone_id': report.zoneId}));
     _ensureSuccess(response, 'Report upload');
     return response;
-  }
-
-  Future<Map<String, dynamic>> _classify(OfflineHazardReport report, String? token) async {
-    final endpoint = reportsEndpoint.replace(path: reportsEndpoint.path.replaceFirst(RegExp(r'/submit/?$'), '/classify'));
-    final request = http.MultipartRequest('POST', endpoint);
-    _auth(request.headers, token);
-    request.headers['Accept'] = 'application/json';
-    request.fields.addAll({'report_id': report.reportId, 'hazard_type': report.hazardType.name, 'latitude': report.latitude.toString(),
-      'longitude': report.longitude.toString(), 'state': report.state ?? 'sikkim', 'description': report.description ?? '',
-      'timestamp': report.capturedAt.toUtc().toIso8601String(), if (report.zoneId != null) 'zone_id': report.zoneId!});
-    request.files.add(await http.MultipartFile.fromPath('image', report.imagePath!));
-    final response = await http.Response.fromStream(await request.send());
-    _ensureSuccess(response, 'AI classification');
-    final decoded = jsonDecode(response.body);
-    if (decoded is! Map) throw const FormatException('Invalid classification response');
-    return Map<String, dynamic>.from(decoded);
   }
 
   static void _auth(Map<String, String> headers, String? token) { if (token != null && token.isNotEmpty) headers['Authorization'] = 'Bearer $token'; }

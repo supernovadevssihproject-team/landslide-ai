@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:terraguard_mobile/main.dart';
+import 'package:terraguard_mobile/offline/offline_hazard_report.dart';
+import 'package:terraguard_mobile/offline/terraguard_database_models.dart';
 import 'package:terraguard_mobile/operational_risk_api.dart';
 import 'package:terraguard_mobile/offline/terraguard_http_sync_api.dart';
 import 'package:terraguard_mobile/offline/terraguard_offline_services.dart';
@@ -65,5 +67,37 @@ void main() {
     expect(risk.dataSource, RiskDataSource.unavailable);
     expect(risk.riskLevel, 'UNAVAILABLE');
     expect(risk.riskScore, isNull);
+  });
+
+  test('reports keep sync and AI states independent', () {
+    final report = OfflineHazardReport(
+      reportId: 'r-1',
+      hazardType: HazardType.landslide,
+      latitude: 27.1,
+      longitude: 88.3,
+      capturedAt: DateTime.utc(2026, 9, 20),
+      deviceId: 'device-1',
+      state: 'sikkim',
+      zoneId: 'zone-1',
+    );
+
+    expect(report.syncStatus, ReportSyncStatus.pendingSync);
+    expect(report.classificationStatus, ClassificationStatus.classificationPending);
+  });
+
+  test('AI classification response is validated before it is accepted', () {
+    final result = FieldClassificationResult.fromJson({
+      'report_id': 'r-1',
+      'predicted_class': 'landslide',
+      'confidence': 0.87,
+      'severity': 'HIGH',
+      'model_version': 'v2',
+      'processed_at': '2026-09-20T12:00:00Z',
+    });
+
+    expect(result.predictedClass, 'landslide');
+    expect(result.confidence, 0.87);
+    expect(result.severity, 'HIGH');
+    expect(result.modelVersion, 'v2');
   });
 }

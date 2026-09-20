@@ -12,7 +12,7 @@ class OfflineReportStore {
     if (_database != null) return _database!;
     _database = await openDatabase(
       path.join(await getDatabasesPath(), 'terraguard_offline.db'),
-      version: 5,
+      version: 6,
       onCreate: (db, _) async {
         await db.execute('''CREATE TABLE hazard_reports (
           report_id TEXT PRIMARY KEY,
@@ -27,6 +27,7 @@ class OfflineReportStore {
           zone_id TEXT,
           location_source TEXT NOT NULL DEFAULT 'GPS',
           status TEXT NOT NULL,
+          classification_status TEXT NOT NULL DEFAULT 'CLASSIFICATION_PENDING',
           retry_count INTEGER NOT NULL DEFAULT 0,
           last_error TEXT,
           backend_response TEXT,
@@ -72,6 +73,10 @@ class OfflineReportStore {
           await db.execute("UPDATE hazard_reports SET updated_at = captured_at WHERE updated_at = ''");
         }
         if (oldVersion < 5) await _createCacheTables(db);
+        if (oldVersion < 6) {
+          await _addColumn(db, 'classification_status', "TEXT NOT NULL DEFAULT 'CLASSIFICATION_PENDING'");
+          await db.execute("UPDATE hazard_reports SET classification_status = 'CLASSIFICATION_PENDING' WHERE classification_status IS NULL");
+        }
         await _createIndexes(db);
       },
     );

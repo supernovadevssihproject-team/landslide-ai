@@ -1,6 +1,9 @@
 import 'dart:convert';
 
+import 'terraguard_database_models.dart';
+
 enum ReportSyncStatus { draft, pendingSync, syncing, uploading, synced, processing, analyzed, syncFailed }
+enum ClassificationStatus { notClassified, classificationPending, classified, classificationFailed, classificationUnavailable }
 enum HazardType { landslide, rockfall, roadBlockage, slopeFailure, flood, other }
 
 class OfflineHazardReport {
@@ -18,10 +21,12 @@ class OfflineHazardReport {
   final String? zoneId;
   final String locationSource;
   final ReportSyncStatus status;
+  final ClassificationStatus classificationStatus;
   final int retryCount;
   final String? lastError;
   final String? backendResponse;
   final String? classificationResult;
+  final FieldClassificationResult? classificationResultData;
   final String? predictedClass;
   final double? classificationConfidence;
   final String? classificationSeverity;
@@ -45,10 +50,12 @@ class OfflineHazardReport {
     this.zoneId,
     this.locationSource = 'GPS',
     this.status = ReportSyncStatus.pendingSync,
+    this.classificationStatus = ClassificationStatus.classificationPending,
     this.retryCount = 0,
     this.lastError,
     this.backendResponse,
     this.classificationResult,
+    this.classificationResultData,
     this.predictedClass,
     this.classificationConfidence,
     this.classificationSeverity,
@@ -63,12 +70,18 @@ class OfflineHazardReport {
   })  : createdAt = createdAt ?? capturedAt,
         updatedAt = updatedAt ?? capturedAt;
 
+  ReportSyncStatus get syncStatus => status;
+  String? get syncStatusValue => status.name;
+
   OfflineHazardReport copyWith({
     ReportSyncStatus? status,
+    ReportSyncStatus? syncStatus,
+    ClassificationStatus? classificationStatus,
     int? retryCount,
     String? lastError,
     String? backendResponse,
     String? classificationResult,
+    FieldClassificationResult? classificationResultData,
     String? predictedClass,
     double? classificationConfidence,
     String? classificationSeverity,
@@ -93,11 +106,13 @@ class OfflineHazardReport {
         state: state ?? this.state,
         zoneId: zoneId ?? this.zoneId,
         locationSource: locationSource ?? this.locationSource,
-        status: status ?? this.status,
+        status: status ?? syncStatus ?? this.status,
+        classificationStatus: classificationStatus ?? this.classificationStatus,
         retryCount: retryCount ?? this.retryCount,
-        lastError: lastError,
+        lastError: lastError ?? this.lastError,
         backendResponse: backendResponse ?? this.backendResponse,
         classificationResult: classificationResult ?? this.classificationResult,
+        classificationResultData: classificationResultData ?? this.classificationResultData,
         predictedClass: predictedClass ?? this.predictedClass,
         classificationConfidence: classificationConfidence ?? this.classificationConfidence,
         classificationSeverity: classificationSeverity ?? this.classificationSeverity,
@@ -124,15 +139,20 @@ class OfflineHazardReport {
         'zone_id': zoneId,
         'location_source': locationSource,
         'status': status.name,
+        'classification_status': classificationStatus.name.toUpperCase(),
         'retry_count': retryCount,
         'last_error': lastError,
         'backend_response': backendResponse,
-        'classification_result': classificationResult,
-        'predicted_class': predictedClass,
-        'classification_confidence': classificationConfidence,
-        'classification_severity': classificationSeverity,
-        'classifier_model_version': classifierModelVersion,
-        'classified_at': classifiedAt?.toUtc().toIso8601String(),
+        'classification_result': classificationResult ?? classificationResultData?.encode(),
+        'predicted_class': predictedClass ?? classificationResultData?.predictedClass,
+        'classification_confidence': classificationConfidence ?? classificationResultData?.confidence,
+        'classification_severity': classificationSeverity ?? classificationResultData?.severity,
+        'classifier_model_version': classifierModelVersion ?? classificationResultData?.modelVersion,
+        'classified_at': classifiedAt != null
+            ? classifiedAt!.toUtc().toIso8601String()
+            : (classificationResultData == null
+                ? null
+                : DateTime.tryParse(classificationResultData!.processedAt)?.toUtc().toIso8601String()),
         'lifecycle_status': lifecycleStatus,
         'confidence': confidence,
         'alert_status': alertStatus,
@@ -143,6 +163,12 @@ class OfflineHazardReport {
 
   factory OfflineHazardReport.fromMap(Map<String, Object?> map) {
     final capturedAt = DateTime.parse(map['captured_at']! as String);
+    final rawStatus = (map['status'] as String?) ?? (map['sync_status'] as String?);
+    final rawClassificationStatus = (map['classification_status'] as String?) ?? 'CLASSIFICATION_PENDING';
+    final classificationJson = map['classification_result'] as String?;
+    final parsedClassification = classificationJson != null && classificationJson.isNotEmpty
+        ? FieldClassificationResult.fromJson(jsonDecode(classificationJson) as Map<String, dynamic>)
+        : null;
     return OfflineHazardReport(
       reportId: map['report_id']! as String,
       hazardType: HazardType.values.byName(map['hazard_type']! as String),
@@ -155,16 +181,19 @@ class OfflineHazardReport {
       state: map['state'] as String? ?? 'sikkim',
       zoneId: map['zone_id'] as String?,
       locationSource: map['location_source'] as String? ?? 'GPS',
-      status: ReportSyncStatus.values.byName(map['status']! as String),
+      status: rawStatus == null ? ReportSyncStatus.pendingSync : ReportSyncStatus.values.byName(rawStatus.toLowerCase() == 'pending' ? 'pendingSync' : rawStatus),
+      classificationStatus: _classificationStatusFromDb(rawClassificationStatus),
       retryCount: (map['retry_count'] as num?)?.toInt() ?? 0,
       lastError: map['last_error'] as String?,
       backendResponse: map['backend_response'] as String?,
-      classificationResult: map['classification_result'] as String?,
-      predictedClass: map['predicted_class'] as String?,
-      classificationConfidence: (map['classification_confidence'] as num?)?.toDouble(),
-      classificationSeverity: map['classification_severity'] as String?,
-      classifierModelVersion: map['classifier_model_version'] as String?,
-      classifiedAt: DateTime.tryParse(map['classified_at'] as String? ?? ''),
+      classificationResult: classificationJson,
+      classificationResultData: parsedClassification,
+      predictedClass: map['predicted_class'] as String? ?? parsedClassification?.predictedClass,
+      classificationConfidence: (map['classification_confidence'] as num?)?.toDouble() ?? parsedClassification?.confidence,
+      classificationSeverity: map['classification_severity'] as String? ?? parsedClassification?.severity,
+      classifierModelVersion: map['classifier_model_version'] as String? ?? parsedClassification?.modelVersion,
+      classifiedAt: DateTime.tryParse(map['classified_at'] as String? ?? '') ??
+          (parsedClassification == null ? null : DateTime.tryParse(parsedClassification.processedAt)),
       lifecycleStatus: map['lifecycle_status'] as String?,
       confidence: (map['confidence'] as num?)?.toDouble(),
       alertStatus: map['alert_status'] as String?,
@@ -172,6 +201,23 @@ class OfflineHazardReport {
       createdAt: DateTime.tryParse(map['created_at'] as String? ?? '') ?? capturedAt,
       updatedAt: DateTime.tryParse(map['updated_at'] as String? ?? '') ?? capturedAt,
     );
+  }
+
+  static ClassificationStatus _classificationStatusFromDb(String? status) {
+    switch ((status ?? 'CLASSIFICATION_PENDING').toUpperCase()) {
+      case 'NOT_CLASSIFIED':
+        return ClassificationStatus.notClassified;
+      case 'CLASSIFICATION_PENDING':
+        return ClassificationStatus.classificationPending;
+      case 'CLASSIFIED':
+        return ClassificationStatus.classified;
+      case 'CLASSIFICATION_FAILED':
+        return ClassificationStatus.classificationFailed;
+      case 'CLASSIFICATION_UNAVAILABLE':
+        return ClassificationStatus.classificationUnavailable;
+      default:
+        return ClassificationStatus.classificationPending;
+    }
   }
 
   String toJson() => jsonEncode(toMap());

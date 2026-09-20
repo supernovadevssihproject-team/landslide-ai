@@ -136,6 +136,14 @@ class OfflineReportsPage extends StatelessWidget {
               ...reports.map((report) {
                 final isSynced = report.status == ReportSyncStatus.synced || report.status == ReportSyncStatus.analyzed;
                 final statusColor = isSynced ? TerraTheme.primary : TerraTheme.warning;
+                final aiStatus = report.classificationStatus;
+                final aiLabel = switch (aiStatus) {
+                  ClassificationStatus.classified => 'AI: ${report.predictedClass ?? 'CLASSIFIED'}',
+                  ClassificationStatus.classificationPending => 'AI: PENDING',
+                  ClassificationStatus.classificationUnavailable => 'AI: UNAVAILABLE',
+                  ClassificationStatus.classificationFailed => 'AI: FAILED',
+                  _ => 'AI: PENDING',
+                };
 
                 return Container(
                   margin: const EdgeInsets.only(bottom: 12),
@@ -217,11 +225,9 @@ class OfflineReportsPage extends StatelessWidget {
                                   ),
                                   const Spacer(),
                                   Text(
-                                    report.classificationResult != null
-                                        ? 'AI: ${report.classificationResult}'
-                                        : (isSynced ? 'AI Verified' : 'Queued'),
+                                    aiLabel,
                                     style: TextStyle(
-                                      color: isSynced ? TerraTheme.primary : TerraTheme.warning,
+                                      color: aiStatus == ClassificationStatus.classified ? TerraTheme.primary : TerraTheme.warning,
                                       fontSize: 11,
                                       fontWeight: FontWeight.w600,
                                     ),
