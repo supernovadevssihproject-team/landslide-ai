@@ -1,32 +1,40 @@
-"""Evaluation entry point for the field report classifier.
+"""Field report classifier API surface."""
 
-When the model is absent or untrained, the script reports an honest status rather
-than fabricating results.
-"""
 from __future__ import annotations
 
-import json
-from pathlib import Path
+from typing import Optional
 
-ROOT = Path(__file__).resolve().parent
-MODEL_FILE = ROOT / "artifacts" / "field_report_classifier_v2.onnx"
+from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 
+from backend.ml.field_report_classifier import classify_field_image
 
-def main() -> None:
-    metrics = {
-        "status": "NOT MEASURED",
-        "accuracy": "NOT MEASURED",
-        "precision": "NOT MEASURED",
-        "recall": "NOT MEASURED",
-        "f1": "NOT MEASURED",
-        "confusion_matrix": "NOT MEASURED",
-        "notes": "The ONNX artifact is not present in this repository snapshot, so no real evaluation data exists.",
-    }
-    if not MODEL_FILE.exists():
-        print(json.dumps(metrics, indent=2))
-        return
-    print(json.dumps({"status": "NOT MEASURED", "model_present": True}, indent=2))
+router = APIRouter(prefix="/api/reports", tags=["reports"])
 
 
-if __name__ == "__main__":
-    main()
+@router.post("/classify")
+async def classify_report(
+    report_id: str = Form(...),
+    image: UploadFile = File(...),
+    hazard_type: Optional[str] = Form(None),
+    latitude: Optional[float] = Form(None),
+    longitude: Optional[float] = Form(None),
+    state: Optional[str] = Form(None),
+    zone_id: Optional[str] = Form(None),
+    description: Optional[str] = Form(None),
+    timestamp: Optional[str] = Form(None),
+):
+    """Classify field evidence only; this never calls location-risk inference."""
+    if not image.content_type or not image.content_type.startswith("image/"):
+        raise HTTPException(status_code=415, detail="image must be an image upload")
+    payload = await image.read()
+    if not payload:
+        raise HTTPException(status_code=400, detail="image is empty")
+    try:
+        return classify_field_image(report_id, payload, hazard_type)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail="classification unavailable/error") from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail="field image classification failed") from exc
+

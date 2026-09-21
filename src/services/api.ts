@@ -291,57 +291,54 @@ export const LandslideApi = {
     description: string;
     imageUrl?: string;
     coordinates?: string;
-  }): Promise<CrowdsourceReport> {
-    return fetchJson<CrowdsourceReport>(
-      '/api/reports/submit',
-      {
+    latitude?: number;
+    longitude?: number;
+    reportId?: string;
+    hazardType?: string;
+    imageFile?: File;
+  }): Promise<{
+    report_id: string;
+    predicted_class: string;
+    confidence: number;
+    severity: string;
+    model_version: string;
+    processed_at: string;
+  }> {
+    if (payload.imageFile) {
+      const formData = new FormData();
+      formData.append('report_id', payload.reportId || `web-${Date.now()}`);
+      formData.append('hazard_type', payload.hazardType || 'landslide');
+      formData.append('state', payload.state || 'sikkim');
+      formData.append('description', payload.description || '');
+      formData.append('timestamp', new Date().toISOString());
+      if (payload.latitude !== undefined) formData.append('latitude', String(payload.latitude));
+      if (payload.longitude !== undefined) formData.append('longitude', String(payload.longitude));
+      if (payload.location) formData.append('location', payload.location);
+      formData.append('image', payload.imageFile);
+
+      const res = await fetch(`${BASE_URL}/api/reports/classify`, {
         method: 'POST',
-        body: JSON.stringify(payload),
-      },
-      {
-        id: `rep-${Date.now()}`,
-        code: `SK-FLD-${Date.now().toString().slice(-4)}`,
-        location: payload.location,
-        subDivision: payload.subDivision || 'Mangan Sub-Division',
-        state: (payload.state as NerState) || 'sikkim',
-        timeAgo: 'Just now',
-        reportedTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        urgency: 'CRITICAL',
-        verifiedBy: 'AI-YOLOv8 Geotech Vision (Edge Verified)',
-        imageUrl: payload.imageUrl || CROWDSOURCE_REPORTS[0].imageUrl,
-        imageAlt: 'Field report photo',
-        cvRisk: '98.4%',
-        cvLabel: 'Active Rotational Shear Scarp with Tension Fissure',
-        cvModel: 'YOLOv8-Geotech-NER v4.2',
-        summary: 'Crown shear scarp and tension cracks verified by edge AI.',
-        description: payload.description,
-        coordinates: payload.coordinates || '27.2388° N, 88.5012° E',
-        elevation: '1,420 m',
-        slope: '48.5°',
-        precipitation: '84 mm/h (IMD Extreme Influx)',
-        exifStatus: 'GPS & Cryptographic Hash Verified (GSAT Uplink)',
-        audioLanguage: 'Nepali (Eastern Sub-dialect)',
-        audioDuration: '0:24',
-        vernacularText: payload.description,
-        englishTranslation: payload.description,
-        sensorCorroboration: {
-          sensorId: 'SN-SK-01',
-          rate: '+18 kPa/hr PWP Spike',
-          thresholdMessage: 'Breached 280 kPa critical shear failure threshold',
-        },
-        boundingBoxes: [
-          {
-            label: 'Crown Shear Scarp (45m)',
-            confidence: '98.4%',
-            top: '12%',
-            left: '18%',
-            width: '64%',
-            height: '32%',
-            color: 'error',
-          },
-        ],
+        body: formData,
+      });
+
+      if (!res.ok) {
+        throw new ApiError(res.status, res.statusText);
       }
-    );
+
+      return (await res.json()) as {
+        report_id: string;
+        predicted_class: string;
+        confidence: number;
+        severity: string;
+        model_version: string;
+        processed_at: string;
+      };
+    }
+
+    return fetchJson('/api/reports/submit', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
   },
 
   async escalateReport(reportId: string): Promise<{ status: string; message: string }> {

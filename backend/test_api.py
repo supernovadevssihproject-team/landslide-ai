@@ -118,6 +118,36 @@ def test_hazard_zones():
     assert any(z["id"] == "zone-sk-01" for z in zones)
     print(f"[PASS] Hazard zones endpoint passed ({len(zones)} zones loaded)")
 
+
+def test_field_classifier_requires_v2_onnx_artifact():
+    from backend.ml.field_report_classifier import classify_field_image
+
+    image_bytes = b"\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x00\x00\x01\x00\x01\x00\x00\xff\xdb\x00C\x00\x08\x06\x06\x07\x06\x05\x08\x07\x07\x07\t\x09\x09\n\x0c\x14\r\x0c\x0b\x0b\x0c\x19\x12\x13\x0f\x14\x1d\x1a\x1f\x1e\x1d\x1a\x1c\x1c $.' ",#\x1c\x1c(7),01444\x1f'9=82<.342\x ff\xc0\x00\x11\x08\x00\x01\x00\x01\x03\x01\x22\x00\x02\x11\x01\x03\x11\x01\xff\xc4\x00\x14\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xc4\x00\x14\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xda\x00\x08\x01\x01\x00\x00\x3f\x00\x3a\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\xff\xd9"
+    try:
+        classify_field_image("report-v2-test", image_bytes)
+        raise AssertionError("v1 fallback should not be used when the v2 ONNX artifact is missing")
+    except RuntimeError as exc:
+        assert "classification unavailable/error" in str(exc)
+        print("[PASS] v2 classifier enforces ONNX artifact requirement without falling back to v1")
+
+
+def test_field_report_dataset_guard_rejects_invalid_split_coverage():
+    from pathlib import Path
+
+    from backend.ml.train_field_report_classifier import validate_split_coverage
+
+    dataset_root = Path(__file__).resolve().parent / "ml" / "datasets" / "field_report_classifier"
+    assert dataset_root.exists(), "field_report_classifier dataset directory is missing"
+
+    try:
+        validate_split_coverage(dataset_root)
+        raise AssertionError("invalid field-report splits should be rejected before training")
+    except ValueError as exc:
+        text = str(exc)
+        assert "roadBlockage" in text or "flood" in text or "Invalid field-report dataset split" in text
+        print("[PASS] invalid field-report splits are rejected before training begins")
+
+
 def test_susceptibility_calculation():
     payload = {
         "slope_deg": 48.5,

@@ -29,6 +29,7 @@ export const FieldReportModal: React.FC<FieldReportModalProps> = ({
   theme = 'dark',
 }) => {
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
   const [fileSize, setFileSize] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -63,6 +64,7 @@ export const FieldReportModal: React.FC<FieldReportModalProps> = ({
       return;
     }
 
+    setSelectedFile(file);
     setFileName(file.name);
     setFileSize((file.size / 1024 / 1024 >= 1) 
       ? `${(file.size / 1024 / 1024).toFixed(2)} MB`
@@ -116,6 +118,7 @@ export const FieldReportModal: React.FC<FieldReportModalProps> = ({
   };
 
   const handleRemovePhoto = () => {
+    setSelectedFile(null);
     setSelectedPhoto(null);
     setFileName(null);
     setFileSize(null);
@@ -137,24 +140,38 @@ export const FieldReportModal: React.FC<FieldReportModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!selectedFile) {
+      setFileError('Please select a field photo before submitting.');
+      return;
+    }
+
     setIsSubmitting(true);
+    setFileError(null);
+
     try {
-      const res = await LandslideApi.submitReport({
+      const result = await LandslideApi.submitReport({
         location: locationName,
         description,
-        imageUrl: selectedPhoto || undefined,
+        state: 'sikkim',
+        latitude: 27.2388,
+        longitude: 88.5012,
+        hazardType: 'landslide',
+        reportId: `web-${Date.now()}`,
+        imageFile: selectedFile,
       });
+
+      const message =
+        `AI classification: ${result.predicted_class} | confidence ${result.confidence.toFixed(4)} | severity ${result.severity} | model ${result.model_version}`;
+
       setIsSubmitting(false);
       onClose();
-      onSubmitSuccess(
-        `Report ${res.code} verified by ${res.cvModel}. ${res.cvLabel} (${res.cvRisk}). Queued for Duty Officer triage.`
-      );
-    } catch {
+      onSubmitSuccess(message);
+    } catch (error) {
       setIsSubmitting(false);
+      const detail = error instanceof Error ? error.message : 'Unknown API error';
+      setFileError(`Classification failed: ${detail}`);
       onClose();
-      onSubmitSuccess(
-        'Citizen report uploaded to LEWS database. YOLOv8 Geotech Vision verified tension fissures. Queued for Duty Officer triage.'
-      );
+      onSubmitSuccess(`AI classification failed: ${detail}`);
     }
   };
 

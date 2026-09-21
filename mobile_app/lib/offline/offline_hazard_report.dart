@@ -4,7 +4,7 @@ import 'terraguard_database_models.dart';
 
 enum ReportSyncStatus { draft, pendingSync, syncing, uploading, synced, processing, analyzed, syncFailed }
 enum ClassificationStatus { notClassified, classificationPending, classified, classificationFailed, classificationUnavailable }
-enum HazardType { landslide, rockfall, roadBlockage, slopeFailure, flood, other }
+enum HazardType { landslide, roadBlockage, flood, other }
 
 class OfflineHazardReport {
   final String reportId;

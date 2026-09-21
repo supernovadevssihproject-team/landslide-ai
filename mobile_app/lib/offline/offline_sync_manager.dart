@@ -163,7 +163,7 @@ class OfflineSyncManager {
     final severity = payload['severity']?.toString();
     final modelVersion = payload['model_version']?.toString();
     final processedAt = payload['processed_at']?.toString();
-    final validClassification = const ['landslide', 'rockfall', 'roadBlockage', 'slopeFailure', 'flood', 'other']
+    final validClassification = const ['landslide', 'roadBlockage', 'flood', 'other']
         .contains(predictedClass);
     if (reportId == null || predictedClass == null || confidence is! num || severity == null || modelVersion == null || processedAt == null || !validClassification) {
       throw const FormatException('Invalid classification payload');

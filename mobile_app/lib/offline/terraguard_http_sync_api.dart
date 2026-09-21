@@ -69,7 +69,7 @@ class TerraGuardHttpSyncApi implements TerraGuardSyncApi {
     final severity = parsed['severity']?.toString();
     final modelVersion = parsed['model_version']?.toString();
     final processedAt = parsed['processed_at']?.toString();
-    final validPrediction = const ['landslide', 'rockfall', 'roadBlockage', 'slopeFailure', 'flood', 'other']
+    final validPrediction = const ['landslide', 'roadBlockage', 'flood', 'other']
         .contains(predictedClass);
     if (reportId == null || predictedClass == null || confidence is! num || severity == null || modelVersion == null || processedAt == null || !validPrediction) {
       throw const FormatException('Malformed classification response.');
