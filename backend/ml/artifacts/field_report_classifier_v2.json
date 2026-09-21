@@ -1,143 +1,3 @@
-<<<<<<< HEAD
-"""ONNX-backed v2 field image classifier.
-
-The production contract is preserved:
-    classify_field_image(report_id, image_bytes, hazard_type=None)
-
-The model is not trained automatically and will fail explicitly if the ONNX artifact
-is missing or cannot be loaded, so the API never silently descends to the old v1
-heuristic classifier.
-"""
-from __future__ import annotations
-
-import json
-from datetime import datetime, timezone
-from io import BytesIO
-from pathlib import Path
-from typing import Optional
-
-import numpy as np
-from PIL import Image, UnidentifiedImageError
-
-try:
-    import onnxruntime as ort
-except ImportError as exc:  # pragma: no cover - dependency is declared in requirements
-    raise RuntimeError("onnxruntime is required for v2 classification") from exc
-
-MODEL_DIR = Path(__file__).resolve().parent
-CONFIG_PATH = MODEL_DIR / "artifacts" / "field_report_classifier_v2.json"
-MODEL_PATH = MODEL_DIR / "artifacts" / "field_report_classifier_v2.onnx"
-
-
-def _softmax(values):
-    values = np.asarray(values, dtype=np.float32)
-    values = values - np.max(values)
-    exps = np.exp(values)
-    total = np.sum(exps)
-    if total == 0:
-        return np.full_like(values, 1.0 / values.size, dtype=np.float32)
-    return (exps / total).astype(np.float32)
-
-
-class FieldReportClassifierV2:
-    def __init__(self, model_path: Optional[Path] = None, config_path: Optional[Path] = None):
-        self.config_path = config_path or CONFIG_PATH
-        self.model_path = model_path or MODEL_PATH
-
-        if not self.config_path.exists():
-            raise FileNotFoundError("field_report_classifier_v2.json is missing")
-        if not self.model_path.exists():
-            raise FileNotFoundError("field_report_classifier_v2.onnx is missing")
-
-        with self.config_path.open("r", encoding="utf-8") as handle:
-            self.config = json.load(handle)
-
-        self.classes = list(self.config.get("classes", []))
-        if not self.classes:
-            raise ValueError("model configuration does not define any classes")
-
-        self.threshold = float(self.config.get("threshold", 0.55))
-        self.image_size = tuple(self.config.get("image_size", "224x224").split("x"))
-        self.image_size = tuple(int(part) for part in self.image_size if part)
-        if len(self.image_size) != 2:
-            self.image_size = (224, 224)
-
-        self.session = ort.InferenceSession(
-            str(self.model_path),
-            providers=["CPUExecutionProvider"],
-        )
-        self._input_name = self.session.get_inputs()[0].name
-        self._output_name = self.session.get_outputs()[0].name
-
-    def preprocess(self, image_bytes: bytes) -> np.ndarray:
-        try:
-            with Image.open(BytesIO(image_bytes)) as source:
-                source.verify()
-            with Image.open(BytesIO(image_bytes)) as source:
-                image = source.convert("RGB")
-        except (UnidentifiedImageError, OSError, ValueError) as exc:
-            raise ValueError("image must be a valid JPEG, PNG, or WebP file") from exc
-
-        image = image.resize(self.image_size, Image.Resampling.BILINEAR)
-        array = np.asarray(image, dtype=np.float32) / 255.0
-        if array.ndim == 2:
-            array = np.repeat(array[:, :, None], 3, axis=2)
-        array = np.transpose(array, (2, 0, 1))
-        array = np.expand_dims(array, axis=0)
-        return array.astype(np.float32)
-
-    def predict(self, image_bytes: bytes) -> dict:
-        input_array = self.preprocess(image_bytes)
-        outputs = self.session.run([self._output_name], {self._input_name: input_array})
-        logits = np.asarray(outputs[0])
-        if logits.ndim == 3:
-            logits = logits[0]
-        if logits.ndim == 2 and logits.shape[0] == 1:
-            logits = logits[0]
-        if logits.shape[0] != len(self.classes):
-            raise ValueError(
-                f"unexpected output dimension {logits.shape}; expected {len(self.classes)} class scores"
-            )
-
-        probabilities = _softmax(logits)
-        index = int(np.argmax(probabilities))
-        predicted_class = self.classes[index]
-        confidence = float(probabilities[index])
-        if confidence < self.threshold:
-            predicted_class = "other"
-            severity = "UNKNOWN"
-        elif confidence >= 0.80:
-            severity = "HIGH"
-        elif confidence >= 0.65:
-            severity = "MEDIUM"
-        else:
-            severity = "LOW"
-
-        return {
-            "report_id": "",
-            "predicted_class": predicted_class,
-            "confidence": round(float(confidence), 4),
-            "severity": severity,
-            "model_version": self.config.get("model_version", "v2"),
-            "processed_at": datetime.now(timezone.utc).isoformat(),
-        }
-
-
-def classify_field_image(report_id: str, image_bytes: bytes, hazard_type: Optional[str] = None) -> dict:
-    """Classify a field image using the ONNX v2 model.
-
-    `hazard_type` is accepted for backwards compatibility with mobile and API
-    payloads, but it is not used to silently choose a v1 heuristic fallback.
-    """
-    del hazard_type
-    try:
-        classifier = FieldReportClassifierV2()
-        result = classifier.predict(image_bytes)
-        result["report_id"] = report_id
-        return result
-    except (FileNotFoundError, RuntimeError, ValueError) as exc:
-        raise RuntimeError("classification unavailable/error") from exc
-=======
 {
   "model_version": "v2",
   "model_type": "YOLO-classification-ONNX",
@@ -156,30 +16,10 @@ def classify_field_image(report_id: str, image_bytes: bytes, hazard_type: Option
     "recall": 0.4444444444444444,
     "f1": 0.446953781512605,
     "confusion_matrix": [
-      [
-        7,
-        0,
-        0,
-        2
-      ],
-      [
-        0,
-        0,
-        0,
-        1
-      ],
-      [
-        1,
-        0,
-        0,
-        1
-      ],
-      [
-        0,
-        0,
-        0,
-        54
-      ]
+      [7, 0, 0, 2],
+      [0, 0, 0, 1],
+      [1, 0, 0, 1],
+      [0, 0, 0, 54]
     ],
     "classes": [
       "landslide",
@@ -189,4 +29,4 @@ def classify_field_image(report_id: str, image_bytes: bytes, hazard_type: Option
     ]
   }
 }
->>>>>>> ff19af3 (Integrate real field-photo AI into web and mobile)
+
