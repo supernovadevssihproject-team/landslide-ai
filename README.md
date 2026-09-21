@@ -1,454 +1,1580 @@
 # TerraGuard
-## AI-Powered Landslide Early Warning and Spatial Risk Monitoring System
-> **Current repository status:** This README reflects the current TerraGuard web platform, FastAPI backend, Flutter mobile application, offline-first field reporting, TerraBot assistant, GIS/risk intelligence, alert workflows, and the V2 field-photo AI backend contract. The V2 field-photo model itself is still pending legitimate dataset acquisition and training.
 
-**Smart India Hackathon (SIH) 2026**  
-**Problem Statement: 26001**
-TerraGuard is an integrated landslide risk monitoring, susceptibility assessment, spatial intelligence, and early-warning prototype designed for the North Eastern Region of India. The system combines historical landslide inventories, geospatial and environmental datasets, machine learning, GIS-based visualization, terrain analysis, live meteorological and seismic integrations, citizen reporting, and alert workflows within a unified application.
-The current prototype extends the original TerraGuard platform with synchronized geographic state across map, weather, seismic, hill-region, search, and 3D terrain workflows.
+## AI-Powered Landslide Risk, Spatial Intelligence, Field Reporting & Early-Warning Platform
+
+**Smart India Hackathon 2026 · Problem Statement 26001**
+
+**Repository:** https://github.com/supernovadevssihproject-team/landslide-ai
+
+TerraGuard is an integrated disaster-intelligence prototype for landslide-risk monitoring and field intelligence in the North Eastern Region of India. It combines geospatial risk assessment, terrain and environmental analysis, weather and seismic context, field reporting, AI-assisted field-image classification, offline-first mobile reporting, alerts, emergency workflows, and TerraBot decision support.
+
 ---
+
 ## Table of Contents
-1. [Project Overview](#project-overview)
-2. [Problem Context](#problem-context)
-3. [Proposed Solution](#proposed-solution)
-4. [Key Objectives](#key-objectives)
-5. [System Features](#system-features)
-6. [Application Modules](#application-modules)
-7. [New Prototype Additions](#new-prototype-additions)
-8. [System Architecture](#system-architecture)
-9. [Data Pipeline](#data-pipeline)
-10. [Machine Learning Pipeline](#machine-learning-pipeline)
-11. [Datasets](#datasets)
-12. [Feature Engineering](#feature-engineering)
-13. [Machine Learning Model](#machine-learning-model)
-14. [Seismic and Earthquake Intelligence](#seismic-and-earthquake-intelligence)
-15. [Geographic State and Synchronization](#geographic-state-and-synchronization)
-16. [Weather and Environmental Telemetry](#weather-and-environmental-telemetry)
-17. [Backend and API Architecture](#backend-and-api-architecture)
-18. [Prediction Workflow](#prediction-workflow)
-19. [Risk Classification](#risk-classification)
-20. [Technology Stack](#technology-stack)
-21. [Project Structure](#project-structure)
-22. [Installation and Setup](#installation-and-setup)
-23. [Prototype Notes and Data Integrity](#prototype-notes-and-data-integrity)
-24. [Project Status](#project-status)
-25. [Future Scope](#future-scope)
-26. [Team](#team)
----
-## Project Overview
-Landslides pose significant risks to communities, transportation infrastructure, public assets, and remote settlements, particularly in mountainous and high-rainfall regions. Effective landslide risk assessment requires the integration of terrain characteristics, environmental conditions, historical events, seismic activity, and spatial information.
-TerraGuard provides a unified platform for:
-- Landslide susceptibility assessment using machine learning
-- GIS-based visualization of risk and environmental layers
-- Terrain and land-surface analysis
-- Historical landslide visualization
-- Location-based risk assessment
-- Rainfall and environmental trigger monitoring
-- Live and recent earthquake monitoring
-- Earthquake-derived ground-motion indicators
-- Hills and mountain region discovery
-- 3D terrain exploration
-- Citizen and field incident reporting
-- Alert and emergency response workflows
-- API-based communication between machine learning and application layers
-Flutter mobile application for field users
-Offline-first field reporting with local SQLite persistence and deferred synchronization
-GPS-based field location capture and camera/gallery image capture
-TerraBot multilingual operational assistant with navigation actions
-Risk simulation and ML pipeline inspection tools
-Emergency SOS, shelters, tactical units, alerts, CAP and dispatch workflows
-The project combines a completed application with a geospatial machine learning pipeline built from processed regional datasets.
----
-## Problem Context
-Landslide occurrence is influenced by multiple environmental and geographical factors. These factors may include:
-- Terrain characteristics
-- Slope
-- Elevation
-- Aspect
-- Soil conditions
-- Land-cover characteristics
-- Rainfall and triggering conditions
-- Historical landslide occurrence
-- Seismic activity and ground motion
-Relevant data are commonly distributed across different sources, formats, coordinate systems, and spatial resolutions. A practical landslide monitoring system therefore requires data preparation, validation, spatial feature extraction, machine learning, and an accessible application layer.
-TerraGuard addresses this requirement by organizing these components into an integrated data-to-decision workflow.
----
-## Proposed Solution
-TerraGuard follows the architecture below:
+
+### Project Overview
+1. [Platform Overview](#1-platform-overview)
+   - [What TerraGuard Does](#what-terraguard-does)
+   - [Core Objectives](#core-objectives)
+   - [Platform Components](#platform-components)
+   - [Two Intelligence Pipelines](#two-intelligence-pipelines)
+2. [Problem & Objectives](#2-problem--objectives)
+   - [Problem Context](#problem-context)
+   - [Project Objectives](#project-objectives)
+   - [Target Users](#target-users)
+
+### Architecture & Application
+3. [Architecture](#3-architecture)
+   - [High-Level Architecture](#high-level-architecture)
+   - [Web Architecture](#web-architecture)
+   - [Backend Architecture](#backend-architecture)
+   - [Mobile Architecture](#mobile-architecture)
+   - [Data Flow](#data-flow)
+   - [Service Boundaries](#service-boundaries)
+4. [Web Platform](#4-web-platform)
+   - [Home](#home)
+   - [Risk Dashboard](#risk-dashboard)
+   - [Risk Details](#risk-details)
+   - [Spatial GIS Command](#spatial-gis-command)
+   - [Alerts](#alerts)
+   - [Emergency SOS](#emergency-sos)
+   - [Hills & Mountain Regions](#hills--mountain-regions)
+   - [Earthquake Monitor](#earthquake-monitor)
+   - [3D Terrain](#3d-terrain)
+   - [Temporal LSTM Predictor](#temporal-lstm-predictor)
+   - [Landslide Risk Simulator](#landslide-risk-simulator)
+   - [Crowdsource / CV Verification](#crowdsource--cv-verification)
+   - [Broadcast & Dispatch](#broadcast--dispatch)
+   - [ML Pipeline Command](#ml-pipeline-command)
+   - [TerraBot](#terrabot)
+   - [About](#about)
+5. [Web User Manual](#5-web-user-manual)
+   - [Starting the Web Application](#starting-the-web-application)
+   - [Navigation](#navigation)
+   - [Viewing Risk](#viewing-risk)
+   - [Using GIS](#using-gis)
+   - [Using 3D Terrain](#using-3d-terrain-1)
+   - [Monitoring Weather](#monitoring-weather)
+   - [Monitoring Earthquakes](#monitoring-earthquakes)
+   - [Submitting a Field Report](#submitting-a-field-report)
+   - [Using Alerts](#using-alerts)
+   - [Using Emergency SOS](#using-emergency-sos-1)
+   - [Using TerraBot](#using-terrabot)
+   - [Troubleshooting Web Workflows](#troubleshooting-web-workflows)
+
+### Reporting, Mobile & Offline
+6. [Field Reporting & AI](#6-field-reporting--ai)
+   - [Field Report Lifecycle](#field-report-lifecycle)
+   - [Image Upload](#image-upload)
+   - [Location Metadata](#location-metadata)
+   - [Report Persistence](#report-persistence)
+   - [Field-Photo AI V2](#field-photo-ai-v2)
+   - [Classification Output](#classification-output)
+   - [Classification Limitations](#classification-limitations)
+7. [Mobile Application](#7-mobile-application)
+   - [Flutter Application](#flutter-application)
+   - [Mobile Features](#mobile-features)
+   - [GPS and Location Risk](#gps-and-location-risk)
+   - [Camera and Gallery](#camera-and-gallery)
+   - [My Reports](#my-reports)
+   - [Emergency / SOS](#emergency--sos)
+   - [Connectivity-Aware Operation](#connectivity-aware-operation)
+8. [Mobile User Manual](#8-mobile-user-manual)
+   - [Installation](#installation)
+   - [First Launch](#first-launch)
+   - [Checking Location Risk](#checking-location-risk)
+   - [Creating a Report](#creating-a-report)
+   - [Saving a Report Offline](#saving-a-report-offline)
+   - [Synchronizing Reports](#synchronizing-reports)
+   - [Viewing Classification](#viewing-classification)
+   - [Viewing My Reports](#viewing-my-reports)
+   - [Using Emergency SOS](#using-emergency-sos-2)
+9. [Offline-First Design](#9-offline-first-design)
+   - [Offline Architecture](#offline-architecture)
+   - [SQLite Storage](#sqlite-storage)
+   - [Report States](#report-states)
+   - [AI Classification States](#ai-classification-states)
+   - [Synchronization Flow](#synchronization-flow)
+   - [Failure Handling](#failure-handling)
+   - [Offline Data Integrity](#offline-data-integrity)
+
+### Machine Learning & Geospatial Intelligence
+10. [Risk & ML System](#10-risk--ml-system)
+    - [Classical ML Location-Risk Model](#classical-ml-location-risk-model)
+    - [Training Inputs](#training-inputs)
+    - [Feature Set](#feature-set)
+    - [Extra Trees Classifier](#extra-trees-classifier)
+    - [Inference Pipeline](#inference-pipeline)
+    - [Seismic Adjustment](#seismic-adjustment)
+    - [Final Risk Score](#final-risk-score)
+    - [Field-Photo Classifier Separation](#field-photo-classifier-separation)
+11. [GIS, Terrain, Weather & Seismic](#11-gis-terrain-weather--seismic)
+    - [GIS Risk Map](#gis-risk-map)
+    - [DEM / Elevation](#dem--elevation)
+    - [Slope](#slope)
+    - [Aspect](#aspect)
+    - [Soil](#soil)
+    - [Land Cover](#land-cover)
+    - [Rainfall](#rainfall)
+    - [Weather Telemetry](#weather-telemetry)
+    - [Earthquake Monitoring](#earthquake-monitoring)
+    - [3D Terrain](#3d-terrain-1)
+12. [TerraBot](#12-terrabot)
+    - [Purpose](#purpose)
+    - [Supported Languages](#supported-languages)
+    - [Supported Questions](#supported-questions)
+    - [Navigation Actions](#navigation-actions)
+    - [Grounding and Safety](#grounding-and-safety)
+13. [Alerts & Emergency](#13-alerts--emergency)
+    - [Alerts](#alerts-1)
+    - [Emergency SOS](#emergency-sos-2)
+    - [Broadcast & Dispatch](#broadcast--dispatch-1)
+    - [SMS Demo Mode](#sms-demo-mode)
+    - [Safety Boundaries](#safety-boundaries)
+
+### Backend, Data & APIs
+14. [Backend & API](#14-backend--api)
+    - [FastAPI Backend](#fastapi-backend)
+    - [Backend Routers](#backend-routers)
+    - [Location-Risk Endpoints](#location-risk-endpoints)
+    - [Field Reporting Endpoints](#field-reporting-endpoints)
+    - [AI Classification Endpoint](#ai-classification-endpoint)
+    - [ML Model Information](#ml-model-information)
+    - [Weather Endpoints](#weather-endpoints)
+    - [Alerts and Notification Endpoints](#alerts-and-notification-endpoints)
+    - [Chat / TerraBot Endpoints](#chat--terrabot-endpoints)
+    - [Health Checks](#health-checks)
+    - [Request / Response Contracts](#request--response-contracts)
+15. [Data Pipeline](#15-data-pipeline)
+    - [Data Sources](#data-sources)
+    - [Landslide Inventory](#landslide-inventory)
+    - [Rainfall Dataset](#rainfall-dataset)
+    - [DEM and Terrain Rasters](#dem-and-terrain-rasters)
+    - [Soil Dataset](#soil-dataset)
+    - [Land Cover Dataset](#land-cover-dataset)
+    - [Seismic Data](#seismic-data)
+    - [Feature Preparation](#feature-preparation)
+    - [Spatial Alignment](#spatial-alignment)
+    - [Data Validation](#data-validation)
+16. [Repository Structure](#16-repository-structure)
+    - [Root Structure](#root-structure)
+    - [Web Source](#web-source)
+    - [Backend Source](#backend-source)
+    - [Mobile Source](#mobile-source)
+    - [ML Artifacts](#ml-artifacts)
+    - [Documentation](#documentation)
+
+### Setup, Configuration & Quality
+17. [Installation](#17-installation)
+    - [Prerequisites](#prerequisites)
+    - [Clone the Repository](#clone-the-repository)
+    - [Install Web Dependencies](#install-web-dependencies)
+    - [Install Backend Dependencies](#install-backend-dependencies)
+    - [Install Flutter Dependencies](#install-flutter-dependencies)
+    - [Run the Development Stack](#run-the-development-stack)
+18. [Development Commands](#18-development-commands)
+    - [Web Commands](#web-commands)
+    - [Backend Commands](#backend-commands)
+    - [Mobile Commands](#mobile-commands)
+    - [ML Commands](#ml-commands)
+    - [Validation Commands](#validation-commands)
+19. [Configuration](#19-configuration)
+    - [Environment Variables](#environment-variables)
+    - [API Base URLs](#api-base-urls)
+    - [Android Emulator Networking](#android-emulator-networking)
+    - [CORS](#cors)
+    - [Model Artifact Configuration](#model-artifact-configuration)
+20. [Testing & Validation](#20-testing--validation)
+    - [Python Compilation](#python-compilation)
+    - [Backend API Tests](#backend-api-tests)
+    - [Web Lint](#web-lint)
+    - [Web Build](#web-build)
+    - [Flutter Analyze](#flutter-analyze)
+    - [Flutter Tests](#flutter-tests)
+    - [Git Diff Validation](#git-diff-validation)
+    - [End-to-End Smoke Testing](#end-to-end-smoke-testing)
+21. [Troubleshooting](#21-troubleshooting)
+    - [Web Cannot Reach Backend](#web-cannot-reach-backend)
+    - [Backend Port Conflict](#backend-port-conflict)
+    - [Mobile Cannot Reach Backend](#mobile-cannot-reach-backend)
+    - [Android Emulator Networking](#android-emulator-networking-1)
+    - [Offline Sync Problems](#offline-sync-problems)
+    - [Image Classification Problems](#image-classification-problems)
+    - [Missing ML Artifact](#missing-ml-artifact)
+    - [Database Problems](#database-problems)
+    - [SMS Provider Limitations](#sms-provider-limitations)
+
+### Transparency, Workflow & Project Information
+22. [Security & Safety](#22-security--safety)
+    - [Input Validation](#input-validation)
+    - [Image Handling](#image-handling)
+    - [API Safety](#api-safety)
+    - [AI Safety Boundaries](#ai-safety-boundaries)
+    - [Emergency Workflow Boundaries](#emergency-workflow-boundaries)
+23. [Dataset & Model Transparency](#23-dataset--model-transparency)
+    - [Classical Location-Risk ML Model](#classical-location-risk-ml-model)
+    - [Classical ML Dataset Categories](#classical-ml-dataset-categories)
+    - [Field-Photo AI Classifier V2](#field-photo-ai-classifier-v2)
+    - [Field-Photo Dataset](#field-photo-dataset)
+    - [Dataset Provenance](#dataset-provenance)
+    - [Model Interpretation](#model-interpretation)
+    - [Classical ML vs Field-Photo AI](#classical-ml-vs-field-photo-ai)
+24. [End-to-End Workflow](#24-end-to-end-workflow)
+    - [System Workflow](#system-workflow)
+    - [Field Reporting Workflow](#field-reporting-workflow)
+    - [Mobile Synchronization States](#mobile-synchronization-states)
+    - [Classical ML Location-Risk Workflow](#classical-ml-location-risk-workflow)
+    - [Classical ML Inference Path](#classical-ml-inference-path)
+    - [Field-Photo AI Workflow](#field-photo-ai-workflow)
+    - [Geographic Context Workflow](#geographic-context-workflow)
+25. [Team](#25-team)
+    - [Team Members](#team-members)
+    - [Repository](#repository)
+26. [License](#26-license)
+
+
+# 1. Platform Overview
+
+TerraGuard follows an operational loop:
+
 ```text
-Data Collection
-      |
-      v
-Data Processing and Validation
-      |
-      v
-GIS Feature Extraction
-      |
-      v
-Machine Learning Dataset Preparation
-      |
-      v
-Extra Trees Susceptibility Model
-      |
-      +----------------------+
-      |                      |
-      v                      v
-FastAPI Backend        Live Weather / Seismic Data
-      |                      |
-      +----------+-----------+
-                 |
-                 v
-        TerraGuard Application
-                 |
-       +---------+---------+
-       |         |         |
-       v         v         v
-     GIS       3D       Alerts
-     Risk     Terrain    & SOS
+OBSERVE
+  ↓
+Terrain + Rainfall + Soil + Land Cover + Seismic + Historical Data
+  ↓
+ASSESS
+  ↓
+Location Risk + GIS + Weather + Earthquake Context
+  ↓
+REPORT
+  ↓
+Field Photo + GPS + Description
+  ↓
+CLASSIFY
+  ↓
+Field-Photo AI
+  ↓
+RESPOND
+  ↓
+Alerts + Emergency + Dispatch + Decision Support
 ```
-The platform is designed to connect environmental data processing, machine learning outputs, spatial context, and operational monitoring into one interface.
+
+The project intentionally separates two intelligence paths:
+
+### Location-risk intelligence
+
+The existing geospatial/environmental ML pipeline evaluates structured features such as elevation, slope, aspect, soil, land cover, and rainfall.
+
+### Field-photo intelligence
+
+The V2 ONNX classifier processes submitted photographs independently. Its output does **not** modify the location-risk probability.
+
 ---
-## Key Objectives
-The primary objectives of TerraGuard are:
-1. Consolidate historical landslide and environmental datasets for the study region.
-2. Extract relevant terrain, soil, and land-cover features from geospatial data.
-3. Build a structured machine learning dataset for landslide susceptibility classification.
-4. Train and integrate an Extra Trees-based machine learning model.
-5. Provide API-based prediction services through a FastAPI backend.
-6. Visualize risk information through GIS-based application interfaces.
-7. Synchronize selected geographic regions across all relevant application modules.
-8. Integrate weather and seismic context for selected hill and mountain regions.
-9. Support citizen reporting and alert workflows.
-10. Establish a foundation for future real-time environmental monitoring and early warning capabilities.
+
+# 2. Problem & Objectives
+
+Landslide risk depends on interacting terrain, rainfall, geological, land-cover, historical, and seismic conditions. These datasets often exist in different formats and spatial resolutions.
+
+TerraGuard aims to:
+
+- consolidate landslide and environmental information;
+- derive terrain and spatial features;
+- estimate location-based susceptibility/risk;
+- visualize risk through GIS;
+- provide weather and earthquake context;
+- collect citizen/field observations;
+- classify field photographs using AI;
+- preserve reports during connectivity loss;
+- synchronize offline reports when connectivity returns;
+- support alerts, SOS, shelters, tactical units and dispatch workflows;
+- provide multilingual decision support through TerraBot;
+- provide a foundation for future real-time deployment.
+
+TerraGuard is a **decision-support prototype**, not a replacement for official disaster-management authorities.
+
 ---
-# System Features
-## Machine Learning-Based Risk Prediction
-TerraGuard includes a machine learning pipeline that processes environmental and geographical features to estimate landslide susceptibility.
-The established terrain classification model is:
+
+# 3. Architecture
+
 ```text
-ExtraTreesClassifier
+                         TERRAGUARD
+                             │
+          ┌──────────────────┼──────────────────┐
+          │                  │                  │
+       WEB APP          FLUTTER MOBILE      TERRABOT
+          │                  │                  │
+          └──────────────────┼──────────────────┘
+                             │
+                        FastAPI Backend
+                             │
+          ┌──────────────────┼──────────────────┐
+          │                  │                  │
+     Risk Engine       Field Reports       AI Engine
+          │                  │                  │
+          │                  │            ONNX Runtime
+          │                  │                  │
+          │                  │          Field Classifier
+          └──────────────────┼──────────────────┘
+                             │
+                    Database / Local Storage
 ```
-The model operates on structured geospatial and environmental features extracted from the project's processed datasets.
+
+### Development topology
+
+```text
+Web:             localhost:3000
+Backend (Web):   localhost:8000
+Backend (Mobile):localhost:8001
+Android emulator:10.0.2.2:8001
+```
+
+These are development addresses only. Production must use HTTPS and a deployed API URL.
+
 ---
-## GIS-Based Risk Visualization
-The application supports GIS-based exploration of spatial information, including:
-- Regional risk visualization
-- Risk-zone filtering
-- Historical landslide locations
-- Machine learning susceptibility visualization
-- Environmental layer controls
-- Seismic event visualization
-- Location inspection
-- Search-driven map navigation
+
+# 4. Web Platform
+
+The React/Vite Web application provides the main operational interface.
+
+## Major modules
+
+- Home
+- Risk Dashboard
+- Spatial GIS Command / Risk Map
+- Risk Details
+- Alerts Feed
+- Emergency SOS
+- Hills & Mountain Regions
+- Earthquake Monitor
+- 3D Terrain
+- Temporal prediction / analysis
+- Landslide Risk Simulator
+- Citizen / Field Reporting
+- Broadcast & Dispatch
+- ML Pipeline Command
+- TerraBot
+- About
+
+The application also contains shared API services, application context, data/configuration, internationalization, utilities, and reusable UI components.
+
 ---
-## Terrain Analysis
-Digital Elevation Model data is processed to derive:
+
+# 5. Web User Manual
+
+## 5.1 Home
+
+Use Home to understand the project and navigate to the major operational modules.
+
+Typical flow:
+
+```text
+Open TerraGuard  Review overview  Select Risk / Map / Report / Emergency / TerraBot
+```
+
+## 5.2 Risk Dashboard
+
+Use the dashboard for fast situational awareness.
+
+Review:
+
+- selected location/region;
+- risk indicators;
+- environmental information;
+- warning summaries;
+- available risk telemetry.
+
+## 5.3 GIS Risk Map
+
+Use GIS when spatial context is required.
+
+```text
+Open GIS
+ select/search region
+ inspect map
+ enable relevant layers
+ select a location
+ review risk/context
+```
+
+The GIS workflow supports risk visualization, historical landslides, ML susceptibility, environmental layers, earthquake events, field information, and location inspection.
+
+## 5.4 Risk Details
+
+Use Risk Details to inspect a selected location's score, risk level, contributing factors, and supporting environmental information.
+
+## 5.5 Hills & Mountain Regions
+
+Use this module to search/select supported hill and mountain regions.
+
+The selected geographic context can feed:
+
+- GIS;
+- 3D terrain;
+- weather;
+- earthquake/seismic context;
+- search/navigation.
+
+## 5.6 Weather
+
+Weather requests can use state, latitude, longitude, and region name so that environmental context follows the selected region.
+
+The UI should distinguish live data from cached/offline fallback data.
+
+## 5.7 Earthquake Monitor
+
+Use Earthquake Monitor to inspect seismic events and derived context.
+
+Typical workflow:
+
+```text
+Open Earthquake Monitor
+ choose region/corridor
+ apply filters
+ select event
+ inspect event and derived indicators
+```
+
+The module can expose magnitude, depth, location, time, distance, estimated PGA, MMI, Arias intensity, trigger scoring, and advisories where available.
+
+## 5.8 3D Terrain
+
+Use 3D Terrain to understand the selected geographic area visually and compare it with GIS/risk information.
+
+## 5.9 Alerts
+
+Use Alerts to inspect warning information and filter by available severity, region, and hazard context.
+
+## 5.10 Emergency / SOS
+
+Use Emergency/SOS for the application's emergency workflow. Continue to use official emergency services and established disaster-response procedures for real incidents.
+
+## 5.11 Broadcast & Dispatch
+
+The platform contains CAP-style alert, siren, tactical-unit, shelter, audit, and SMS broadcast workflows. SMS is currently **demo mode**.
+
+---
+
+# 6. Field Reporting & AI
+
+Field reporting is the bridge between the operational platform and observations from the ground.
+
+## 6.1 Web field-report workflow
+
+```text
+Select Photo
+   ↓
+Validate Image
+   ↓
+Enter Location + Description + Hazard
+   ↓
+Submit Multipart Request
+   ↓
+FastAPI
+   ↓
+POST /api/reports/classify
+   ↓
+ONNX Runtime
+   ↓
+Prediction + Confidence + Severity + Model Version
+   ↓
+Display Real Result
+```
+
+The current Web integration sends the actual image to the classifier rather than using a fake AI response.
+
+## 6.2 Image requirements
+
+The current Web field-report UI validates image type and limits the selected file to **15 MB**.
+
+Use clear, relevant photographs whenever possible.
+
+## 6.3 AI response
+
+Example:
+
+```json
+{
+  "report_id": "demo-1",
+  "predicted_class": "landslide",
+  "confidence": 0.55,
+  "severity": "LOW",
+  "model_version": "v2",
+  "processed_at": "..."
+}
+```
+
+The values depend on the submitted image.
+
+## 6.4 Interpretation
+
+AI confidence is **visual classification confidence**. It is not:
+
+- official hazard confirmation;
+- physical landslide severity;
+- evacuation authorization;
+- official disaster declaration.
+
+Use the AI result together with location risk, terrain, rainfall, seismic context, field verification, and official procedures.
+
+---
+
+# 7. Mobile Application
+
+The Flutter application is located under:
+
+```text
+mobile_app/
+```
+
+The project is named `terraguard_mobile`.
+
+## Capabilities
+
+- operational risk dashboard;
+- risk map;
+- camera capture;
+- gallery selection;
+- GPS/location capture;
+- field hazard reporting;
+- local SQLite persistence;
+- offline synchronization;
+- My Reports;
+- emergency/SOS;
+- backend API synchronization;
+- field-photo AI classification;
+- connectivity-aware behavior.
+
+## Main Flutter dependencies
+
+The current application uses packages including:
+
+- `connectivity_plus`
+- `flutter_map`
+- `geolocator`
+- `http`
+- `image_picker`
+- `latlong2`
+- `path`
+- `permission_handler`
+- `sqflite`
+- `url_launcher`
+- `uuid`
+
+Development/testing also uses Flutter test/lint tooling and SQLite FFI support.
+
+---
+
+# 8. Mobile User Manual
+
+## 8.1 Start the app
+
+```bash
+cd mobile_app
+flutter pub get
+flutter run
+```
+
+Grant camera and location permissions when requested.
+
+## 8.2 Check risk
+
+Open the risk dashboard/map to review the current operational context before reporting a field hazard.
+
+## 8.3 Create a field report
+
+```text
+Open Field Report
+ Capture/select photo
+ Confirm GPS
+ Select hazard type
+ Add description
+ Save report
+ Synchronize when available
+ Review AI result
+```
+
+## 8.4 Online workflow
+
+```text
+Photo + GPS + metadata
+        ↓
+Local report
+        ↓
+Sync
+        ↓
+Backend
+        ↓
+AI classification
+        ↓
+Store/display result
+```
+
+## 8.5 Offline workflow
+
+```text
+Photo + GPS + metadata
+        ↓
+SQLite local storage
+        ↓
+PENDING
+        ↓
+Connection returns
+        ↓
+SYNCING
+        ↓
+Backend upload
+        ↓
+SYNCED
+        ↓
+AI classification
+        ↓
+CLASSIFIED / FAILED / UNAVAILABLE
+```
+
+A successful report upload is intentionally independent from the later AI result.
+
+## 8.6 My Reports
+
+Use My Reports to inspect locally stored/synchronized field reports and their synchronization/classification states.
+
+## 8.7 Emergency
+
+Use the Emergency/SOS workflow when needed. For real emergencies, use official emergency channels as well.
+
+---
+
+# 9. Offline-First Design
+
+The mobile offline layer uses SQLite for report metadata and stores captured images as local files referenced by the report record.
+
+Important offline components include:
+
+```text
+mobile_app/lib/offline/
+├── database_schema.dart
+├── field_classification_api.dart
+├── field_report_capture_service.dart
+├── offline_hazard_report.dart
+├── offline_hazard_report_page.dart
+├── offline_report_store.dart
+├── offline_reports_page.dart
+├── offline_sync_manager.dart
+├── terraguard_database_models.dart
+├── terraguard_http_sync_api.dart
+└── terraguard_offline_services.dart
+```
+
+## Report states
+
+```text
+PENDING  SYNCING  SYNCED
+              └── SYNC_FAILED
+```
+
+## AI states
+
+```text
+NOT_CLASSIFIED
+      ↓
+CLASSIFICATION_PENDING
+      ↓
+CLASSIFIED
+
+or
+
+CLASSIFICATION_FAILED
+CLASSIFICATION_UNAVAILABLE
+```
+
+The two state machines must remain separate.
+
+---
+
+# 10. Risk & ML System
+
+## 10.1 Location-risk model
+
+The established location-risk pipeline uses structured environmental/geospatial features including:
+
+```text
+elevation
+slope
+aspect
+soil_id
+landcover_class
+rainfall_1d
+rainfall_3d
+rainfall_7d
+rainfall_15d
+rainfall_30d
+```
+
+The repository documents an Extra Trees susceptibility model as the established terrain/environmental classifier. The active backend implementation is the runtime source of truth.
+
+## 10.2 Seismic adjustment
+
+The existing risk logic includes:
+
+```text
+Delta_seismic = S_seismic × 0.20 × (1 - P_base)
+P_final = clamp(P_base + Delta_seismic, 0, 1)
+Final Score = P_final × 100
+```
+
+The field-photo AI does not alter this calculation.
+
+## 10.3 ML API
+
+The Web/API layer exposes ML operations including:
+
+```text
+POST /api/ml/predict
+GET  /api/ml/model-info
+GET  /api/ml/metrics
+GET  /api/ml/comparison
+GET  /api/ml/feature-importance
+GET  /api/ml/datasets
+```
+
+---
+
+# 11. GIS, Terrain, Weather & Seismic
+
+## GIS
+
+The Web GIS uses Leaflet and supports spatial layers, risk visualization, historical events, seismic context, and field-report locations.
+
+## Terrain
+
+DEM data is used to derive:
+
 ```text
 Elevation
 Slope
 Aspect
 ```
-These terrain variables form part of the machine learning feature set and are also used for spatial interpretation.
----
-## Soil Analysis
-The project integrates HWSD2 soil raster data.
-Current machine learning feature:
-```text
-soil_id
-```
-The architecture can be expanded to incorporate additional soil properties, subject to metadata availability and validation.
----
-## Land-Cover Analysis
-Land-cover information is integrated using ESA WorldCover data.
-Current machine learning feature:
-```text
-landcover_class
-```
-Land-cover information provides a representation of surface characteristics relevant to spatial susceptibility analysis.
----
-## Rainfall and Trigger Monitoring
-Rainfall is included as an environmental factor within the TerraGuard data architecture and supports:
-- Rainfall accumulation analysis
-- Trigger monitoring
-- Dynamic risk assessment
-- Early-warning workflows
-- Live environmental data integration
-The current prototype also supports coordinate-aware weather requests for selected hill and mountain regions.
----
-## Citizen and Field Reporting
-The application supports citizen and field reporting workflows that can capture:
-- Geographic location
-- Images
-- Incident descriptions
-- Time information
-- Hazard details
-This provides a mechanism for incorporating field-level observations into the broader monitoring workflow.
----
-## Alert Workflows
-The system architecture supports risk communication and alert workflows, including:
-- Risk notifications
-- Warning feeds
-- Location-based alerts
-- Emergency workflows
-- SOS workflows
-- CAP-compatible alert architecture
----
-# TerraBot AI Assistant
-TerraGuard includes TerraBot, an in-application assistant connected to the platform's operational context.
-The current implementation combines:
-```text
-TerraBot Chat UI
-      |
-      v
-Backend chatbot service
-      |
-      +--> Risk / location context
-      +--> Weather and telemetry navigation
-      +--> Earthquake monitor navigation
-      +--> Hills & mountain regions
-      +--> Alerts
-      +--> Hazard reporting
-      +--> Emergency / safety guidance
-      +--> Home and module navigation
-```
-Multilingual Support
-The chatbot backend currently defines support for:
-```text
-English
-Hindi
-Assamese
-Bengali
-Bodo
-Khasi
-Manipuri (Meitei)
-Mizo
-Nepali
-```
-The assistant can also provide navigation actions from recognized requests instead of only returning text.
-Examples include:
-```text
-"Show current risk"
-"Open earthquake monitor"
-"Show hills"
-"Open alerts"
-"Report a hazard"
-"Open emergency"
-"Go home"
-```
-The web interface includes a TerraBot chat widget with voice-related interaction support and operational action buttons.
-TerraBot is a decision-support interface. It does not replace official emergency authorities or independently authorize evacuation.
----
-# Application Modules
-## Home
-The home interface provides:
-- Project introduction
-- Location discovery
-- Core feature navigation
-- Warning information
-- Public awareness content
-## Risk Dashboard
-The dashboard provides:
-- Location-based monitoring
-- Risk indicators
-- Environmental conditions
-- Warning summaries
-- Risk telemetry and summaries
-## GIS Risk Map
-The GIS module provides:
-- Regional risk visualization
-- Risk-zone filtering
-- Environmental layer controls
-- Historical landslide visualization
-- Current ML susceptibility visualization
-- Live earthquake visualization
-- Historical earthquake empty-state handling
-- Location inspection
-- Search-driven navigation
-## Risk Details
-The risk details module provides:
-- Risk scores
-- Contributing environmental factors
-- Environmental information
-- Location-based risk interpretation
-- Safety and response information
-## Alerts Feed
-The alerts module provides:
-- Hazard warning information
-- Severity filtering
-- Regional filtering
-- Environmental trigger information
-- GIS inspection links
-## Emergency SOS
-The emergency module supports workflows such as:
-- SOS requests
-- Location sharing
-- Emergency contact information
-- Offline-aware communication workflows
-- Safety information
-## Hills & Mountain Regions
-This module provides:
-- Searchable hills and mountain regions
-- Region selection
-- Representative verified coordinates
-- Region-aware weather
-- Nearby/latest earthquake context
-- Epicentral distance display
-- Estimated PGA and MMI indicators
-- External reference links such as Wikipedia/Britannica
-## Earthquake Monitor
-The earthquake monitor provides:
-- Selected Hill Region monitoring
-- Hazard Corridor Zone monitoring
-- NCS earthquake event integration
-- Location search
-- Radius filters
-- Minimum magnitude filters
-- Event sorting
-- Expandable earthquake event details
-- Hypocentral distance
-- Estimated PGA
-- Instrumental MMI
-- Arias intensity
-- Trigger scoring
-- Geotechnical advisories
-## 3D Terrain
-The 3D terrain interface provides geographic visualization tied to the selected hill or mountain region, allowing terrain context to follow the same geographic selection used by the GIS map.
-## Additional Modules
-The application also includes modules for:
-- Landslide risk simulation
-- Machine learning pipeline visualization
-- Prediction workflows
-- Citizen reporting
-- Alert and dispatch workflows
----
-# Flutter Mobile Application
-TerraGuard includes a dedicated Flutter companion application under:
-```text
-mobile_app/
-```
-The mobile application is designed for field users and connects to the same FastAPI backend used by the web application.
-Mobile Capabilities
-The current mobile architecture includes:
-Operational risk dashboard
-Location-risk evaluation
-Risk score and risk-level presentation
-Risk map
-Field hazard reporting
-Camera/gallery image capture
-GPS/location capture
-Local report persistence
-Offline synchronization
-My Reports / report history
-Emergency / SOS quick actions
-Backend API synchronization
-Connectivity-aware behavior
-Field-photo AI classification state handling
-Mobile Backend
-The mobile app uses the same FastAPI application as the web platform, but runs against a separate local Uvicorn process during development:
-```text
-Web
-React/Vite :3000
-    |
-    v
-FastAPI :8000
 
-Mobile
-Flutter
-    |
-    v
-FastAPI :8001
+These features support both spatial interpretation and ML.
+
+## Soil
+
+HWSD2 soil information is represented in the ML feature pipeline using `soil_id`.
+
+## Land Cover
+
+ESA WorldCover information is represented through `landcover_class`.
+
+## Rainfall
+
+Rainfall supports environmental trigger and dynamic-risk workflows.
+
+## Earthquakes
+
+The seismic subsystem provides event monitoring and derived ground-motion/context indicators where configured.
+
+---
+
+# 12. TerraBot
+
+TerraBot is the in-application multilingual operational assistant.
+
+## Supported languages
+
+```text
+en  English
+hi  Hindi
+as  Assamese
+bn  Bengali
+brx Bodo
+ks  Khasi
+mni Manipuri / Meitei
+lus Mizo
+ne  Nepali
 ```
-These are separate processes of the same backend implementation.
-Android Development
-Android emulators access the host machine's local backend through:
+
+## Example commands
+
+```text
+Show current risk
+Open earthquake monitor
+Show hills
+Open alerts
+Report a hazard
+Open emergency
+Go home
+```
+
+TerraBot can return navigation actions as well as text.
+
+It is a decision-support interface and does not independently authorize evacuation.
+
+---
+
+# 13. Alerts & Emergency
+
+The alert architecture includes:
+
+- risk notifications;
+- warning feeds;
+- location-based alerts;
+- CAP-compatible alert structure;
+- siren workflow;
+- relief shelters;
+- tactical units;
+- audit logs;
+- SMS status/broadcast workflow;
+- emergency/SOS workflows.
+
+### SMS status
+
+SMS is currently **DEMO MODE**. The field-photo classifier never directly sends SMS.
+
+---
+
+# 14. Backend & API
+
+The backend is FastAPI with Uvicorn.
+
+## Health
+
+```http
+GET /health
+GET /api/health
+```
+
+## Field reports
+
+```http
+POST /api/reports/submit
+POST /api/reports/classify
+POST /api/reports/sync-offline
+POST /api/reports/{report_id}/escalate
+POST /api/reports/{report_id}/dismiss
+```
+
+## Alerts
+
+```http
+GET  /api/alerts/cap
+POST /api/alerts/siren
+GET  /api/alerts/units
+GET  /api/alerts/shelters
+GET  /api/alerts/audit-logs
+GET  /api/alerts/sms-status
+POST /api/alerts/sms-broadcast
+```
+
+## Weather
+
+```http
+GET /api/weather/live
+```
+
+## ML
+
+```http
+POST /api/ml/predict
+GET  /api/ml/model-info
+GET  /api/ml/metrics
+GET  /api/ml/comparison
+GET  /api/ml/feature-importance
+GET  /api/ml/datasets
+```
+
+## GIS/zone ML
+
+```http
+GET /api/zones/historical-training-events
+GET /api/zones/historical-training-events/timeline
+GET /api/zones/{zone_id}/ml-risk
+GET /api/zones/ml-heatmap-points
+```
+
+## Chatbot
+
+```http
+POST /api/chat
+```
+
+The exact route implementation in `backend/routers/` and `backend/services/` is the source of truth.
+
+---
+
+# 15. Data Pipeline
+
+The broader geospatial pipeline follows:
+
+```text
+Raw Data
+  ↓
+Validation
+  ↓
+Cleaning / CRS handling
+  ↓
+Raster + Vector Processing
+  ↓
+Feature Extraction
+  ↓
+ML Dataset
+  ↓
+Training / Evaluation
+  ↓
+FastAPI
+  ↓
+Web + Mobile
+```
+
+Data categories include:
+
+- landslide inventory;
+- rainfall;
+- DEM/elevation;
+- slope/aspect;
+- soil;
+- land cover;
+- seismic data;
+- weather;
+- field reports.
+
+---
+
+# 16. Repository Structure
+
+```text
+landslide-ai/
+├── .env.example
+├── .gitignore
+├── README.md
+├── index.html
+├── metadata.json
+├── package.json
+├── package-lock.json
+├── tsconfig.json
+├── vite.config.ts
+│
+├── backend/
+│   ├── main.py
+│   ├── requirements.txt
+│   ├── test_api.py
+│   ├── routers/
+│   ├── services/
+│   └── ml/
+│       ├── field_report_classifier.py
+│       ├── train_field_report_classifier.py
+│       ├── prepare_field_report_dataset.py
+│       ├── artifacts/
+│       └── datasets/
+│
+├── data/
+├── docs/
+├── ml/
+├── public/
+│
+├── mobile_app/
+│   ├── android/
+│   ├── ios/
+│   ├── windows/
+│   ├── assets/
+│   ├── lib/
+│   ├── test/
+│   ├── pubspec.yaml
+│   └── README.md
+│
+└── src/
+    ├── App.tsx
+    ├── main.tsx
+    ├── index.css
+    ├── types.ts
+    ├── components/
+    ├── context/
+    ├── data/
+    ├── i18n/
+    ├── services/
+    └── utils/
+```
+
+### Important source areas
+
+**Web:** `src/App.tsx`, `src/components/`, `src/context/`, `src/data/`, `src/i18n/`, `src/services/`, `src/utils/`, `src/types.ts`
+
+**Backend:** `backend/main.py`, `backend/routers/`, `backend/services/`, `backend/ml/`, `backend/test_api.py`
+
+**Mobile:** `mobile_app/lib/main.dart`, `config/`, `offline/`, `risk_map_page.dart`, `operational_risk_api.dart`, `theme/`, `widgets/`
+
+---
+
+# 17. Installation
+
+## Web + Backend
+
+```bash
+npm install
+```
+
+Install Python dependencies from:
+
+```text
+backend/requirements.txt
+```
+
+Start Web backend:
+
+```bash
+python -m uvicorn backend.main:app --reload --host 127.0.0.1 --port 8000
+```
+
+Start Web:
+
+```bash
+npm run dev
+```
+
+## Mobile
+
+```bash
+cd mobile_app
+flutter pub get
+flutter run
+```
+
+Start the mobile backend separately on port `8001`:
+
+```bash
+cd ..
+python -m uvicorn backend.main:app --reload --host 127.0.0.1 --port 8001
+```
+
+---
+
+# 18. Development Commands
+
+## Web
+
+```bash
+npm run dev
+npm run build
+npm run lint
+npm run preview
+```
+
+## Backend
+
+```bash
+python -m compileall backend
+python backend/test_api.py
+```
+
+## Mobile
+
+```bash
+cd mobile_app
+flutter analyze
+flutter test
+```
+
+## Git safety
+
+```bash
+git status
+git diff --stat
+git diff --check
+git fetch origin
+git push origin HEAD
+```
+
+Never use force-push for normal team synchronization.
+
+---
+
+# 19. Configuration
+
+The root repository contains:
+
+```text
+.env.example
+```
+
+Never commit API keys, provider credentials, tokens, or private secrets.
+
+## Mobile API configuration
+
+`mobile_app/lib/config/app_config.dart` supports:
+
+```text
+TERRAGUARD_API_BASE_URL
+TERRAGUARD_WEB_URL
+```
+
+Local defaults:
+
+```text
+Android emulator  http://10.0.2.2:8001
+iOS/Desktop/Web   http://localhost:8001
+Web URL           http://localhost:3000
+```
+
+For production, use an HTTPS backend URL through `TERRAGUARD_API_BASE_URL`.
+
+---
+
+# 20. Testing & Validation
+
+The current integrated codebase has been validated locally.
+
+## Backend
+
+```text
+24/24 API tests passed
+```
+
+## Web
+
+```text
+npm run lint   PASS
+npm run build  PASS
+```
+
+## Mobile
+
+```text
+flutter analyze  No issues found
+flutter test     6 tests passed
+```
+
+## AI runtime
+
+The current V2 ONNX artifact loads on CPU and the classification endpoint has been exercised through the local backend.
+
+A validated example from the integration pass returned:
+
+```text
+HTTP 200
+predicted_class = landslide
+confidence       = 0.55
+model_version    = v2
+```
+
+## Repository
+
+```text
+git diff --check  PASS
+```
+
+The integrated changes were safely synchronized to the remote `main` branch without a force push.
+
+---
+
+# 21. Troubleshooting
+
+## Web cannot reach backend
+
+Check:
+
+1. backend process is running;
+2. correct port is used;
+3. API/proxy configuration is correct;
+4. CORS allows the Web origin;
+5. browser Network/Console logs.
+
+## Mobile cannot reach backend
+
+Android emulator:
+
 ```text
 http://10.0.2.2:8001
 ```
-iOS simulator or desktop/web development can use:
+
+Other local platforms:
+
 ```text
 http://localhost:8001
 ```
-Mobile Packages
-The current Flutter project uses packages supporting:
-```text
-Flutter
-flutter_map
-geolocator
-image_picker
-permission_handler
-connectivity_plus
-sqflite
-http
-latlong2
-uuid
-url_launcher
+
+Confirm the mobile backend process is running on `8001`.
+
+## AI classification fails
+
+Check:
+
+1. `field_report_classifier_v2.onnx` exists;
+2. `field_report_classifier_v2.json` exists;
+3. `onnxruntime` is installed;
+4. image is valid;
+5. image is within the upload-size limit;
+6. backend logs;
+7. `/api/ml/model-info`;
+8. `/api/reports/classify` response.
+
+The V2 runtime must fail clearly if the artifact is unavailable. It must not silently run an old V1 implementation.
+
+## Flutter issues
+
+```bash
+cd mobile_app
+flutter pub get
+flutter analyze
+flutter test
 ```
-The exact dependency versions are maintained in `mobile_app/pubspec.yaml`.
+
+## Web build issues
+
+```bash
+npm install
+npm run lint
+npm run build
+```
+
+Fix the first real build/type error before changing unrelated code.
+
 ---
-# Offline-First Field Reporting
-The mobile field-report workflow is designed so that a user does not lose a report because connectivity is unavailable.
+
+# 22. Security & Safety
+
+Before production:
+
+- use HTTPS;
+- protect secrets;
+- restrict CORS appropriately;
+- validate uploaded files;
+- enforce upload-size limits;
+- validate image formats;
+- protect administrative operations;
+- use persistent/backed-up storage;
+- review authentication/authorization requirements;
+- monitor API failures;
+- minimize unnecessary personal data.
+
+TerraGuard's AI does not independently:
+
+- authorize evacuation;
+- modify location-risk probabilities;
+- change official thresholds;
+- send emergency SMS;
+- declare an official disaster;
+- replace trained responders.
+
+---
+
+# 23. Dataset & Model Transparency
+
+TerraGuard contains two separate machine-learning pipelines. They solve different problems and use different data. The field-photo classifier must not be confused with the main geographic location-risk model.
+
+## 23.1 Classical location-risk ML model
+
+The classical ML pipeline estimates landslide susceptibility/risk for a geographic location from structured environmental and geospatial features.
+
+### Model purpose
+
 ```text
-User captures photo
-        |
-        v
-GPS + metadata captured
-        |
-        v
-Report saved locally
-        |
-        +--------------------+
-        |                    |
-        v                    v
-Report Sync State       AI State
-PENDING                 CLASSIFICATION_PENDING
-        |
-        v
-Connectivity available
-        |
-        v
-Upload report
-        |
-        v
-Report = SYNCED
-        |
-        v
-POST /api/reports/classify
-        |
-        v
-V2 field-photo AI
-        |
-        +--> CLASSIFIED
-        +--> CLASSIFICATION_FAILED
-        +--> CLASSIFICATION_UNAVAILABLE
+Input:
+geospatial + environmental conditions
+
+        ↓
+
+Feature extraction / preprocessing
+
+        ↓
+
+Classical ML susceptibility model
+
+        ↓
+
+Base landslide probability
+
+        ↓
+
+Seismic adjustment
+
+        ↓
+
+Final location-risk score
 ```
-Local Storage
-SQLite stores report metadata and provenance while captured images remain in the local filesystem.
-The mobile database tracks:
+
+### Established model
+
+The repository documents an Extra Trees susceptibility model as the established terrain/environmental classifier. The active backend implementation remains the runtime source of truth.
+
+### Main features
+
+The location-risk model uses structured features such as:
+
 ```text
-Report ID
-Hazard type
-Location
-Latitude / longitude
-Description
-Image path
-Created timestamp
-Sync state
-Classification state
-Predicted class
-Classification confidence
-Classification severity
-Model version
-Classification timestamp
+elevation
+slope
+aspect
+soil_id
+landcover_class
+rainfall_1d
+rainfall_3d
+rainfall_7d
+rainfall_15d
+rainfall_30d
 ```
-Separate Sync and AI States
+
+### Dataset categories
+
+The classical ML dataset pipeline was built from geospatial and environmental sources rather than photographs. The project data includes:
+
+| Dataset / source category | Example project data | Role |
+|---|---|---|
+| Landslide inventory | GSI landslide inventory / Landslide Atlas-derived data | Historical landslide labels and locations |
+| Rainfall | `NER_Landslide_Rainfall_ML_Dataset_654.csv` and rainfall data | Precipitation-related predictors |
+| Elevation / DEM | `NER_elevation.tif` | Terrain elevation |
+| Slope | `NER_slope.tif` | Terrain steepness |
+| Aspect | `NER_aspect.tif` | Terrain orientation |
+| Soil | `NER_HWSD2_soil.tif` | Soil/environmental characteristics |
+| Land cover | ESA WorldCover GeoTIFF data | Land-cover class |
+| Seismic context | Earthquake/seismic data used by the risk pipeline | Seismic adjustment/context |
+
+The geospatial datasets are processed into structured ML features before inference. Raster layers can have different spatial resolutions and coordinate reference systems, so preprocessing and spatial alignment are part of the data pipeline.
+
+### Important distinction
+
+The classical ML model does **not** use the field-photo dataset as its training dataset.
+
+The main location-risk prediction is based on geographic/environmental evidence. A submitted field photograph is handled by the separate field-photo AI pipeline described below.
+
+## 23.2 Field-photo AI classifier V2
+
+The field-photo model analyzes an image submitted through the Web or Mobile field-report workflow.
+
+### Model purpose
+
+```text
+Field photograph
+
+        ↓
+
+Image preprocessing
+
+        ↓
+
+ONNX image classifier
+
+        ↓
+
+Visual classification
+
+        ↓
+
+Class + confidence + severity
+```
+
+### Runtime contract
+
+The current V2 artifact defines four runtime classes:
+
+```text
+landslide
+roadBlockage
+flood
+other
+```
+
+Configuration:
+
+| Parameter | Value |
+|---|---|
+| Model version | `v2` |
+| Model type | `YOLO-classification-ONNX` |
+| Image size | `224 × 224` |
+| Runtime | `onnxruntime` |
+| Execution | CPU |
+| Confidence threshold | `0.55` |
+
+### Field-photo dataset used during integration
+
+The prototype field-photo dataset was assembled separately from the geospatial ML data:
+
+| Class | Train | Validation | Test |
+|---|---:|---:|---:|
+| `landslide` | 38 | 8 | 9 |
+| `roadBlockage` | 1 | 0 | 1 |
+| `flood` | 2 | 0 | 2 |
+| `other` | 244 | 52 | 54 |
+
+The dataset has strong landslide/other representation but very limited supporting-class coverage. In particular, `roadBlockage` and `flood` have no validation samples.
+
+Therefore, the field-photo model's prototype evaluation should not be interpreted as balanced four-class production performance. The field-photo classifier is primarily supporting the project's landslide-focused prototype workflow.
+
+### Dataset provenance
+
+The field-photo integration work referenced public image datasets including:
+
+- `bbrenes/objectRecognition_Landslides` on Hugging Face, used for landslide imagery.
+- `Mobiusi/Agricultural-Flood-Disaster-Insurance-Claim-Image-Dataset` on Hugging Face, used for flood imagery.
+- `Mobiusi/Road-Blockage-and-Illegal-Parking-Identification-Dataset` on Hugging Face, used for road-blockage imagery.
+
+The project should retain the source, publisher, license, download date, selected classes, and retained sample counts whenever these datasets are redistributed or used for future training.
+
+### Interpretation and safety
+
+Field-photo classification represents visual model output only. It is not a physical hazard measurement and does not replace the geographic risk model.
+
+The classifier must not:
+
+- modify the location-risk probability;
+- modify the seismic adjustment;
+- independently authorize evacuation;
+- declare an official disaster;
+- send emergency SMS.
+
+The application should use wording such as:
+
+```text
+AI visual classification: landslide
+```
+
+or:
+
+```text
+AI classified field image as landslide
+```
+
+rather than claiming that the AI has officially confirmed a real-world landslide.
+
+## 23.3 How the two ML pipelines work together
+
+The two models complement each other but remain technically separate:
+
+| Aspect | Classical location-risk ML | Field-photo AI |
+|---|---|---|
+| Input | Geographic/environmental data | Field photograph |
+| Main purpose | Estimate location-based landslide risk | Classify visible field-report imagery |
+| Data type | Raster, vector, tabular, environmental | Images |
+| Main features/classes | Elevation, slope, aspect, soil, land cover, rainfall and related context | `landslide`, `roadBlockage`, `flood`, `other` |
+| Runtime role | Core geographic risk engine | Supporting field-report evidence |
+| Changes location-risk probability | Yes, through its established pipeline | No |
+| Uses seismic adjustment | Yes, through the existing risk workflow | No |
+| Sends SMS | No | No |
+| Intended interpretation | Geographic risk/susceptibility estimate | Visual classification assistance |
+
+This separation is intentional. A field report can provide additional visual evidence without silently changing the established location-risk model.
+
+---
+
+# Quick Reference
+
+## Start Web
+
+```bash
+npm install
+npm run dev
+```
+
+## Start Web Backend
+
+```bash
+python -m uvicorn backend.main:app --reload --host 127.0.0.1 --port 8000
+```
+
+## Start Mobile Backend
+
+```bash
+python -m uvicorn backend.main:app --reload --host 127.0.0.1 --port 8001
+```
+
+## Start Mobile
+
+```bash
+cd mobile_app
+flutter pub get
+flutter run
+```
+
+## Validate Everything
+
+```bash
+python -m compileall backend
+python backend/test_api.py
+npm run lint
+npm run build
+cd mobile_app
+flutter analyze
+flutter test
+cd ..
+git diff --check
+```
+
+---
+
+# TerraGuard
+
+**Observe. Assess. Report. Respond.**
+
+**Smart India Hackathon 2026 — Problem Statement 26001**
+
+**SuperNovaDev SIH Project Team**
+
+---
+
+# 24. End-to-End Workflow
+
+TerraGuard connects the Web application, Flutter mobile application, FastAPI backend, GIS services, machine learning pipelines, field reporting, and operational alert workflows.
+
+## 24.1 System Workflow
+
+```text
+User
+  |
+  +-----------------------------+
+  |                             |
+  v                             v
+Web Application            Flutter Mobile App
+  |                             |
+  |                             +--> GPS / Camera / Gallery
+  |                             |
+  |                             +--> Local SQLite
+  |                             |
+  +-------------+---------------+
+                |
+                v
+         FastAPI Backend
+                |
+        +-------+--------+
+        |                |
+        v                v
+Location-Risk ML     Field Report
+Pipeline             Processing
+        |                |
+        |                v
+        |          V2 Field-Photo AI
+        |                |
+        +-------+--------+
+                |
+                v
+       Risk / Report Result
+                |
+        +-------+--------+
+        |                |
+        v                v
+  Web / Mobile      Alerts / SOS
+```
+
+## 24.2 Field Reporting Workflow
+
+1. The user captures a field photograph and records GPS location and report metadata.
+2. The mobile application stores the report locally when network connectivity is unavailable.
+3. When connectivity returns, the synchronization manager uploads the pending report to the FastAPI backend.
+4. The backend persists the report and processes the image through the V2 field-photo classification workflow where available.
+5. The classifier returns the predicted class, visual confidence, severity band, model version, and processing timestamp.
+6. The classification result is returned to the Web or Mobile client.
+7. Alert and emergency workflows remain separate from the field-photo classifier.
+8. SMS dispatch remains in demo mode until the required provider and DLT activation is available.
+
+## 24.3 Mobile Synchronization States
+
 Report synchronization:
+
 ```text
 PENDING
 SYNCING
 SYNCED
 SYNC_FAILED
 ```
+
 AI classification:
+
 ```text
 NOT_CLASSIFIED
 CLASSIFICATION_PENDING
@@ -456,1168 +1582,211 @@ CLASSIFIED
 CLASSIFICATION_FAILED
 CLASSIFICATION_UNAVAILABLE
 ```
-This separation is important: a report can successfully reach the backend even when the AI model is unavailable.
-Mobile Safety Behavior
-The app does not present an unavailable model as a successful AI result.
-It uses language such as:
-```text
-AI visual classification: landslide
+
+A report can be successfully synchronized even when AI classification is unavailable.
+
+## 24.4 Classical ML Location-Risk Workflow
+
+The following flow represents the actual classical geospatial ML path used by TerraGuard. It keeps the environmental/geospatial model separate from the field-photo AI classifier.
+
+```mermaid
+flowchart TD
+    A[Multi-Source Data Collection]
+
+    A --> B[Historical Landslide Inventory<br/>GSI / Landslide Atlas]
+    A --> C[DEM & Terrain Data<br/>Elevation / Slope / Aspect]
+    A --> D[Soil Data<br/>HWSD2]
+    A --> E[Land Cover Data<br/>ESA WorldCover]
+    A --> F[Rainfall & Weather Data]
+    A --> G[Seismic / Earthquake Data]
+
+    B --> H[Data Cleaning & Validation]
+    C --> H
+    D --> H
+    E --> H
+    F --> H
+    G --> H
+
+    H --> I[Coordinate Standardization<br/>Spatial Alignment]
+    I --> J[GIS Feature Extraction]
+
+    J --> J1[Elevation]
+    J --> J2[Slope]
+    J --> J3[Aspect]
+    J --> J4[Soil ID]
+    J --> J5[Land Cover Class]
+    J --> J6[Rainfall Features]
+    J --> J7[Seismic Features]
+
+    J1 --> K[Classical ML Dataset]
+    J2 --> K
+    J3 --> K
+    J4 --> K
+    J5 --> K
+    J6 --> K
+    J7 --> K
+    B --> K
+
+    K --> L[Extra Trees Classifier]
+    L --> M[Base Landslide Risk Probability]
+
+    G --> N[Seismic Adjustment]
+    M --> N
+    N --> O[Final Location Risk Score]
+
+    O --> P[FastAPI Backend]
+
+    P --> Q[TerraGuard Web Application]
+    P --> R[TerraGuard Mobile Application]
+
+    Q --> S[GIS Risk Map]
+    Q --> T[3D Terrain]
+    Q --> U[Weather Telemetry]
+    Q --> V[Earthquake Monitor]
+    Q --> W[Risk Dashboard & Details]
+    Q --> X[Alerts & Notifications]
+    Q --> Y[Emergency SOS]
+    Q --> Z[TerraBot]
+    Q --> AA[Field Hazard Reporting]
+
+    R --> AB[GPS & Location Risk]
+    R --> AC[Camera / Gallery Reporting]
+    R --> AD[Offline SQLite Storage]
+    R --> AE[Offline Sync]
+    R --> AF[My Reports]
+    R --> AG[AI Field-Photo Classification]
+
+    AA --> AH[Report Submission]
+    AC --> AH
+    AH --> P
+    P --> AI[Report Database]
+    AI --> AG
+
+    AG --> AJ[Visual Classification<br/>landslide / roadBlockage / flood / other]
+    AJ --> AK[Confidence & Severity]
+    AK --> AL[Field Report Result]
+
+    AE --> P
+    P --> AM[API Response & Synchronization]
+
+    X --> AN[SMS Demo Mode / In-App Alerts]
+    AL --> AN
+    AN --> AO[Authorities & Communities]
+
+    S --> AO
+    W --> AO
+    Y --> AO
+    Z --> AO
+
+    AO --> AP[Preparedness & Response]
+    AP --> AQ[Safer Communities]
 ```
-rather than:
+
+### Classical ML inference path
+
+For a new location, the operational inference path is:
+
 ```text
-AI confirms a landslide
+Location / Coordinates
+        |
+        v
+FastAPI Backend
+        |
+        v
+Extract / Prepare Geospatial Features
+        |
+        +--> Elevation
+        +--> Slope
+        +--> Aspect
+        +--> Soil ID
+        +--> Land Cover Class
+        +--> Rainfall
+        |
+        v
+Extra Trees Classifier
+        |
+        v
+Base Landslide Risk Probability
+        |
+        v
+Seismic Adjustment
+        |
+        v
+Final Location Risk Score
+        |
+        +--> Web GIS / Risk Dashboard
+        +--> Mobile Location-Risk View
+        +--> Alerts & Decision Support
 ```
-The field-photo classifier does not independently modify the location-risk score, trigger evacuation, or send SMS.
----
-# Field-Photo AI Classifier V2
-TerraGuard has a dedicated field-photo AI pipeline separate from the established location-risk model.
-Target Classes
+
+The established location-risk pipeline remains independent from the field-photo classifier. The field-photo classifier provides separate visual evidence for submitted reports and does not modify the location-risk probability.
+
+## 24.5 Field-Photo AI Workflow
+
+The current V2 runtime contract uses:
+
 ```text
 landslide
-rockfall
 roadBlockage
-slopeFailure
 flood
 other
 ```
-Production Pipeline
-```text
-Legitimate external datasets
-        |
-        v
-Source and license verification
-        |
-        v
-Cleaning + deduplication
-        |
-        v
-Train / validation / test split
-        |
-        v
-Lightweight image classifier
-        |
-        v
-Real evaluation
-        |
-        v
-ONNX export
-        |
-        v
-ONNX Runtime
-        |
-        v
-FastAPI
-        |
-        v
-POST /api/reports/classify
-        |
-        v
-Flutter
-```
-Current V2 Backend State
-The repository currently contains the strict V2 contract and artifact gate.
-```text
-V2 API contract                   COMPLETE
-No-V1-fallback behavior           COMPLETE
-Artifact validation gate          COMPLETE
-Backend regression tests          PASSING
-External dataset acquisition      PENDING
-License verification              PENDING
-Real model training               PENDING
-Held-out evaluation               PENDING
-Production ONNX artifact         PENDING
-Real inference benchmark          PENDING
-Mobile/backend E2E classification PENDING
-```
-The project does not fabricate dataset counts, training metrics, model size, or latency.
-Artifacts
-When training is complete, the production artifacts are intended to be:
-```text
-backend/ml/artifacts/field_report_classifier_v2.onnx
-backend/ml/artifacts/field_report_classifier_v2.json
-```
-Confidence Policy
+
+Confidence policy:
+
 ```text
 >= 0.80  HIGH
 >= 0.65  MEDIUM
 >= 0.55  LOW
 <  0.55  other / UNKNOWN
 ```
-Confidence represents visual classification confidence, not physical hazard severity.
-No V1 Fallback
-If the V2 ONNX artifact is missing or cannot load, the backend reports classification unavailable/error.
-It does not silently run the historical deterministic V1 classifier.
-API
+
+Classification confidence represents visual model confidence. It is not physical hazard severity or an authorization to evacuate.
+
+The field-photo classifier does not modify the location-risk score, independently authorize evacuation, or directly send SMS messages.
+
+## 24.6 Geographic Context Workflow
+
 ```text
-POST /api/reports/classify
-```
-Mobile-compatible fields include:
-```text
-report_id
-image
-hazard_type
-latitude
-longitude
-state
-zone_id
-description
-timestamp
-```
-Expected response:
-```json
-{
-  "report_id": "...",
-  "predicted_class": "landslide",
-  "confidence": 0.87,
-  "severity": "HIGH",
-  "model_version": "v2",
-  "processed_at": "2026-09-20T..."
-}
-```
----
-# New Prototype Additions
-The current prototype retains the original TerraGuard capabilities and adds the following major workflows.
-## 1. Authoritative Geographic State
-`MapContext` is used as the shared geographic state for the application.
-The selected region and map focus coordinates are designed to remain consistent across:
-```text
-Hills & Mountain Regions
-        |
-        +--> GIS Risk Map
-        |
-        +--> 3D Terrain
-        |
-        +--> Weather
-        |
-        +--> Earthquake / Seismic Context
-        |
-        +--> Search
-        |
-        +--> Browser Navigation
-```
-This reduces conflicting local copies of selected-region state.
----
-## 2. Coordinate-Aware Weather
-The weather API accepts:
-```text
-state
-latitude
-longitude
-region_name
-```
-For a verified hill or mountain region, the application's selected coordinates are forwarded to the weather service so the environmental context follows the selected region rather than relying only on a state-level default.
----
-## 3. Seismic Ground-Motion Metrics
-The prototype includes seismic utility calculations for:
-- Epicentral distance
-- Hypocentral distance
-- Estimated PGA
-- PGA as `% g`
-- Instrumental MMI
-- Arias intensity
-- Composite destabilization / trigger scoring
-- Time-decay effects
-The implementation is intended for prototype hazard visualization and decision-support workflows.
----
-## 4. Historical Map Mode Separation
-Historical mode distinguishes historical event visualization from the current ML inference layer.
-The application supports an explicit current-risk overlay rather than silently presenting present-day ML output as historical data.
----
-## 5. Unified Spatial Search
-Search is designed to span multiple spatial categories:
-```text
-Risk Zones
-Hills & Mountain Regions
-Historical Landslides
-NCS Earthquakes
-```
-Selecting search results can update the geographic context and map focus.
----
-## 6. Browser Navigation Restoration
-The prototype integrates browser history with geographic/module state so that:
-```text
-Select Region A
-      |
-      v
-Select Region B
-      |
-      v
-Browser Back
-      |
-      v
-Restore Region A
-      |
-      v
-Browser Forward
-      |
-      v
-Restore Region B
-```
-This is intended to make navigation behave more predictably during map-driven exploration.
----
-## 7. Safe Historical Earthquake Handling
-When an authoritative historical earthquake archive is unavailable, TerraGuard presents an empty state instead of inventing historical earthquake events.
-This keeps the historical earthquake interface distinguishable from live NCS data.
----
-## 8. External Reference Link Isolation
-Wikipedia, Britannica, and similar reference links are treated as external navigation.
-Opening a source link should not mutate the application's selected geographic state.
----
-# Web and GIS Intelligence
-The React/Vite web application acts as the main operational command interface.
-Web Technology
-```text
-React
-TypeScript
-Vite
-Tailwind CSS
-Leaflet
-Lucide React
-Motion
-```
-Operational Modules
-The current web application contains modules/components for:
-```text
-Home
-Risk Dashboard
-Risk Details
-Spatial GIS Command
-Alerts
-Emergency SOS
-Hills & Mountain Regions
-Earthquake Monitor
-3D Terrain
-Temporal LSTM Predictor
-Landslide Risk Simulator
-Crowdsource / CV Verification
-Broadcast & Dispatch
-ML Pipeline Command
-TerraBot
-About
-```
-The application uses lazy-loaded operational modules and a shared `MapContext` for geographic state.
-Geographic Synchronization
-The selected region and map coordinates can be propagated across:
-```text
-Hills & Mountain Regions
-        |
-        +--> GIS Risk Map
-        +--> 3D Terrain
-        +--> Weather
-        +--> Earthquake Monitor
-        +--> Search
-        +--> Browser navigation
-```
-GIS Functions
-The platform supports:
-Risk-zone visualization
-Historical landslide visualization
-ML susceptibility visualization
-Environmental layers
-Location inspection
-Spatial search
-Earthquake overlays
-Hill/mountain region selection
-3D terrain context
-Current-risk versus historical-map separation
----
-# Alert, Emergency and Dispatch Workflows
-TerraGuard includes a backend alert engine and operator-facing emergency workflows.
-Alert Engine
-The backend exposes alert functionality for:
-```text
-CAP alerts
-Tactical units
-Relief shelters
-Audit logs
-Acoustic siren simulation
-Dispatch orders
-Emergency SMS broadcast
-```
-The alert engine evaluates report and environmental trigger information and can create CAP-compatible alert payloads.
-Emergency SOS
-The web application provides an Emergency SOS module with:
-SOS access
-Emergency contact information
-Location context
-Safety information
-Offline-aware location behavior
-The mobile application also exposes an Emergency / SOS quick action.
-Shelters and Tactical Response
-The backend maintains structures for:
-```text
-Relief shelters
-Tactical units
-Audit logs
-Alert dispatch records
-```
-These support the demonstration of an operational disaster-response workflow.
-SMS
-The current project keeps SMS dispatch in demo mode until the required provider/DLT activation is available.
-The field-photo classifier itself does not send SMS.
----
-# System Architecture
-```mermaid
-flowchart TD
-    A[Data Collection]
-    A --> B[Historical Landslide Inventory]
-    A --> C[DEM and Terrain Data]
-    A --> D[Soil Data]
-    A --> E[Land Cover Data]
-    A --> F[Rainfall Data]
-    B --> G[Data Cleaning and Validation]
-    C --> G
-    D --> G
-    E --> G
-    F --> G
-    G --> H[Coordinate Standardization]
-    H --> I[GIS Feature Extraction]
-    I --> J[Elevation]
-    I --> K[Slope]
-    I --> L[Aspect]
-    I --> M[Soil ID]
-    I --> N[Land Cover Class]
-    J --> O[Machine Learning Dataset]
-    K --> O
-    L --> O
-    M --> O
-    N --> O
-    O --> P[Extra Trees Classifier]
-    P --> Q[FastAPI Backend]
-    Q --> R[TerraGuard Application]
-    R --> S[GIS Risk Map]
-    R --> T[3D Terrain]
-    R --> U[Weather Telemetry]
-    R --> V[Earthquake Monitor]
-    R --> W[Alerts]
-    R --> X[Citizen Reporting]
-```
----
-# Data Pipeline
-The data engineering workflow is organized as follows:
-```text
-Data Acquisition
-      |
-      v
-Data Cleaning
-      |
-      v
-Data Validation
-      |
-      v
-Duplicate Handling
-      |
-      v
-Coordinate Standardization
-      |
-      v
-Regional Filtering
-      |
-      v
-Environmental Raster Processing
-      |
-      v
-Spatial Feature Extraction
-      |
-      v
-Positive and Background Sample Preparation
-      |
-      v
-Final Machine Learning Dataset
-```
----
-# Machine Learning Pipeline
-```text
-Historical Landslide Data
-            +
-Environmental GIS Data
-            |
-            v
-Data Cleaning
-            |
-            v
-Coordinate Standardization
-            |
-            v
-Regional Data Filtering
-            |
-            v
-Raster Feature Extraction
-            |
-            v
-Elevation
-Slope
-Aspect
-Soil ID
-Land Cover Class
-            |
-            v
-Positive Landslide Samples
-            +
-Background / Negative Samples
-            |
-            v
-Final Machine Learning Dataset
-            |
-            v
-Dataset Validation
-            |
-            v
-Model Training
-            |
-            v
-Extra Trees Classifier
-            |
-            v
-Model Prediction
-            |
-            v
-FastAPI Inference
-            |
-            v
-TerraGuard Application
-```
----
-# Datasets
-## Terrain and DEM Data
-Location:
-```text
-data/dem/
-```
-Processed terrain datasets include:
-```text
-NER_elevation.tif
-NER_slope.tif
-NER_aspect.tif
-```
-| Feature | Description |
-|---|---|
-| Elevation | Height above sea level |
-| Slope | Terrain steepness |
-| Aspect | Terrain direction |
----
-## Soil Data
-Location:
-```text
-data/soil/
-```
-Main raster:
-```text
-NER_HWSD2_soil.tif
-```
-Current machine learning feature:
-```text
-soil_id
-```
----
-## Land-Cover Data
-Location:
-```text
-data/landcover/
-```
-Processed raster:
-```text
-NER_landcover.tif
-```
-Source:
-```text
-ESA WorldCover
-```
-Current machine learning feature:
-```text
-landcover_class
-```
-Additional analysis output:
-```text
-NER_landcover_class_frequency.csv
-```
----
-## India Landslide Master Dataset
-Final dataset:
-```text
-India_Landslide_Master_Final.csv
-```
-The original TerraGuard data-processing workflow consolidated multiple landslide sources into a common India inventory.
----
-## North Eastern Region Landslide Dataset
-Dataset:
-```text
-NER_Landslide_Records_Final.csv
-```
-The regional inventory is used as the basis for the North Eastern Region modelling workflow.
----
-# Feature Engineering
-Environmental raster features were extracted for the regional landslide inventory.
-Dataset:
-```text
-NER_Landslide_Training_Features.csv
-```
-Core extracted features:
-```text
-elevation
-slope
-aspect
-soil_id
-landcover_class
-```
----
-# Positive Training Dataset
-Dataset:
-```text
-NER_Landslide_Training_Features_Clean.csv
-```
-Class label:
-```text
-label = 1
-```
-These records represent historical landslide locations with complete environmental feature values.
----
-# Background / Negative Samples
-Dataset:
-```text
-NER_Background_Samples_Validated.csv
-```
-Class label:
-```text
-label = 0
-```
-These samples represent background locations used for the landslide classification dataset.
----
-# Final Machine Learning Dataset
-Dataset:
-```text
-NER_Landslide_ML_Dataset.csv
-```
-Core dataset columns include:
-```text
-latitude_standardized
-longitude_standardized
-elevation
-slope
-aspect
-soil_id
-landcover_class
-label
-sample_type
-```
-The final dataset is processed to remove invalid and duplicate records and to address conflicting labels.
----
-# Location-Risk ML Model
-## Terrain + Rainfall Ensemble
-The original TerraGuard prediction architecture combines complementary models:
-```text
-Terrain model: ExtraTreesClassifier
-Rainfall model: RandomForestClassifier
-```
-The terrain model is the established landslide susceptibility model used throughout the current application workflow.
-The rainfall model is used as a complementary environmental signal where the required rainfall-window features are available.
-The combined architecture is intended to provide:
-- Non-linear relationship modelling
-- Interaction capture
-- Structured tabular-data classification
-- Probability-based outputs
-- Feature importance analysis
-- Ensemble-based risk interpretation
----
-# Seismic and Earthquake Intelligence
-TerraGuard integrates live/recent earthquake information through the National Center for Seismology (NCS) workflow used by the application.
-## Earthquake Metrics
-For a selected region and earthquake event, the prototype calculates or presents:
-- Epicentral distance
-- Hypocentral distance
-- Estimated Peak Ground Acceleration (PGA)
-- PGA in `% g`
-- Instrumental Modified Mercalli Intensity (MMI)
-- Arias intensity
-- Focal proximity
-- Composite trigger score
-- Time-decay contribution
-The seismic metrics are intended as prototype decision-support indicators rather than a substitute for authoritative engineering or emergency-management products.
----
-# Geographic State and Synchronization
-A selected hill or mountain region is treated as the main geographic context.
-When a verified region is selected, the application can propagate:
-```text
-Region
-Coordinates
-Map focus
-Weather query
-Earthquake query
-3D terrain focus
-Search context
-Browser history state
-```
-Representative coordinates are used where the data source provides a verified representative point rather than an exact polygon boundary. The application should not interpret a representative point as an exact administrative or geographic boundary.
----
-# Weather and Environmental Telemetry
-The backend weather route supports:
-```text
-/api/weather/live
-```
-Optional request parameters include:
-```text
-state
-latitude
-longitude
-region_name
-```
-The prototype uses coordinate-aware weather retrieval for selected geographic regions.
-The current implementation can use public meteorological data through Open-Meteo and retains an offline fallback for prototype continuity.
-A response can distinguish live data from fallback data using:
-```text
-is_live_feed
-```
-where live service responses are marked as live and offline fallback responses are marked as not live.
-Some prototype dashboard metrics may use baseline/fallback values when external services are unavailable. These values are intended for prototype continuity and should not be interpreted as authoritative measurements.
----
-# Backend and API Architecture
-TerraGuard uses a Python-based backend architecture centered on:
-```text
-FastAPI
-Python
-Uvicorn
-Pydantic
-```
-The backend supports:
-- Prediction requests
-- Machine learning model inference
-- Input validation
-- Weather telemetry
-- Earthquake/seismic APIs
-- Reporting workflows
-- Alert workflows
-- Frontend-backend communication
-When the backend is running locally, FastAPI interactive API documentation is available at:
-```text
-http://127.0.0.1:8000/docs
-```
----
-# Prediction Workflow
-```text
-TerraGuard Application
-           |
-           v
-API Request
-           |
-           v
-FastAPI Backend
-           |
-           v
-Input Validation
-           |
-           v
-Feature Preparation
-           |
-           v
-Extra Trees Classifier
-           |
-           v
-Prediction Output
-           |
-           v
-Risk Classification
-           |
-           v
-API Response
-           |
-           v
-Risk Visualization
-           |
-           v
-Alert Workflow
-```
----
-# Risk Classification
-Prediction outputs can be presented through the following risk categories:
-| Risk Level | Interpretation |
-|---|---|
-| Low | Lower estimated susceptibility |
-| Moderate | Moderate estimated environmental risk |
-| High | High estimated susceptibility |
-| Critical | Requires immediate attention based on configured thresholds |
-These categories support:
-- Dashboard visualization
-- GIS visualization
-- Risk monitoring
-- Warning workflows
-- Decision support
----
-# Technology Stack
-| Layer | Technology |
-|---|---|
-| Frontend | React |
-| Language | TypeScript |
-| Build Tool | Vite |
-| UI | Tailwind CSS |
-| Icons | Lucide React |
-| Animation | Motion |
-| Backend | FastAPI |
-| Backend Language | Python |
-| API Server | Uvicorn |
-| Validation | Pydantic |
-| Machine Learning | Scikit-learn |
-| Primary ML Model | Extra Trees Classifier |
-| Data Processing | Pandas, NumPy |
-| Visualization | Matplotlib / Interactive Web Maps |
-| Geospatial Data | GeoTIFF / Raster Data |
-| GIS | Interactive Map Layers |
-| Terrain | DEM, Elevation, Slope, Aspect |
-| Soil | HWSD2 |
-| Land Cover | ESA WorldCover |
-| Weather | Open-Meteo / Prototype telemetry adapters |
-| Earthquake Source | National Center for Seismology (NCS) |
----
-# Project Structure
-```text
-landslide-ai/
-│
-├── backend/
-│   ├── routers/
-│   │   ├── earthquakes.py
-│   │   ├── weather.py
-│   │   └── ...
-│   ├── services/
-│   │   ├── weather_service.py
-│   │   └── ...
-│   └── main.py
-│
-├── public/
-│
-├── src/
-│   ├── components/
-│   │   ├── GisMapContainer.tsx
-│   │   ├── HillsMountainRegions.tsx
-│   │   ├── SpatialGisCommand.tsx
-│   │   ├── ThreeDMapView.tsx
-│   │   └── ...
-│   │
-│   ├── context/
-│   │   └── MapContext.tsx
-│   │
-│   ├── data/
-│   │   └── hillsData.ts
-│   │
-│   ├── services/
-│   │   └── api.ts
-│   │
-│   ├── utils/
-│   │   └── seismicMetrics.ts
-│   │
-│   ├── types.ts
-│   ├── App.tsx
-│   └── main.tsx
-│
-├── data/
-│   ├── dem/
-│   ├── soil/
-│   └── landcover/
-│
-├── models/
-├── notebooks/
-├── scripts/
-├── README.md
-├── package.json
-└── requirements.txt
-```
----
-# Installation and Setup
-## Prerequisites
-Install:
-```text
-Node.js
-npm
-Python 3.x
-Git
-```
----
-## Clone the Repository
-```bash
-git clone https://github.com/supernovadevssihproject-team/landslide-ai.git
-cd landslide-ai
-```
----
-## Frontend Setup
-Install dependencies:
-```bash
-npm install
-```
-Start the development server:
-```bash
-npm run dev
-```
-The Vite development server will display the local URL in the terminal.
----
-## Backend Setup
-Create and activate a Python virtual environment:
-### Windows
-```powershell
-python -m venv .venv
-.venv\Scripts\Activate.ps1
-```
-### Linux / macOS
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-```
-Install Python dependencies:
-```bash
-pip install -r requirements.txt
-```
-TerraGuard uses one FastAPI application implementation. For local development, run separate Uvicorn instances for the web and mobile workflows:
-Web backend:
-```bash
-python -m uvicorn backend.main:app --reload --host 127.0.0.1 --port 8000
-```
-Web API documentation:
-```text
-http://127.0.0.1:8000/docs
-```
-Mobile backend instance:
-```bash
-python -m uvicorn backend.main:app --reload --host 127.0.0.1 --port 8001
-```
-Mobile API documentation:
-```text
-http://127.0.0.1:8001/docs
-```
-These are two processes of the same FastAPI application, with separate ports for the current local web and mobile workflows. The web browser uses Vite at `http://127.0.0.1:3000`, whose API proxy targets port `8000`. The Flutter app targets port `8001` (`10.0.2.2:8001` from an Android emulator).
-The local endpoint split is:
-```text
-WEB:    http://127.0.0.1:3000 -> http://127.0.0.1:8000
-MOBILE: Flutter app          -> http://127.0.0.1:8001
-```
----
-## Build Verification
-Frontend lint:
-```bash
-npm run lint
-```
-Production build:
-```bash
-npm run build
-```
-Backend syntax verification:
-```bash
-python -m compileall backend
-```
----
-# Validation and Testing
-Web
-```bash
-npm run lint
-npm run build
-```
-The current web workflow has been validated with TypeScript checks and a production Vite build.
-Backend
-```bash
-python -m compileall backend
-python backend/test_api.py
-```
-The current V2 contract/no-fallback backend changes have been validated by the backend API test suite.
-Mobile
-From `mobile_app/`:
-```bash
-flutter analyze
-flutter test
-```
-The offline field-report implementation has been validated with Flutter analysis and tests.
-Important Integration Test
-Once the real V2 ONNX artifact is available, the final E2E test must verify:
-```text
-Flutter photo capture
+Selected Region
       |
-      v
-Local SQLite report
-      |
-      v
-Backend upload
-      |
-      v
-POST /api/reports/classify
-      |
-      v
-ONNX Runtime
-      |
-      v
-Real prediction
-      |
-      v
-Confidence + severity
-      |
-      v
-Mobile CLASSIFIED state
+      +--> GIS Risk Map
+      +--> 3D Terrain
+      +--> Weather
+      +--> Earthquake Monitor
+      +--> Search
+      +--> Browser Navigation
 ```
-No model performance value should be documented until measured on the actual deployed artifact.
----
-# Prototype Notes and Data Integrity
-TerraGuard is currently a **prototype / portfolio / demonstration application**.
-Important implementation notes:
-- Live external services may be unavailable or rate-limited.
-- Offline fallback data can be used to preserve application continuity.
-- Prototype baseline values may appear for selected environmental metrics when an external service is unavailable.
-- Fallback data should not be interpreted as real-time authoritative measurements.
-- Historical earthquake records are not fabricated when a verified archive is unavailable.
-- Representative hill coordinates are used where a source provides a representative point rather than an exact boundary polygon.
-- Seismic metrics are intended for prototype decision support and visualization.
-For operational disaster-management deployment, all external data sources, geospatial boundaries, alert thresholds, model calibration, and engineering formulas should undergo domain validation and independent verification.
----
-# Project Status
-Prototype / Demonstration Ready — Full Web + Mobile Platform
-Web Platform
-```text
-Core web application                  COMPLETE
-GIS risk visualization                COMPLETE
-Shared geographic state               COMPLETE
-Weather integration                   COMPLETE
-Earthquake monitoring                 COMPLETE
-3D terrain context                    COMPLETE
-Risk dashboard                        COMPLETE
-Risk details                          COMPLETE
-Alerts feed                           COMPLETE
-Emergency SOS                         COMPLETE
-Hills / mountain regions              COMPLETE
-TerraBot assistant                    COMPLETE
-Risk simulation                       COMPLETE
-ML pipeline interface                 COMPLETE
-Crowdsource reporting                 COMPLETE
-Broadcast / dispatch interface        COMPLETE
-```
-Flutter Mobile
-```text
-Mobile application                    COMPLETE
-Location-risk API integration         COMPLETE
-GPS field capture                     COMPLETE
-Camera/gallery capture                COMPLETE
-Local SQLite persistence              COMPLETE
-Connectivity-aware synchronization    COMPLETE
-Offline report queue                  COMPLETE
-My Reports workflow                   COMPLETE
-Separate report/AI states             COMPLETE
-Mobile risk map                       COMPLETE
-Emergency / SOS quick action          COMPLETE
-V2 classifier API integration seam    COMPLETE
-```
-Field-Photo AI V2
-```text
-Backend API contract                  COMPLETE
-Strict no-V1 fallback                 COMPLETE
-Artifact validation gate              COMPLETE
-Backend regression tests              PASSING
-External dataset acquisition          PENDING
-License verification                  PENDING
-Real model training                   PENDING
-Held-out evaluation                   PENDING
-Production ONNX artifact              PENDING
-Real inference benchmark              PENDING
-Mobile/backend E2E AI test            PENDING
-```
-The project intentionally distinguishes implemented software contracts from uncompleted model training. No field-photo AI accuracy or deployment performance is claimed until the real model is trained and tested.
-# Future Scope
-Future TerraGuard development can include:
-- Real-time IMD data integration
-- Verified satellite and radar feeds
-- Higher-resolution precipitation products
-- Soil-moisture data integration
-- Real-time sensor networks
-- More detailed seismic hazard models
-- Verified historical earthquake archives
-- Improved regional administrative boundaries
-- Larger and more representative training datasets
-- Explainable AI dashboards
-- Model calibration with field observations
-- Automated alert threshold optimization
-- SMS / email / push notification integrations
-- Offline-first field applications
-- Mobile deployment
-- Cloud-native deployment
-- Continuous model monitoring and retraining
-- Production-grade data provenance and auditability
+
+This keeps the selected region and geographic focus consistent across major application modules.
+
 ---
 
-# Deployment
-TerraGuard can be deployed as a split frontend/backend application because the project contains a React/Vite frontend and a FastAPI backend.
-## Deployment Architecture
-```text
-Users
-  |
-  v
-Public Frontend
-React + Vite
-  |
-  | HTTPS API Requests
-  v
-FastAPI Backend
-  |
-  +-------------------+
-  |                   |
-  v                   v
-ML Models        External Services
-                 Weather / NCS
-```
-## Frontend Deployment
-The frontend can be built for production using:
-```bash
-npm run build
-```
-The resulting Vite production output is normally generated in:
-```text
-dist/
-```
-The `dist/` directory can be served by a static hosting platform or a conventional web server.
-Before deployment, configure the frontend API base URL or environment variables required by the project so that production requests point to the deployed FastAPI service rather than the local backend.
-Example production workflow:
-```text
-1. Install Node.js dependencies
-2. Configure production environment variables
-3. Run npm run build
-4. Deploy the generated dist/ directory
-5. Configure the backend API URL
-6. Verify CORS and HTTPS connectivity
-```
-## Backend Deployment
-The FastAPI backend can be started with:
-```bash
-python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000
-```
-For a production deployment, the backend should run behind a production-capable process manager or application platform.
-Required backend configuration should include:
-```text
-Python environment
-Required Python packages
-Model files
-Application configuration
-CORS settings
-External API configuration
-```
-The API documentation is available at:
-```text
-https://<your-backend-domain>/docs
-```
-when the service is publicly deployed.
-## Environment Variables
-Do not commit private credentials or API keys to the repository.
-Use an environment file for local development, for example:
-```text
-.env
-```
-and provide a safe example file such as:
-```text
-.env.example
-```
-Typical configuration may include:
-```text
-VITE_API_BASE_URL=
-BACKEND_CORS_ORIGINS=
-WEATHER_API_KEY=
-EARTHQUAKE_API_CONFIG=
-OTHER_SERVICE_KEYS=
-```
-Only define variables that are actually required by the deployment configuration.
-## CORS
-When the frontend and backend are hosted on different domains, configure FastAPI CORS to allow the production frontend origin.
-Example:
-```text
-Frontend:
-https://your-frontend-domain
-Backend:
-https://your-backend-domain
-```
-Do not use an unrestricted production CORS configuration unless it is intentionally required and understood.
-## Model and Data Deployment
-The deployment must make all required machine learning artifacts and runtime data available to the backend. This includes the V2 field-photo ONNX artifact once training is complete.
-Depending on repository size, large files may be:
-```text
-Stored in the repository
-Stored in object storage
-Mounted from a persistent volume
-Downloaded during deployment
-Managed through a model/data registry
-```
-Verify that the deployed backend can locate:
-```text
-Model files
-Required GIS data
-Configuration files
-Required lookup tables
-```
-## Production Verification Checklist
-After deployment, verify:
-```text
-[ ] Frontend loads successfully
-[ ] Backend health/API endpoint responds
-[ ] CORS allows frontend requests
-[ ] Prediction endpoint works
-[ ] GIS map renders
-[ ] 3D terrain renders
-[ ] Hill selection updates geographic context
-[ ] Weather endpoint responds
-[ ] Earthquake endpoint responds
-[ ] Alerts and reporting workflows operate
-[ ] External source links open correctly
-[ ] Browser Back/Forward restores geographic state
-[ ] No secret keys are exposed in frontend source
-[ ] HTTPS is enabled for public deployment
-```
-## Prototype Deployment Note
-TerraGuard is currently a prototype and can be deployed as a demonstration application. A production disaster-management deployment should additionally include:
-- Production-grade monitoring
-- Authentication and authorization
-- Secure secret management
-- Rate limiting
-- Data provenance
-- Strong API validation
-- Centralized logging
-- Backups
-- Model/version tracking
-- Domain-specific validation of hazard metrics
-- High-availability infrastructure
-- Independent verification of authoritative data sources
-## SMS Gateway Setup & India DLT Activation
-TerraGuard's emergency dispatch pipeline uses **SMSHorizon** (India Bulk DLT gateway) for localized emergency SMS alerts.
-> [!NOTE]
-> Real SMS dispatch requires active SMSHorizon account credentials and TRAI DLT activation (Entity ID, Sender ID, and Approved Template ID). SMSHorizon activation requests are currently pending. Until activation is complete, TerraGuard runs with `SMS_DEMO_MODE=true` to demonstrate full end-to-end emergency workflows truthfully without sending fake SMS or displaying unverified delivery receipts.
-### Production Activation Steps
-Once SMSHorizon account approval and TRAI DLT template registration are granted:
-1. **Log in to SMSHorizon Console** and copy your API Key.
-2. **Register TRAI DLT Entity & Header (Sender ID)** (e.g. Entity ID `100123...`, Sender ID `GSISIK`).
-3. **Register DLT Approved SMS Template**:
-   - Approved Text: `[GSI-LEWS ALERT] {#var#}. {#var#} Call 1077.`
-   - Note down the approved `DLT_TEMPLATE_ID`.
-4. **Update Environment Variables** in `backend/.env` or environment:
-   ```env
-   SMS_PROVIDER=sms_horizon
-   SMS_DEMO_MODE=false
-   SMSHORIZON_API_KEY="your_api_key_here"
-   SMSHORIZON_SENDER_ID="GSISIK"
-   SMSHORIZON_DLT_ENTITY_ID="100123..."
-   SMSHORIZON_TEMPLATE_ID="200456..."
-   SMSHORIZON_API_URL="https://smshorizon.in/api/sendsms.php"
-   ```
-5. **Restart Backend Server**:
-   ```bash
-      python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000
-   ```
-6. **Execute Verification**:
-   Send a test dispatch via mobile app emergency sheet or web operator console. The backend will transmit the request to SMSHorizon and return `status: "sent"` upon provider confirmation.
----
-# Team
-**Supernova Devs — SIH Project Team**
+# 25. Team
+
+**Supernova Devs - SIH Project Team**
+
 ## Team Members
-- B NITHIN CHANDRA — https://github.com/bnithinchandra-dotcom
-- B DHANUSH — https://github.com/bondidhanush01-bit
-- B Kedar Sharma — https://github.com/frostblack548-stack
-- Ch Naga Manaswini — https://github.com/chnagamanaswini
-- D Prajnasree — https://prajnasree.github.io
-- Hasini chappidi — https://github.com/hasini-ch-7
+
+- B NITHIN CHANDRA - https://github.com/bnithinchandra-dotcom
+- B DHANUSH - https://github.com/bondidhanush01-bit
+- B Kedar Sharma - https://github.com/frostblack548-stack
+- Ch Naga Manaswini - https://github.com/chnagamanaswini
+- D Prajnasree - https://prajnasree.github.io
+- Hasini chappidi - https://github.com/hasini-ch-7
 
 TerraGuard was developed as a collaborative Smart India Hackathon project and is being further developed as a professional portfolio and applied geospatial AI prototype.
----
+
 ## Repository
-GitHub:
-```text
+
 https://github.com/supernovadevssihproject-team/landslide-ai
-```
+
 ---
-# License
-This project is free to use by anyone.
-For licensing or usage-related questions, please contact the TerraGuard team.
+
+# 26. License
+
+The current repository does not contain a separate root `LICENSE` file. The existing repository documentation states that the project is free to use by anyone and directs licensing or usage-related questions to the TerraGuard team.
+
+Repository:
+
+https://github.com/supernovadevssihproject-team/landslide-ai
