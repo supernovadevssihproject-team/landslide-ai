@@ -32,6 +32,10 @@ export interface EnabledLayers {
   liveEarthquakes: boolean;
   historicalLandslides: boolean;
   seismicActivity: boolean;
+  liveRiskZones: boolean;
+  administrativeBoundaries: boolean;
+  rainfall: boolean;
+  citizenReports: boolean;
 }
 
 export interface MapContextProps {
@@ -67,6 +71,10 @@ const defaultEnabledLayers: EnabledLayers = {
   liveEarthquakes: true,
   historicalLandslides: true,
   seismicActivity: false,
+  liveRiskZones: true,
+  administrativeBoundaries: true,
+  rainfall: false,
+  citizenReports: true,
 };
 
 const defaultContext: MapContextProps = {

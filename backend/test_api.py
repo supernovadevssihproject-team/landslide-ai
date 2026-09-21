@@ -23,6 +23,58 @@ def test_health():
     print("[PASS] Health check endpoints (/health, /api/health) passed")
 
 
+def test_map_geojson_layers():
+    risk = client.get("/api/map/risk-polygons?state=sikkim")
+    assert risk.status_code == 200, risk.text
+    risk_payload = risk.json()
+    assert risk_payload["type"] == "FeatureCollection"
+    assert len(risk_payload["features"]) >= 1
+    first = risk_payload["features"][0]
+    assert first["geometry"]["type"] == "Polygon"
+    assert "risk_score" in first["properties"]
+
+    bounds = client.get("/api/map/boundaries?level=state")
+    assert bounds.status_code == 200, bounds.text
+    bounds_payload = bounds.json()
+    assert bounds_payload["type"] == "FeatureCollection"
+    assert len(bounds_payload["features"]) >= 1
+    boundary = bounds_payload["features"][0]
+    assert boundary["geometry"]["type"] in {"Polygon", "MultiPolygon"}
+    assert "state" in boundary["properties"]
+
+    print("[PASS] GeoJSON risk/boundary map layers passed")
+
+
+def test_live_contextual_map_contracts():
+    weather = client.get("/api/weather/live?state=sikkim")
+    assert weather.status_code == 200, weather.text
+    weather_payload = weather.json()
+    assert "current_rainfall_mm_hr" in weather_payload
+    assert "last_updated" in weather_payload
+
+    earthquakes = client.get("/api/earthquakes?latitude=27.5&longitude=88.5&radius_km=500&limit=5")
+    assert earthquakes.status_code == 200, earthquakes.text
+    eq_payload = earthquakes.json()
+    assert isinstance(eq_payload.get("events", []), list)
+    assert "earthquake_data_available" in eq_payload
+
+    reports = client.get("/api/reports")
+    assert reports.status_code == 200, reports.text
+    report_list = reports.json()
+    assert len(report_list) >= 1
+    first_report = report_list[0]
+    assert "classification" in first_report or "aiClassificationStatus" in first_report
+    assert first_report.get("state") in {"sikkim", "assam", "meghalaya", "arunachal", "manipur", "nagaland", "mizoram", "tripura"} or first_report.get("state") is not None
+
+    map_reports = client.get("/api/map/reports?state=sikkim")
+    assert map_reports.status_code == 200, map_reports.text
+    map_payload = map_reports.json()
+    assert map_payload["type"] == "FeatureCollection"
+    assert len(map_payload["features"]) >= 1
+
+    print("[PASS] Live contextual map contracts passed: rainfall, earthquake, public reports, and map report GeoJSON")
+
+
 def test_chatbot_language_support():
     response = client.post("/api/chat", json={
         "message": "What is the risk in Sikkim?",

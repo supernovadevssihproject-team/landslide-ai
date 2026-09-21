@@ -757,6 +757,39 @@ export const SpatialGisCommand: React.FC<SpatialGisCommandProps> = ({
                     <label className="flex items-center gap-2.5 cursor-pointer text-xs font-medium group">
                       <input
                         type="checkbox"
+                        checked={activeLayers.liveRiskZones ?? true}
+                        onChange={() => setActiveLayers((p) => ({ ...p, liveRiskZones: !(p.liveRiskZones ?? true) }))}
+                        className="w-4 h-4 rounded text-emerald-500 focus:ring-emerald-400 cursor-pointer accent-emerald-500"
+                      />
+                      <ShieldAlert className="w-3.5 h-3.5 text-emerald-500" />
+                      <span>Live Risk Zones</span>
+                    </label>
+
+                    <label className="flex items-center gap-2.5 cursor-pointer text-xs font-medium group">
+                      <input
+                        type="checkbox"
+                        checked={activeLayers.administrativeBoundaries ?? true}
+                        onChange={() => setActiveLayers((p) => ({ ...p, administrativeBoundaries: !(p.administrativeBoundaries ?? true) }))}
+                        className="w-4 h-4 rounded text-cyan-500 focus:ring-cyan-400 cursor-pointer accent-cyan-500"
+                      />
+                      <MapPin className="w-3.5 h-3.5 text-cyan-500" />
+                      <span>Administrative Boundaries</span>
+                    </label>
+
+                    <label className="flex items-center gap-2.5 cursor-pointer text-xs font-medium group">
+                      <input
+                        type="checkbox"
+                        checked={activeLayers.rainfall ?? false}
+                        onChange={() => setActiveLayers((p) => ({ ...p, rainfall: !(p.rainfall ?? false) }))}
+                        className="w-4 h-4 rounded text-blue-500 focus:ring-blue-400 cursor-pointer accent-blue-500"
+                      />
+                      <CloudRain className="w-3.5 h-3.5 text-blue-500" />
+                      <span>Live Rainfall Feed</span>
+                    </label>
+
+                    <label className="flex items-center gap-2.5 cursor-pointer text-xs font-medium group">
+                      <input
+                        type="checkbox"
                         checked={activeLayers.imdRadar}
                         onChange={() =>
                           setActiveLayers((p) => ({ ...p, imdRadar: !p.imdRadar }))
@@ -778,6 +811,17 @@ export const SpatialGisCommand: React.FC<SpatialGisCommandProps> = ({
                       />
                       <Droplets className="w-3.5 h-3.5 text-cyan-500" />
                       <span>{t('riskMap.soilSaturation')}</span>
+                    </label>
+
+                    <label className="flex items-center gap-2.5 cursor-pointer text-xs font-medium group">
+                      <input
+                        type="checkbox"
+                        checked={activeLayers.citizenReports ?? true}
+                        onChange={() => setActiveLayers((p) => ({ ...p, citizenReports: !(p.citizenReports ?? true) }))}
+                        className="w-4 h-4 rounded text-emerald-500 focus:ring-emerald-400 cursor-pointer accent-emerald-500"
+                      />
+                      <Send className="w-3.5 h-3.5 text-emerald-500" />
+                      <span>Citizen Report Clusters</span>
                     </label>
 
                     <label className="flex items-center gap-2.5 cursor-pointer text-xs font-medium group">

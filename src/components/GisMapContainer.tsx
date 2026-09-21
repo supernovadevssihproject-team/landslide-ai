@@ -25,6 +25,8 @@ import {
 import { ThreeDMapView } from './ThreeDMapView';
 import { FocusCoordinates } from '../context/MapContext';
 import { HillsRegion } from '../data/hillsData';
+import { LiveRiskLayer } from './map/LiveRiskLayer';
+import { AdministrativeBoundaryLayer } from './map/AdministrativeBoundaryLayer';
 
 export type GoogleEarthBasemap = 'satellite' | 'hybrid' | 'terrain' | '3d_earth';
 
@@ -53,6 +55,13 @@ interface GisMapContainerProps {
     mlHeatmap: boolean;
     earthquakeEvents: boolean;
     historicalEarthquakeEvents: boolean;
+    liveEarthquakes?: boolean;
+    historicalLandslides?: boolean;
+    seismicActivity?: boolean;
+    liveRiskZones?: boolean;
+    administrativeBoundaries?: boolean;
+    rainfall?: boolean;
+    citizenReports?: boolean;
   };
   onToggleLayer: (layerKey: string) => void;
   onShowToast: (msg: string) => void;
@@ -74,6 +83,13 @@ function parseZoneCoordinates(coordStr: string): [number, number] {
     }
   } catch { }
   return [27.5312, 88.5134];
+}
+
+function formatLastUpdated(value?: string | null): string {
+  if (!value) return 'not available';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
 }
 
 export const GisMapContainer: React.FC<GisMapContainerProps> = ({
@@ -101,12 +117,15 @@ export const GisMapContainer: React.FC<GisMapContainerProps> = ({
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const canvasOverlayRef = useRef<HTMLCanvasElement>(null);
   const mapRef = useRef<L.Map | null>(null);
+  const [mapInstance, setMapInstance] = useState<L.Map | null>(null);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
   const markersLayerGroupRef = useRef<L.LayerGroup | null>(null);
   const trainingEventsLayerGroupRef = useRef<L.LayerGroup | null>(null);
   const sensorsLayerGroupRef = useRef<L.LayerGroup | null>(null);
   const earthquakesLayerGroupRef = useRef<L.LayerGroup | null>(null);
   const historicalEarthquakesLayerGroupRef = useRef<L.LayerGroup | null>(null);
+  const rainfallLayerGroupRef = useRef<L.LayerGroup | null>(null);
+  const reportClusterLayerGroupRef = useRef<L.LayerGroup | null>(null);
   const selectedHillMarkerLayerRef = useRef<L.LayerGroup | null>(null);
   const shelterMarkerLayerRef = useRef<L.LayerGroup | null>(null);
 
@@ -116,6 +135,82 @@ export const GisMapContainer: React.FC<GisMapContainerProps> = ({
   const [showSettingsPanel, setShowSettingsPanel] = useState<boolean>(false);
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
   const [currentZoom, setCurrentZoom] = useState<number>(9);
+  const [riskPolygons, setRiskPolygons] = useState<any>({ type: 'FeatureCollection', features: [] });
+  const [boundaries, setBoundaries] = useState<any>({ type: 'FeatureCollection', features: [] });
+  const [rainfallFeed, setRainfallFeed] = useState<{
+    latitude: number;
+    longitude: number;
+    station_name: string;
+    district: string;
+    state: string;
+    current_rainfall_mm_hr: number;
+    antecedent_72h_rainfall_mm: number;
+    last_updated: string;
+  } | null>(null);
+  const [reportClusters, setReportClusters] = useState<Array<{
+    id: string;
+    latitude: number;
+    longitude: number;
+    count: number;
+    severity: string;
+    location: string;
+    classification: string;
+  }>>([]);
+  const [rainfallStatus, setRainfallStatus] = useState<{ loading: boolean; error: string | null; lastUpdated: string | null }>({
+    loading: false,
+    error: null,
+    lastUpdated: null,
+  });
+  const [reportStatus, setReportStatus] = useState<{ loading: boolean; error: string | null; lastUpdated: string | null }>({
+    loading: false,
+    error: null,
+    lastUpdated: null,
+  });
+  const [earthquakeLayerStatus, setEarthquakeLayerStatus] = useState<{ loading: boolean; error: string | null; lastUpdated: string | null }>({
+    loading: false,
+    error: null,
+    lastUpdated: null,
+  });
+  const [liveEarthquakeStatus, setLiveEarthquakeStatus] = useState<string>(earthquakeStatus);
+
+  useEffect(() => {
+    setLiveEarthquakeStatus(earthquakeStatus);
+  }, [earthquakeStatus]);
+
+  useEffect(() => {
+    let ignore = false;
+    const controller = new AbortController();
+
+    const loadMapLayers = async () => {
+      try {
+        const [riskResp, boundaryResp] = await Promise.all([
+          fetch(`${(import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/+$/, '')}/api/map/risk-polygons?state=${encodeURIComponent(selectedZone.state.toLowerCase())}`, { signal: controller.signal }),
+          fetch(`${(import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/+$/, '')}/api/map/boundaries?level=state`, { signal: controller.signal }),
+        ]);
+
+        if (ignore) return;
+
+        if (riskResp.ok) {
+          const riskJson = await riskResp.json();
+          setRiskPolygons(riskJson || { type: 'FeatureCollection', features: [] });
+        }
+        if (boundaryResp.ok) {
+          const boundaryJson = await boundaryResp.json();
+          setBoundaries(boundaryJson || { type: 'FeatureCollection', features: [] });
+        }
+      } catch (error: any) {
+        if (error?.name !== 'AbortError') {
+          console.warn('Map live layer unavailable:', error);
+        }
+      }
+    };
+
+    loadMapLayers();
+    return () => {
+      ignore = true;
+      controller.abort();
+    };
+  }, [selectedZone.state]);
 
   // Google Earth tile URLs (high-speed Google tile servers)
   const tileConfigs = useMemo(() => ({
@@ -179,9 +274,12 @@ export const GisMapContainer: React.FC<GisMapContainerProps> = ({
     sensorsLayerGroupRef.current = L.layerGroup().addTo(map);
     earthquakesLayerGroupRef.current = L.layerGroup().addTo(map);
     historicalEarthquakesLayerGroupRef.current = L.layerGroup().addTo(map);
+    rainfallLayerGroupRef.current = L.layerGroup().addTo(map);
+    reportClusterLayerGroupRef.current = L.layerGroup().addTo(map);
     selectedHillMarkerLayerRef.current = L.layerGroup().addTo(map);
     shelterMarkerLayerRef.current = L.layerGroup().addTo(map);
     mapRef.current = map;
+    setMapInstance(map);
 
     // Track zoom
     map.on('zoomend', () => {
@@ -191,6 +289,7 @@ export const GisMapContainer: React.FC<GisMapContainerProps> = ({
     return () => {
       map.remove();
       mapRef.current = null;
+      setMapInstance(null);
     };
   }, []);
 
@@ -556,6 +655,181 @@ export const GisMapContainer: React.FC<GisMapContainerProps> = ({
     });
   }, [sensors, activeLayers.sensorNodes]);
 
+  useEffect(() => {
+    let active = true;
+    if (!activeLayers.rainfall) {
+      setRainfallFeed(null);
+      return;
+    }
+
+    const coords = parseZoneCoordinates(selectedZone.coords);
+    const state = selectedZone.state || 'sikkim';
+    const fetchRainfall = async () => {
+      try {
+        const params = new URLSearchParams({ state: String(state).toLowerCase() });
+        if (Number.isFinite(coords[0]) && Number.isFinite(coords[1])) {
+          params.set('latitude', String(coords[0]));
+          params.set('longitude', String(coords[1]));
+        }
+        const resp = await fetch(`${(import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/+$/, '')}/api/weather/live?${params.toString()}`);
+        if (!resp.ok) return;
+        const data = await resp.json();
+        if (!active) return;
+        setRainfallFeed({
+          latitude: Number(data.latitude ?? coords[0]),
+          longitude: Number(data.longitude ?? coords[1]),
+          station_name: data.station_name || 'IMD AWS Hub',
+          district: data.district || 'Rainfall station',
+          state: String(data.state || state).toLowerCase(),
+          current_rainfall_mm_hr: Number(data.current_rainfall_mm_hr ?? 0),
+          antecedent_72h_rainfall_mm: Number(data.antecedent_72h_rainfall_mm ?? 0),
+          last_updated: data.last_updated || 'live',
+        });
+      } catch (error) {
+        console.warn('Rainfall layer unavailable:', error);
+      }
+    };
+
+    fetchRainfall();
+    return () => { active = false; };
+  }, [selectedZone.coords, selectedZone.state, activeLayers.rainfall]);
+
+  useEffect(() => {
+    let active = true;
+    if (!activeLayers.citizenReports) {
+      setReportClusters([]);
+      setReportStatus((prev) => ({ ...prev, loading: false, error: null }));
+      return;
+    }
+
+    const loadReports = async () => {
+      setReportStatus((prev) => ({ ...prev, loading: true, error: null }));
+
+      try {
+        const state = selectedZone.state === 'all' ? undefined : selectedZone.state;
+        const resp = await fetch(`${(import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/+$/, '')}/api/map/reports${state ? `?state=${encodeURIComponent(state)}` : ''}`);
+        if (!resp.ok) {
+          throw new Error(`Citizen reports status ${resp.status}`);
+        }
+        const payload = await resp.json();
+        if (!active) return;
+        const grouped = new Map<string, { id: string; latitude: number; longitude: number; count: number; severity: string; location: string; classification: string }>();
+
+        (payload.features || []).forEach((feature: any) => {
+          const props = feature.properties || {};
+          const lon = Number(feature.geometry?.coordinates?.[0]);
+          const lat = Number(feature.geometry?.coordinates?.[1]);
+          if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
+          const key = `${lat.toFixed(3)}:${lon.toFixed(3)}`;
+          const existing = grouped.get(key);
+          const urgency = String(props.severity || 'ROUTINE').toUpperCase();
+          const classification = String(props.classification || 'pending');
+          if (existing) {
+            existing.count += 1;
+            if (['CRITICAL', 'URGENT'].includes(urgency) || ['CRITICAL', 'URGENT'].includes(existing.severity)) {
+              existing.severity = urgency === 'CRITICAL' || existing.severity === 'CRITICAL' ? 'CRITICAL' : 'URGENT';
+            }
+            if (classification && classification !== existing.classification) {
+              existing.classification = classification;
+            }
+          } else {
+            grouped.set(key, {
+              id: key,
+              latitude: lat,
+              longitude: lon,
+              count: 1,
+              severity: urgency,
+              location: props.location || 'Citizen report',
+              classification,
+            });
+          }
+        });
+
+        const nextClusters = Array.from(grouped.values());
+        setReportClusters(nextClusters);
+        setReportStatus({
+          loading: false,
+          error: null,
+          lastUpdated: new Date().toISOString(),
+        });
+      } catch (error) {
+        if (!active) return;
+        console.warn('Citizen report clusters unavailable:', error);
+        setReportClusters([]);
+        setReportStatus({
+          loading: false,
+          error: 'Citizen report feed unavailable',
+          lastUpdated: null,
+        });
+      }
+    };
+
+    loadReports();
+    const intervalId = window.setInterval(loadReports, 45000);
+    return () => {
+      active = false;
+      window.clearInterval(intervalId);
+    };
+  }, [selectedZone.state, activeLayers.citizenReports]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    const group = rainfallLayerGroupRef.current;
+    if (!map || !group) return;
+
+    group.clearLayers();
+    if (!activeLayers.rainfall || !rainfallFeed) return;
+
+    const radius = Math.min(32, Math.max(16, rainfallFeed.current_rainfall_mm_hr * 0.9 + 12));
+    const marker = L.circleMarker([rainfallFeed.latitude, rainfallFeed.longitude], {
+      radius,
+      color: '#38bdf8',
+      weight: 2,
+      fillColor: '#0ea5e9',
+      fillOpacity: 0.55,
+    });
+    marker.bindTooltip(`
+      <div class="p-1.5 font-mono text-[10px] bg-slate-950 text-cyan-100 rounded border border-cyan-500/80">
+        <b class="text-cyan-300 block">${rainfallFeed.station_name}</b>
+        <div>${rainfallFeed.district}</div>
+        <div>Rain: ${rainfallFeed.current_rainfall_mm_hr.toFixed(1)} mm/hr</div>
+        <div>72h: ${rainfallFeed.antecedent_72h_rainfall_mm.toFixed(1)} mm</div>
+        <div class="text-slate-400">${rainfallFeed.last_updated}</div>
+      </div>
+    `, { direction: 'top', sticky: true });
+    marker.addTo(group);
+  }, [rainfallFeed, activeLayers.rainfall]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    const group = reportClusterLayerGroupRef.current;
+    if (!map || !group) return;
+
+    group.clearLayers();
+    if (!activeLayers.citizenReports || reportClusters.length === 0) return;
+
+    reportClusters.forEach((cluster) => {
+      const severityColor = cluster.severity === 'CRITICAL' ? '#ef4444' : cluster.severity === 'URGENT' ? '#f59e0b' : '#22c55e';
+      const radius = Math.min(32, 10 + cluster.count * 4);
+      const marker = L.circleMarker([cluster.latitude, cluster.longitude], {
+        radius,
+        color: severityColor,
+        weight: 2,
+        fillColor: severityColor,
+        fillOpacity: 0.7,
+      });
+      marker.bindTooltip(`
+        <div class="p-1.5 font-mono text-[10px] bg-slate-950 text-slate-100 rounded border border-slate-600">
+          <b class="text-cyan-300 block">${cluster.location}</b>
+          <div>${cluster.count} report${cluster.count > 1 ? 's' : ''} clustered</div>
+          <div>Severity: ${cluster.severity}</div>
+          <div>AI visual classification: ${cluster.classification || 'landslide'}</div>
+        </div>
+      `, { direction: 'top', sticky: true });
+      marker.addTo(group);
+    });
+  }, [reportClusters, activeLayers.citizenReports]);
+
   // Render validated official NCS earthquake events.
   useEffect(() => {
     const map = mapRef.current;
@@ -580,12 +854,59 @@ export const GisMapContainer: React.FC<GisMapContainerProps> = ({
           <div>${event.location}</div>
           <div>${event.depth_km.toFixed(0)} km deep • ${event.status}</div>
           <div>${new Date(event.event_time).toLocaleString()}</div>
-          <div class="text-slate-400">${earthquakeStatus}</div>
+          <div class="text-slate-400">${liveEarthquakeStatus}</div>
         </div>
       `, { direction: 'top', offset: [0, -size / 2] });
       marker.addTo(group);
     });
-  }, [earthquakes, earthquakeStatus, activeLayers.earthquakeEvents]);
+  }, [earthquakes, liveEarthquakeStatus, activeLayers.earthquakeEvents]);
+
+  useEffect(() => {
+    let active = true;
+    if (!activeLayers.earthquakeEvents) {
+      setEarthquakeLayerStatus((prev) => ({ ...prev, loading: false, error: null }));
+      return;
+    }
+
+    const fetchEarthquakes = async () => {
+      setEarthquakeLayerStatus((prev) => ({ ...prev, loading: true, error: null }));
+
+      try {
+        const match = selectedZone.coords.match(/(-?\d+(?:\.\d+)?)[^,]*,\s*(-?\d+(?:\.\d+)?)/);
+        const latitude = match ? Number(match[1]) : undefined;
+        const longitude = match ? Number(match[2]) : undefined;
+        const response = await fetch(`${(import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/+$/, '')}/api/earthquakes?latitude=${latitude ?? ''}&longitude=${longitude ?? ''}&radius_km=500&limit=25`);
+        if (!response.ok) {
+          throw new Error(`Earthquake feed status ${response.status}`);
+        }
+        const payload = await response.json();
+        if (!active) return;
+        const events = Array.isArray(payload?.events) ? payload.events : [];
+        setEarthquakeLayerStatus({
+          loading: false,
+          error: payload?.earthquake_data_available === false ? 'Earthquake feed unavailable' : null,
+          lastUpdated: payload?.last_updated || new Date().toISOString(),
+        });
+        setLiveEarthquakeStatus(payload?.earthquake_data_available ? `${events.length} NCS events in range` : 'NCS feed temporarily unavailable');
+      } catch (error) {
+        if (!active) return;
+        console.warn('Earthquake layer unavailable:', error);
+        setLiveEarthquakeStatus('NCS feed temporarily unavailable');
+        setEarthquakeLayerStatus({
+          loading: false,
+          error: 'Earthquake feed unavailable',
+          lastUpdated: null,
+        });
+      }
+    };
+
+    fetchEarthquakes();
+    const intervalId = window.setInterval(fetchEarthquakes, 60000);
+    return () => {
+      active = false;
+      window.clearInterval(intervalId);
+    };
+  }, [activeLayers.earthquakeEvents, selectedZone.coords]);
 
   // Render validated historical earthquake events
   useEffect(() => {
@@ -770,6 +1091,27 @@ export const GisMapContainer: React.FC<GisMapContainerProps> = ({
     };
   }, [heatmapPoints, activeLayers.mlHeatmap, heatmapRadius, heatmapOpacity, stressRainfall]);
 
+  const selectedAreaInfo = useMemo(() => {
+    const feature = riskPolygons?.features?.find((item: any) => {
+      const props = item?.properties || {};
+      return props.name === selectedZone.name || props.state === selectedZone.state;
+    }) || riskPolygons?.features?.[0];
+    const props = feature?.properties || {};
+    const reportCount = reportClusters.reduce((sum, cluster) => sum + cluster.count, 0);
+    const strongestEarthquake = earthquakes[0];
+
+    return {
+      state: String(selectedZone.state || props.state || 'unknown'),
+      district: String(props.district || selectedZone.corridor || 'district context'),
+      riskLevel: String(props.risk_level || selectedZone.riskStatus || 'LOW'),
+      riskScore: Number(props.risk_score ?? 0),
+      rainfall: rainfallFeed ? `${rainfallFeed.current_rainfall_mm_hr.toFixed(1)} mm/hr` : 'not available',
+      reportCount,
+      earthquakeContext: strongestEarthquake ? `${strongestEarthquake.magnitude.toFixed(1)}M ${strongestEarthquake.location}` : 'not available',
+      lastUpdated: rainfallStatus.lastUpdated || reportStatus.lastUpdated || earthquakeLayerStatus.lastUpdated || 'not available',
+    };
+  }, [riskPolygons, selectedZone, reportClusters, earthquakes, rainfallFeed, rainfallStatus.lastUpdated, reportStatus.lastUpdated, earthquakeLayerStatus.lastUpdated]);
+
   return (
     <div
       className={`relative w-full rounded-xl overflow-hidden border border-[#1c2b3c] shadow-2xl transition-all ${isFullscreen ? 'fixed inset-0 z-50 rounded-none' : 'h-[440px] sm:h-[500px]'
@@ -777,6 +1119,9 @@ export const GisMapContainer: React.FC<GisMapContainerProps> = ({
     >
       {/* Main Leaflet GIS Map Container */}
       <div ref={mapContainerRef} className="w-full h-full z-0" />
+
+      <LiveRiskLayer map={mapInstance} visible={activeLayers.liveRiskZones ?? true} data={riskPolygons} />
+      <AdministrativeBoundaryLayer map={mapInstance} visible={activeLayers.administrativeBoundaries ?? true} data={boundaries} />
 
       {/* Transparent Canvas Overlay for ML Pattern Heatmap */}
       <canvas
@@ -965,20 +1310,61 @@ export const GisMapContainer: React.FC<GisMapContainerProps> = ({
         </div>
       )}
 
-      {/* Bottom Center: Institutional ML Susceptibility Heatmap Legend */}
-      {activeLayers.mlHeatmap && (
-        <div className="absolute bottom-3 left-1/2 transform -translate-x-1/2 z-20 bg-[#051424]/90 backdrop-blur-md border border-[#1c2b3c] rounded-lg px-3 py-1.5 text-[10px] font-mono shadow-xl flex items-center gap-3">
-          <span className="text-slate-400 font-bold uppercase">ML Risk Gradient:</span>
-          <div className="flex items-center gap-1">
-            <span className="text-cyan-300 font-bold">0.0 (Low)</span>
-            <div className="w-28 h-2 rounded bg-gradient-to-r from-cyan-400 via-emerald-400 via-amber-400 to-red-600 shadow-inner" />
-            <span className="text-red-400 font-bold">1.0 (Critical)</span>
-          </div>
+      <div className="absolute bottom-3 left-1/2 transform -translate-x-1/2 z-20 bg-[#051424]/90 backdrop-blur-md border border-[#1c2b3c] rounded-lg px-3 py-2 text-[10px] font-mono shadow-xl flex flex-col gap-2">
+        <div className="flex items-center gap-2 text-slate-300">
+          <span className="font-bold uppercase text-slate-400">Legend</span>
+          <span className="inline-flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-full bg-red-500" /> risk</span>
+          <span className="inline-flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-full bg-cyan-400" /> admin</span>
+          <span className="inline-flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-full bg-sky-400" /> rain</span>
+          <span className="inline-flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-full bg-orange-400" /> quake</span>
+          <span className="inline-flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-full bg-emerald-400" /> reports</span>
         </div>
-      )}
+        {(activeLayers.mlHeatmap || activeLayers.liveRiskZones !== false) && (
+          <div className="flex items-center gap-2 text-[9px] text-slate-300">
+            <span className="text-slate-400 font-bold uppercase">ML Risk Gradient:</span>
+            <span className="text-cyan-300 font-bold">Low</span>
+            <div className="w-20 h-2 rounded bg-gradient-to-r from-cyan-400 via-emerald-400 via-amber-400 to-red-600 shadow-inner" />
+            <span className="text-red-400 font-bold">Critical</span>
+          </div>
+        )}
+        <div className="flex flex-wrap items-center gap-2 text-[9px] text-slate-300">
+          {activeLayers.rainfall && (
+            <span className={rainfallStatus.error ? 'text-red-300' : rainfallStatus.loading ? 'text-amber-300' : 'text-cyan-300'}>
+              Rain: {rainfallStatus.loading ? 'refreshing...' : rainfallStatus.error ? 'error' : formatLastUpdated(rainfallStatus.lastUpdated)}
+            </span>
+          )}
+          {activeLayers.earthquakeEvents && (
+            <span className={earthquakeLayerStatus.error ? 'text-red-300' : earthquakeLayerStatus.loading ? 'text-amber-300' : 'text-orange-300'}>
+              Quake: {earthquakeLayerStatus.loading ? 'refreshing...' : earthquakeLayerStatus.error ? 'error' : formatLastUpdated(earthquakeLayerStatus.lastUpdated)}
+            </span>
+          )}
+          {activeLayers.citizenReports && (
+            <span className={reportStatus.error ? 'text-red-300' : reportStatus.loading ? 'text-amber-300' : 'text-emerald-300'}>
+              Reports: {reportStatus.loading ? 'refreshing...' : reportStatus.error ? 'error' : formatLastUpdated(reportStatus.lastUpdated)}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Bottom Left: GIS Selected Area HUD */}
+      <div className="absolute bottom-3 left-3 z-20 bg-[#051424]/90 backdrop-blur-md border border-[#1c2b3c] rounded px-2.5 py-2 text-[10px] font-mono text-slate-300 shadow-lg max-w-[260px] pointer-events-none">
+        <div className="flex items-center gap-1 text-cyan-300 uppercase tracking-wide font-bold">
+          <Crosshair className="w-3 h-3" />
+          <span>Selected Area</span>
+        </div>
+        <div className="mt-1 text-slate-100 font-semibold">{selectedAreaInfo.state} • {selectedAreaInfo.district}</div>
+        <div className="mt-1 flex flex-wrap gap-x-2 gap-y-1">
+          <span>Risk: <span className="text-amber-300">{selectedAreaInfo.riskLevel}</span></span>
+          <span>Score: <span className="text-amber-300">{Number.isFinite(selectedAreaInfo.riskScore) ? selectedAreaInfo.riskScore.toFixed(1) : '0.0'}</span></span>
+          <span>Rain: <span className="text-sky-300">{selectedAreaInfo.rainfall}</span></span>
+          <span>Reports: <span className="text-emerald-300">{selectedAreaInfo.reportCount}</span></span>
+          <span>Earthquakes: <span className="text-orange-300">{selectedAreaInfo.earthquakeContext}</span></span>
+          <span>Updated: <span className="text-cyan-300">{selectedAreaInfo.lastUpdated}</span></span>
+        </div>
+      </div>
 
       {/* Bottom Left: GPS Target Lock HUD Overlay */}
-      <div className="absolute bottom-3 left-3 z-20 bg-[#051424]/90 backdrop-blur-md border border-[#1c2b3c] rounded px-2.5 py-1 text-[10px] font-mono text-slate-300 flex items-center gap-3 pointer-events-none shadow-lg">
+      <div className="absolute bottom-3 left-[290px] z-20 bg-[#051424]/90 backdrop-blur-md border border-[#1c2b3c] rounded px-2.5 py-1 text-[10px] font-mono text-slate-300 flex items-center gap-3 pointer-events-none shadow-lg">
         <span className="flex items-center gap-1">
           <Crosshair className="w-3 h-3 text-cyan-400" />
           <span>TARGET: {selectedZone.coords}</span>
