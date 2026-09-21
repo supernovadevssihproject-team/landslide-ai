@@ -71,6 +71,30 @@
     padding: 0;
     overflow-x: hidden;
   }
+
+  :focus-visible {
+    outline: 2px solid var(--color-secondary);
+    outline-offset: 3px;
+  }
+}
+
+.app-shell {
+  background-image:
+    radial-gradient(circle at 12% 8%, rgb(35 184 160 / 0.08), transparent 28rem),
+    radial-gradient(circle at 88% 22%, rgb(42 156 201 / 0.08), transparent 32rem),
+    linear-gradient(180deg, #071827 0%, #051424 52%, #071522 100%);
+}
+
+.app-main {
+  position: relative;
+  z-index: 1;
+}
+
+.theme-light.app-shell {
+  background-image:
+    radial-gradient(circle at 12% 8%, rgb(16 185 129 / 0.08), transparent 28rem),
+    radial-gradient(circle at 88% 22%, rgb(14 165 233 / 0.08), transparent 32rem),
+    linear-gradient(180deg, #f8fbfc 0%, #f4f7fa 52%, #eef4f6 100%);
 }
 
 /* Custom scrollbars */
@@ -336,6 +360,13 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.001ms !important;
+  }
+
   .cine-animated {
     animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;

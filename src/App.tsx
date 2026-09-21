@@ -233,7 +233,7 @@ export default function App() {
 
   return (
     <div
-      className={`relative min-h-screen flex flex-col font-sans transition-colors duration-300 ${
+      className={`app-shell relative min-h-screen flex flex-col font-sans transition-colors duration-300 ${
         isDark
           ? 'bg-[#090e17] text-slate-100 selection:bg-emerald-900 selection:text-emerald-100'
           : 'bg-[#f4f7fa] text-slate-900 selection:bg-emerald-200 selection:text-emerald-900'
@@ -268,7 +268,7 @@ export default function App() {
       />
 
       {/* Main Operational Screen Views */}
-      <main className="flex-1 w-full">
+      <main className="app-main flex-1 w-full">
         <Suspense fallback={<ModuleLoadingFallback />}>
         {/* Screen 1: Home Landing Page */}
         {activeModule === 'home' && (

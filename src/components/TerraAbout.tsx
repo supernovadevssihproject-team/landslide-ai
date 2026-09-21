@@ -98,6 +98,28 @@ export const TerraAbout: React.FC<TerraAboutProps> = ({ onNavigate, theme }) => 
           </div>
         </div>
 
+        <div
+          className={`p-6 rounded-2xl border ${
+            isDark ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-slate-200 shadow-sm'
+          }`}
+        >
+          <h2 className="font-bold text-base mb-2">ONNX Field-Photo Classification</h2>
+          <p className={`text-xs leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+            TerraGuard includes an ONNX Runtime-based field-photo classification model for submitted field images. The current classifier supports four categories: landslide, roadBlockage, flood, and other. The classification provides visual decision-support context for field reports and should not be treated as official confirmation of a physical hazard.
+          </p>
+        </div>
+
+        <div
+          className={`p-6 rounded-2xl border ${
+            isDark ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-slate-200 shadow-sm'
+          }`}
+        >
+          <h2 className="font-bold text-base mb-2">Prototype Notice</h2>
+          <p className={`text-xs leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+            TerraGuard is developed as a prototype for the Smart India Hackathon (SIH). The machine-learning, GIS, field-reporting, alert, and decision-support features demonstrate the proposed solution and should not be treated as an official disaster-warning or evacuation system.
+          </p>
+        </div>
+
         {/* Direct Deep-Dive Launchers for the Sub-Modules */}
         <div
           className={`p-6 rounded-2xl border ${
