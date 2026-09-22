@@ -4,6 +4,11 @@ Test Suite for LandslideGuard Backend API
 
 import sys
 from pathlib import Path
+
+import numpy as np
+from PIL import Image
+from io import BytesIO
+
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from starlette.testclient import TestClient
@@ -198,6 +203,60 @@ def test_field_report_dataset_guard_rejects_invalid_split_coverage():
         text = str(exc)
         assert "roadBlockage" in text or "flood" in text or "Invalid field-report dataset split" in text
         print("[PASS] invalid field-report splits are rejected before training begins")
+
+
+def test_field_classifier_ignores_hazard_type_override_for_low_confidence(monkeypatch):
+    import backend.ml.field_report_classifier as classifier_module
+
+    class FakeSession:
+        def get_inputs(self):
+            return [type("Input", (), {"name": "input"})()]
+
+        def run(self, *_args, **_kwargs):
+            logits = np.array([[1.4, 0.0, -1.0, -0.5]], dtype=np.float32)
+            return [logits]
+
+    monkeypatch.setattr(classifier_module, "_SESSION", None)
+    monkeypatch.setattr(classifier_module, "MODEL_THRESHOLD", 0.7)
+    monkeypatch.setattr(classifier_module, "MODEL_CLASSES", ("landslide", "roadBlockage", "flood", "other"))
+    monkeypatch.setattr(classifier_module, "_ensure_v2_ready", lambda: FakeSession())
+
+    buffer = BytesIO()
+    Image.new("RGB", (32, 32), color=(128, 90, 50)).save(buffer, format="JPEG")
+    payload = buffer.getvalue()
+
+    result = classifier_module.classify_field_image("report-hazard-override", payload, hazard_type="landslide")
+
+    assert result["predicted_class"] == "other"
+    assert result["severity"] == "UNKNOWN"
+    assert result["confidence"] < 0.7
+    print("[PASS] hazard_type is ignored when the image evidence is below the conservative threshold")
+
+
+def test_field_classifier_preserves_explicit_rainfall_selection(monkeypatch):
+    import backend.ml.field_report_classifier as classifier_module
+
+    class FakeSession:
+        def get_inputs(self):
+            return [type("Input", (), {"name": "input"})()]
+
+        def run(self, *_args, **_kwargs):
+            logits = np.array([[4.0, 0.0, -1.0, -2.0]], dtype=np.float32)
+            return [logits]
+
+    monkeypatch.setattr(classifier_module, "_SESSION", None)
+    monkeypatch.setattr(classifier_module, "_ensure_v2_ready", lambda: FakeSession())
+
+    buffer = BytesIO()
+    Image.new("RGB", (32, 32), color=(128, 90, 50)).save(buffer, format="JPEG")
+    result = classifier_module.classify_field_image(
+        "report-rainfall-selection", buffer.getvalue(), hazard_type="rainfall"
+    )
+
+    assert result["hazard_type"] == "rainfall"
+    assert result["predicted_class"] == "landslide"
+    assert result["predicted_class"] != result["hazard_type"]
+    print("[PASS] explicit rainfall selection is preserved separately from a landslide visual prediction")
 
 
 def test_susceptibility_calculation():
@@ -524,6 +583,11 @@ def test_chatbot():
 
 if __name__ == "__main__":
     print("\nRunning LandslideGuard Backend API Tests...\n")
+    class DummyMonkeypatch:
+        def setattr(self, target, name, value):
+            setattr(target, name, value)
+
+    mp = DummyMonkeypatch()
     test_health()
     test_hazard_zones()
     test_susceptibility_calculation()
@@ -548,5 +612,6 @@ if __name__ == "__main__":
     test_chatbot()
     test_chatbot_all_language_responses()
     test_chatbot_navigation_commands()
-    print("\nAll 24 Backend API tests passed successfully!\n")
-
+    test_field_classifier_ignores_hazard_type_override_for_low_confidence(mp)
+    test_field_classifier_preserves_explicit_rainfall_selection(mp)
+    print("\nAll 26 Backend API tests passed successfully!\n")

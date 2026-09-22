@@ -36,6 +36,7 @@ export const FieldReportModal: React.FC<FieldReportModalProps> = ({
   const [fileError, setFileError] = useState<string | null>(null);
 
   const [locationName, setLocationName] = useState('NH-10 Near Dikchu Bend (Km 36.2)');
+  const [hazardType, setHazardType] = useState('landslide');
   const [description, setDescription] = useState(
     'Upper slope began slipping after intense rain. Boulders rolling down into drainage canal. Road cracking visible.'
   );
@@ -155,13 +156,13 @@ export const FieldReportModal: React.FC<FieldReportModalProps> = ({
         state: 'sikkim',
         latitude: 27.2388,
         longitude: 88.5012,
-        hazardType: 'landslide',
+        hazardType,
         reportId: `web-${Date.now()}`,
         imageFile: selectedFile,
       });
 
       const message =
-        `AI classification: ${result.predicted_class} | confidence ${result.confidence.toFixed(4)} | severity ${result.severity} | model ${result.model_version}`;
+        `AI visual classification: ${result.predicted_class} | confidence ${result.confidence.toFixed(4)} | severity ${result.severity} | model ${result.model_version}`;
 
       setIsSubmitting(false);
       onClose();
@@ -355,6 +356,28 @@ export const FieldReportModal: React.FC<FieldReportModalProps> = ({
               />
               <MapPin className="w-3.5 h-3.5 text-amber-500 absolute left-2.5 top-3" />
             </div>
+          </div>
+
+          {/* Hazard type */}
+          <div>
+            <label className="text-[11px] font-mono text-slate-400 block mb-1 uppercase font-semibold">
+              Hazard Type
+            </label>
+            <select
+              value={hazardType}
+              onChange={(e) => setHazardType(e.target.value)}
+              className={`w-full text-xs rounded-xl px-3 py-2.5 border outline-none font-medium transition-all ${
+                isDark
+                  ? 'bg-slate-800/80 text-white border-slate-700 focus:border-emerald-500'
+                  : 'bg-slate-50 text-slate-900 border-slate-300 focus:border-emerald-600'
+              }`}
+            >
+              <option value="landslide">Landslide</option>
+              <option value="roadBlockage">Road blockage</option>
+              <option value="flood">Flood</option>
+              <option value="rainfall">Rainfall</option>
+              <option value="other">Other</option>
+            </select>
           </div>
 
           {/* Description */}

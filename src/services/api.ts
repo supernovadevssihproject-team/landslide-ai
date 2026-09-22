@@ -327,6 +327,7 @@ export const LandslideApi = {
 
       return (await res.json()) as {
         report_id: string;
+        hazard_type: string | null;
         predicted_class: string;
         confidence: number;
         severity: string;

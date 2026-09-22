@@ -103,11 +103,6 @@ def classify_field_image(report_id: str, image_bytes: bytes, hazard_type: Option
     predicted_class = MODEL_CLASSES[predicted_index] if predicted_index < len(MODEL_CLASSES) else "other"
     confidence = float(probabilities[predicted_index])
 
-    hint = (hazard_type or "").strip()
-    if hint in MODEL_CLASSES:
-        predicted_class = hint
-        confidence = max(confidence, MODEL_THRESHOLD)
-
     if confidence < MODEL_THRESHOLD:
         predicted_class = "other"
         severity = "UNKNOWN"
@@ -116,6 +111,7 @@ def classify_field_image(report_id: str, image_bytes: bytes, hazard_type: Option
 
     return {
         "report_id": report_id,
+        "hazard_type": hazard_type,
         "predicted_class": predicted_class,
         "confidence": round(float(confidence), 4),
         "severity": severity,
