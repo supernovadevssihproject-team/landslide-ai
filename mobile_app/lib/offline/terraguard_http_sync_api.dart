@@ -69,7 +69,7 @@ class TerraGuardHttpSyncApi implements TerraGuardSyncApi {
     final severity = parsed['severity']?.toString();
     final modelVersion = parsed['model_version']?.toString();
     final processedAt = parsed['processed_at']?.toString();
-    final validPrediction = const ['landslide', 'roadBlockage', 'flood', 'other']
+    final validPrediction = const ['landslide', 'roadBlockage', 'flood', 'rainfall', 'other']
         .contains(predictedClass);
     if (reportId == null || predictedClass == null || confidence is! num || severity == null || modelVersion == null || processedAt == null || !validPrediction) {
       throw const FormatException('Malformed classification response.');
@@ -81,9 +81,11 @@ class TerraGuardHttpSyncApi implements TerraGuardSyncApi {
     final request = http.MultipartRequest('POST', reportsEndpoint);
     _auth(request.headers, token);
     request.headers['Accept'] = 'application/json';
-    request.fields.addAll({'location': location, 'subDivision': 'Mobile Field Report', 'state': report.state ?? 'sikkim',
-      'description': desc, 'latitude': report.latitude.toString(), 'longitude': report.longitude.toString(), 'deviceId': report.deviceId,
-      'coordinates': coordinates, if (report.zoneId != null) 'zone_id': report.zoneId!});
+    request.fields.addAll({'report_id': report.reportId, 'hazard_type': report.hazardType.name, 'location': location,
+      'subDivision': 'Mobile Field Report', 'state': report.state ?? 'sikkim', 'description': desc,
+      'latitude': report.latitude.toString(), 'longitude': report.longitude.toString(), 'deviceId': report.deviceId,
+      'coordinates': coordinates, 'timestamp': report.capturedAt.toUtc().toIso8601String(),
+      if (report.zoneId != null) 'zone_id': report.zoneId!});
     request.files.add(await http.MultipartFile.fromPath('file', report.imagePath!));
     final response = await http.Response.fromStream(await request.send());
     _ensureSuccess(response, 'Multipart report upload');
@@ -93,9 +95,11 @@ class TerraGuardHttpSyncApi implements TerraGuardSyncApi {
   Future<http.Response> _submitJson(OfflineHazardReport report, String? token, String location, String coordinates, String desc) async {
     final headers = <String, String>{'Accept': 'application/json', 'Content-Type': 'application/json'};
     _auth(headers, token);
-    final response = await client.post(reportsEndpoint, headers: headers, body: jsonEncode({'location': location, 'subDivision': 'Mobile Field Report',
-      'state': report.state ?? 'sikkim', 'description': desc, 'latitude': report.latitude, 'longitude': report.longitude, 'deviceId': report.deviceId,
-      'coordinates': coordinates, if (report.zoneId != null) 'zone_id': report.zoneId}));
+    final response = await client.post(reportsEndpoint, headers: headers, body: jsonEncode({'report_id': report.reportId,
+      'hazard_type': report.hazardType.name, 'location': location, 'subDivision': 'Mobile Field Report',
+      'state': report.state ?? 'sikkim', 'description': desc, 'latitude': report.latitude, 'longitude': report.longitude,
+      'deviceId': report.deviceId, 'coordinates': coordinates, 'timestamp': report.capturedAt.toUtc().toIso8601String(),
+      if (report.zoneId != null) 'zone_id': report.zoneId}));
     _ensureSuccess(response, 'Report upload');
     return response;
   }

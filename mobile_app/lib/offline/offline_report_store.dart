@@ -6,12 +6,15 @@ import 'offline_hazard_report.dart';
 /// Single local database for reports and offline operational caches.
 /// Images remain in the filesystem; SQLite stores their paths and metadata.
 class OfflineReportStore {
+  final String? dbPath;
   Database? _database;
+
+  OfflineReportStore({this.dbPath});
 
   Future<Database> get database async {
     if (_database != null) return _database!;
     _database = await openDatabase(
-      path.join(await getDatabasesPath(), 'terraguard_offline.db'),
+      dbPath ?? path.join(await getDatabasesPath(), 'terraguard_offline.db'),
       version: 6,
       onCreate: (db, _) async {
         await db.execute('''CREATE TABLE hazard_reports (

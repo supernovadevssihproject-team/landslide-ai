@@ -4,7 +4,7 @@ import 'terraguard_database_models.dart';
 
 enum ReportSyncStatus { draft, pendingSync, syncing, uploading, synced, processing, analyzed, syncFailed }
 enum ClassificationStatus { notClassified, classificationPending, classified, classificationFailed, classificationUnavailable }
-enum HazardType { landslide, roadBlockage, flood, other }
+enum HazardType { rainfall, landslide, roadBlockage, flood, other }
 
 class OfflineHazardReport {
   final String reportId;
@@ -171,7 +171,7 @@ class OfflineHazardReport {
         : null;
     return OfflineHazardReport(
       reportId: map['report_id']! as String,
-      hazardType: HazardType.values.byName(map['hazard_type']! as String),
+      hazardType: _hazardTypeFromDb(map['hazard_type'] as String?),
       description: map['description'] as String?,
       imagePath: map['image_path'] as String?,
       latitude: (map['latitude'] as num).toDouble(),
@@ -203,17 +203,26 @@ class OfflineHazardReport {
     );
   }
 
+  static HazardType _hazardTypeFromDb(String? raw) {
+    if (raw == null || raw.isEmpty) return HazardType.landslide;
+    final lower = raw.toLowerCase();
+    for (final val in HazardType.values) {
+      if (val.name.toLowerCase() == lower) return val;
+    }
+    return HazardType.landslide;
+  }
+
   static ClassificationStatus _classificationStatusFromDb(String? status) {
-    switch ((status ?? 'CLASSIFICATION_PENDING').toUpperCase()) {
-      case 'NOT_CLASSIFIED':
+    switch ((status ?? 'CLASSIFICATION_PENDING').replaceAll('_', '').toUpperCase()) {
+      case 'NOTCLASSIFIED':
         return ClassificationStatus.notClassified;
-      case 'CLASSIFICATION_PENDING':
+      case 'CLASSIFICATIONPENDING':
         return ClassificationStatus.classificationPending;
       case 'CLASSIFIED':
         return ClassificationStatus.classified;
-      case 'CLASSIFICATION_FAILED':
+      case 'CLASSIFICATIONFAILED':
         return ClassificationStatus.classificationFailed;
-      case 'CLASSIFICATION_UNAVAILABLE':
+      case 'CLASSIFICATIONUNAVAILABLE':
         return ClassificationStatus.classificationUnavailable;
       default:
         return ClassificationStatus.classificationPending;

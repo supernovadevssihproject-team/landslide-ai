@@ -138,11 +138,11 @@ class OfflineReportsPage extends StatelessWidget {
                 final statusColor = isSynced ? TerraTheme.primary : TerraTheme.warning;
                 final aiStatus = report.classificationStatus;
                 final aiLabel = switch (aiStatus) {
-                  ClassificationStatus.classified => 'AI: ${report.predictedClass ?? 'CLASSIFIED'}',
-                  ClassificationStatus.classificationPending => 'AI: PENDING',
-                  ClassificationStatus.classificationUnavailable => 'AI: UNAVAILABLE',
-                  ClassificationStatus.classificationFailed => 'AI: FAILED',
-                  _ => 'AI: PENDING',
+                  ClassificationStatus.classified => 'AI visual classification: ${report.predictedClass ?? 'CLASSIFIED'}',
+                  ClassificationStatus.classificationPending => 'AI visual classification: PENDING',
+                  ClassificationStatus.classificationUnavailable => 'AI visual classification: UNAVAILABLE',
+                  ClassificationStatus.classificationFailed => 'AI visual classification: FAILED',
+                  _ => 'AI visual classification: PENDING',
                 };
 
                 return Container(
@@ -167,11 +167,11 @@ class OfflineReportsPage extends StatelessWidget {
                                 children: [
                                   Expanded(
                                     child: Text(
-                                      report.hazardType.name.toUpperCase(),
+                                      'Selected hazard: ${report.hazardType.name.toUpperCase()}',
                                       style: const TextStyle(
                                         color: TerraTheme.textPrimary,
                                         fontWeight: FontWeight.bold,
-                                        fontSize: 15,
+                                        fontSize: 14,
                                         letterSpacing: 0.3,
                                       ),
                                     ),
@@ -223,16 +223,16 @@ class OfflineReportsPage extends StatelessWidget {
                                     '${report.latitude.toStringAsFixed(4)}°, ${report.longitude.toStringAsFixed(4)}°',
                                     style: const TextStyle(color: TerraTheme.secondary, fontSize: 11, fontFamily: 'monospace'),
                                   ),
-                                  const Spacer(),
-                                  Text(
-                                    aiLabel,
-                                    style: TextStyle(
-                                      color: aiStatus == ClassificationStatus.classified ? TerraTheme.primary : TerraTheme.warning,
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
                                 ],
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                aiLabel,
+                                style: TextStyle(
+                                  color: aiStatus == ClassificationStatus.classified ? TerraTheme.primary : TerraTheme.warning,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                             ],
                           ),
