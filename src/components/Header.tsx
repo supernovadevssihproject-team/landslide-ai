@@ -105,13 +105,13 @@ export const Header: React.FC<HeaderProps> = ({
       {/* Main Command Bar */}
       <div className="main-command-bar app-wide-container w-full px-3 sm:px-6 py-2.5 flex items-center justify-between gap-2 sm:gap-4">
         {/* Emblem & Branding */}
-        <div className="flex items-center gap-2.5 sm:gap-3.5">
+        <div className="header-brand flex min-w-0 items-center gap-2.5 sm:gap-3.5">
           <img
             src={ASSET_URLS.emblem}
             alt="National Emblem of India"
             className="w-8 h-8 sm:w-10 sm:h-10 object-contain brightness-110 drop-shadow flex-shrink-0"
           />
-          <div className="flex flex-col">
+          <div className="min-w-0 flex flex-col">
             <div className="flex items-center gap-2">
               <h1 className="text-base sm:text-lg font-black tracking-wide leading-tight flex items-center gap-1.5">
                 <span className="text-emerald-500">TerraGuard</span>
@@ -120,7 +120,7 @@ export const Header: React.FC<HeaderProps> = ({
                 </span>
               </h1>
             </div>
-            <p className={`text-[10px] sm:text-[11px] font-medium leading-none tracking-normal ${
+            <p className={`header-tagline max-w-[15rem] truncate text-[10px] sm:text-[11px] font-medium leading-none tracking-normal ${
               isDark ? 'text-slate-400' : 'text-slate-500'
             }`}>
               {t('header.govtLabel')}
@@ -129,7 +129,7 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* Center / Right controls */}
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="header-controls flex items-center gap-2 sm:gap-3">
           {/* State Filter Selector */}
           <div className="relative hidden lg:block">
             <select
@@ -209,12 +209,12 @@ export const Header: React.FC<HeaderProps> = ({
             {theme === 'light' ? (
               <>
                 <Sun className="w-3.5 h-3.5 text-amber-600 animate-spin-slow" />
-                <span className="text-[11px] font-mono tracking-tight font-bold text-amber-900">{t('header.lightMode')}</span>
+                <span className="header-control-label text-[11px] font-mono tracking-tight font-bold text-amber-900">{t('header.lightMode')}</span>
               </>
             ) : (
               <>
                 <Moon className="w-3.5 h-3.5 text-cyan-400" />
-                <span className="text-[11px] font-mono tracking-tight text-slate-200">{t('header.darkMode')}</span>
+                <span className="header-control-label text-[11px] font-mono tracking-tight text-slate-200">{t('header.darkMode')}</span>
               </>
             )}
           </button>

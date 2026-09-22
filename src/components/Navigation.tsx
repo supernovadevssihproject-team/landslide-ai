@@ -191,7 +191,7 @@ export const Navigation: React.FC<NavigationProps> = ({
                 event.preventDefault();
               }
             }}
-            className="min-w-0 flex-1 overflow-x-auto no-scrollbar scroll-smooth"
+            className="navigation-scroll min-w-0 flex-1 overflow-x-auto no-scrollbar scroll-smooth"
           >
             <div className="flex w-max items-center gap-1.5 sm:gap-2">
             {primaryModules.map((m) => {
@@ -211,7 +211,7 @@ export const Navigation: React.FC<NavigationProps> = ({
                   key={m.id}
                   ref={isActive ? activeButtonRef : undefined}
                   onClick={() => onChangeModule(m.id)}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all relative cursor-pointer whitespace-nowrap border ${
+                  className={`navigation-item flex shrink-0 items-center gap-2 px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all relative cursor-pointer whitespace-nowrap border ${
                     isActive
                       ? 'bg-emerald-600 text-white border-emerald-600 shadow-md shadow-emerald-600/20'
                       : isDark
@@ -224,7 +224,7 @@ export const Navigation: React.FC<NavigationProps> = ({
 
                   {m.badge && (
                     <span
-                      className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full border ${
+                      className={`navigation-badge text-[10px] font-mono px-1.5 py-0.2 rounded-full border ${
                         isActive ? 'bg-white/20 text-white border-white/30' : m.badgeColor
                       }`}
                     >

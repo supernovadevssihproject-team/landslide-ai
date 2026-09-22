@@ -62,6 +62,7 @@
 @layer base {
   * {
     border-color: var(--color-outline-variant);
+    box-sizing: border-box;
   }
   body {
     font-family: 'Public Sans', sans-serif;
@@ -126,6 +127,142 @@
 }
 .pt-safe {
   padding-top: env(safe-area-inset-top, 0px);
+}
+
+@media (max-width: 639px) {
+  header {
+    position: relative;
+  }
+
+  nav {
+    top: 0;
+  }
+
+  .main-command-bar {
+    flex-wrap: wrap;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+
+  .header-brand {
+    flex: 1 1 auto;
+  }
+
+  .header-controls {
+    flex: 0 1 auto;
+    justify-content: flex-end;
+  }
+
+  .header-tagline {
+    max-width: 11rem;
+    overflow: visible;
+    white-space: normal;
+    line-height: 1.2;
+    text-overflow: clip;
+  }
+
+  .home-hero,
+  .home-hero-content {
+    min-height: 440px;
+  }
+
+  .home-hero-content {
+    justify-content: flex-start;
+    padding: 1.75rem 1rem 2rem;
+  }
+
+  .home-hero-title {
+    max-width: 20rem;
+    font-size: clamp(2.25rem, 11vw, 3.25rem);
+  }
+
+  .home-hero-description {
+    max-width: 31rem;
+    margin-top: 0.9rem;
+    font-size: 0.875rem;
+    line-height: 1.5;
+  }
+
+  .home-risk-search {
+    margin-top: 1.25rem;
+  }
+
+  .home-risk-search > div > div {
+    flex-wrap: wrap;
+  }
+
+  .home-risk-search input {
+    min-width: 0;
+    flex: 1 1 9rem;
+  }
+
+  .home-risk-search button {
+    flex: 1 1 100%;
+    margin-top: 0.25rem;
+  }
+
+  .home-risk-submit {
+    min-width: 7.25rem;
+  }
+
+  .navigation-scroll {
+    scroll-padding-inline: 0.25rem;
+  }
+
+  .navigation-badge {
+    display: none;
+  }
+
+  .chat-launcher {
+    margin-bottom: 5.5rem;
+  }
+
+  .earthquake-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (min-width: 640px) and (max-width: 1024px) {
+  header {
+    position: relative;
+  }
+
+  nav {
+    top: 0;
+  }
+
+  .main-command-bar {
+    flex-wrap: wrap;
+  }
+
+  .header-brand {
+    flex: 1 1 auto;
+  }
+
+  .header-controls {
+    flex: 1 1 100%;
+    justify-content: flex-end;
+  }
+}
+
+@media (max-width: 479px) {
+  .header-control-label {
+    display: none;
+  }
+
+  .main-command-bar {
+    gap: 0.5rem;
+  }
+
+  .header-controls {
+    gap: 0.375rem;
+  }
+
+  .header-controls > button,
+  .header-controls > div > div {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
 }
 
 /* ========================================================
@@ -291,7 +428,7 @@
    Portrait / mobile: fit the whole 16:9 scene so nothing is cropped,
    with an ambient blurred fill behind it. */
 .scene-stage {
-  width: max(100vw, calc(100vh * 16 / 9));
+  width: max(100%, calc(100vh * 16 / 9));
   height: max(100vh, calc(100vw * 9 / 16));
 }
 .scene-ambient {
@@ -301,11 +438,13 @@
    with an ambient blurred fill behind it so it still fills the screen. */
 @media (orientation: portrait) {
   .scene-stage {
-    width: 100vw;
-    height: calc(100vw * 9 / 16);
+    width: 100%;
+    height: calc(100% * 9 / 16);
   }
   .scene-ambient {
     display: block;
+    max-width: 100%;
+    transform: none !important;
   }
 }
 

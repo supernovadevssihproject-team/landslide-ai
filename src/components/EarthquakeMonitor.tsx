@@ -235,11 +235,11 @@ export const EarthquakeMonitor: React.FC<EarthquakeMonitorProps> = ({ selectedZo
       </section>
 
       {/* Primary KPI Grid: High Precision Ground Motion & Hazard Metrics */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="earthquake-kpi-grid grid grid-cols-2 gap-3 sm:grid-cols-4">
         {/* Metric 1: Peak Ground Acceleration */}
         <div className={`rounded-xl border p-4 transition-all hover:border-cyan-500/40 ${panelClass}`}>
           <div className="flex items-center justify-between">
-            <span className={`text-[10px] font-bold uppercase tracking-wider ${mutedClass}`}>Max Est. PGA</span>
+            <span className={`min-w-0 break-words text-[10px] font-bold uppercase tracking-wider ${mutedClass}`}>Max Est. PGA</span>
             <Gauge className="h-4 w-4 text-cyan-400" />
           </div>
           <div className="mt-2 flex items-baseline gap-1.5">
@@ -256,18 +256,18 @@ export const EarthquakeMonitor: React.FC<EarthquakeMonitorProps> = ({ selectedZo
         {/* Metric 2: Estimated MMI */}
         <div className={`rounded-xl border p-4 transition-all hover:border-orange-500/40 ${panelClass}`}>
           <div className="flex items-center justify-between">
-            <span className={`text-[10px] font-bold uppercase tracking-wider ${mutedClass}`}>Max Instrumental MMI</span>
+            <span className={`min-w-0 break-words text-[10px] font-bold uppercase tracking-wider ${mutedClass}`}>Max Instrumental MMI</span>
             <Waves className="h-4 w-4 text-orange-400" />
           </div>
           <div className="mt-2 flex items-baseline gap-2">
             <span className="text-2xl font-black font-mono text-orange-400">
               {riskAssessment.maxMmi}
             </span>
-            <span className="text-xs font-semibold text-slate-300 truncate">
+            <span className="min-w-0 break-words text-xs font-semibold text-slate-300">
               {riskAssessment.dominantMetrics?.estimatedMmi.label ?? 'Imperceptible'}
             </span>
           </div>
-          <div className="mt-1 text-[10px] font-mono text-slate-400 truncate">
+            <div className="mt-1 break-words text-[10px] font-mono text-slate-400">
             {riskAssessment.dominantEvent ? `${riskAssessment.dominantEvent.location}` : 'No recent high-impact events'}
           </div>
         </div>
@@ -275,7 +275,7 @@ export const EarthquakeMonitor: React.FC<EarthquakeMonitorProps> = ({ selectedZo
         {/* Metric 3: Composite Trigger Score */}
         <div className={`rounded-xl border p-4 transition-all ${panelClass} ${riskAssessment.triggerLevel === 'CRITICAL' ? 'border-red-500/50 bg-red-950/20' : riskAssessment.triggerLevel === 'HIGH' ? 'border-orange-500/40' : ''}`}>
           <div className="flex items-center justify-between">
-            <span className={`text-[10px] font-bold uppercase tracking-wider ${mutedClass}`}>Seismic Trigger Level</span>
+            <span className={`min-w-0 break-words text-[10px] font-bold uppercase tracking-wider ${mutedClass}`}>Seismic Trigger Level</span>
             <ShieldAlert className={`h-4 w-4 ${riskAssessment.triggerLevel === 'CRITICAL' ? 'text-red-400 animate-pulse' : riskAssessment.triggerLevel === 'HIGH' ? 'text-orange-400' : 'text-emerald-400'}`} />
           </div>
           <div className="mt-2 flex items-baseline gap-2">
@@ -313,7 +313,7 @@ export const EarthquakeMonitor: React.FC<EarthquakeMonitorProps> = ({ selectedZo
       <div className={`p-4 rounded-xl border flex flex-wrap items-center justify-between gap-3 ${panelClass}`}>
         <div className="flex flex-wrap items-center gap-3">
           {/* Location Filter Input */}
-          <div className="relative min-w-[200px]">
+          <div className="relative min-w-0 flex-1 basis-full sm:basis-auto sm:min-w-[200px]">
             <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"

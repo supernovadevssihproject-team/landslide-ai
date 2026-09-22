@@ -1620,11 +1620,11 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
   };
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 font-sans sm:bottom-5 sm:right-5">
+    <div className="chat-widget-shell fixed bottom-4 right-3 z-50 font-sans sm:bottom-5 sm:right-5">
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className={`mb-20 flex items-center gap-2.5 px-4 py-3 rounded-full shadow-2xl border transition-all duration-300 hover:scale-105 sm:mb-24 ${
+          className={`chat-launcher mb-20 flex items-center gap-2 rounded-full px-3 py-2.5 shadow-2xl border transition-all duration-300 hover:scale-105 sm:mb-24 sm:gap-2.5 sm:px-4 sm:py-3 ${
             isDark
               ? 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-400/30 shadow-emerald-950/50'
               : 'bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-500 shadow-emerald-200'
@@ -1637,7 +1637,7 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
               <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-200"></span>
             </span>
           </div>
-          <span className="font-medium text-sm tracking-wide">TerraGuard AI Chat</span>
+          <span className="text-xs font-medium tracking-wide sm:text-sm">TerraGuard AI Chat</span>
         </button>
       )}
 

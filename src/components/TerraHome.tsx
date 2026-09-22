@@ -76,7 +76,7 @@ export const TerraHome: React.FC<TerraHomeProps> = React.memo(({
   return (
     <div className="space-y-8 pb-16 font-sans">
       {/* Hero Section */}
-      <div className="relative min-h-[560px] overflow-hidden rounded-3xl border border-emerald-500/20 shadow-2xl shadow-black/30 sm:min-h-[620px]">
+      <div className="home-hero relative min-h-[560px] overflow-hidden rounded-3xl border border-emerald-500/20 shadow-2xl shadow-black/30 sm:min-h-[620px]">
         <div
           className={`absolute inset-0 pointer-events-none ${
             theme === 'light'
@@ -87,24 +87,24 @@ export const TerraHome: React.FC<TerraHomeProps> = React.memo(({
         <div className="absolute inset-0 bg-gradient-to-t from-[#030d18]/85 via-transparent to-[#051424]/20 pointer-events-none" />
 
         {/* Content Container */}
-        <div className="relative z-10 flex min-h-[560px] max-w-5xl flex-col justify-center px-5 py-12 text-white sm:min-h-[620px] sm:px-12 sm:py-20">
+        <div className="home-hero-content relative z-10 flex min-h-[560px] max-w-5xl flex-col justify-center px-5 py-12 text-white sm:min-h-[620px] sm:px-12 sm:py-20">
           <div className="mb-5 inline-flex w-fit items-center gap-2 rounded-full border border-emerald-400/40 bg-emerald-500/15 px-3 py-1 text-xs font-mono font-bold uppercase tracking-wider text-emerald-300 shadow-lg shadow-emerald-950/20">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
             <span className="sr-only">{t('home.liveStatus')}</span>
             {t('home.liveMonitoring')}
           </div>
 
-          <h1 className="max-w-3xl text-4xl font-black leading-[0.98] tracking-tight sm:text-6xl lg:text-7xl">
+          <h1 className="home-hero-title max-w-3xl text-4xl font-black leading-[0.98] tracking-tight sm:text-6xl lg:text-7xl">
             {t('home.heroTitlePart1')} <br />
             <span className="text-emerald-400">{t('home.heroTitlePart2')}</span>
           </h1>
 
-          <p className="mt-5 max-w-2xl text-base leading-relaxed text-slate-200 sm:text-lg">
+          <p className="home-hero-description mt-5 max-w-2xl text-base leading-relaxed text-slate-200 sm:text-lg">
             {t('home.heroDescription')}
           </p>
 
           {/* Search Bar */}
-          <form onSubmit={handleSearchSubmit} className="relative mt-8 max-w-2xl">
+          <form onSubmit={handleSearchSubmit} className="home-risk-search relative mt-8 max-w-2xl">
             <div className="rounded-2xl border border-white/20 bg-[#051424]/55 p-2 shadow-2xl shadow-black/30 backdrop-blur-xl transition-all focus-within:border-emerald-400/80 focus-within:ring-2 focus-within:ring-emerald-400/20">
               <div className="flex items-center">
                 <div className="pl-3 pr-2 text-emerald-400">
@@ -124,7 +124,7 @@ export const TerraHome: React.FC<TerraHomeProps> = React.memo(({
                 />
                 <button
                   type="submit"
-                  className="flex-shrink-0 cursor-pointer rounded-xl bg-emerald-500 px-4 py-2.5 text-xs font-bold tracking-wide text-slate-950 shadow-lg shadow-emerald-950/40 transition-all hover:bg-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-300 sm:px-6 sm:py-3 sm:text-sm"
+                  className="home-risk-submit flex-shrink-0 cursor-pointer whitespace-nowrap rounded-xl bg-emerald-500 px-4 py-2.5 text-xs font-bold tracking-wide text-slate-950 shadow-lg shadow-emerald-950/40 transition-all hover:bg-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-300 sm:px-6 sm:py-3 sm:text-sm"
                 >
                   {t('home.checkRisk')}
                 </button>
