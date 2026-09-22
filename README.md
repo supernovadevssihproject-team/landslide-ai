@@ -4,11 +4,14 @@
 
 **Smart India Hackathon 2026 · Problem Statement 26001**
 
-**Repository:** https://github.com/supernovadevssihproject-team/landslide-ai
-
 TerraGuard is an integrated disaster-intelligence prototype for landslide-risk monitoring and field intelligence in the North Eastern Region of India. It combines geospatial risk assessment, terrain and environmental analysis, weather and seismic context, field reporting, AI-assisted field-image classification, offline-first mobile reporting, alerts, emergency workflows, and TerraBot decision support.
 
 ---
+## 🔗 Project Links
+
+- 🌐 **Live Demo:** https://terraguard-ner.duckdns.org/
+- 📦 **Submission Files & APK:** https://drive.google.com/drive/folders/1DpWlCq8kI3R_jSXFXnF2aenznaKuZNT2?usp=sharing
+- 💻 **GitHub Repository:** https://github.com/supernovadevssihproject-team/landslide-ai
 
 ## Table of Contents
 
