@@ -522,7 +522,7 @@ class _EmergencySmsSectionState extends State<_EmergencySmsSection> {
     });
 
     try {
-      final url = Uri.parse('${AppConfig.apiBaseUrl}/api/alerts/sms-broadcast');
+      final url = AppConfig.apiUri('alerts/sms-broadcast');
       final res = await http.post(
         url,
         headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},

@@ -16,4 +16,23 @@ class AppConfig {
     }
     return 'http://localhost:8001';
   }
+
+  static Uri buildApiUri(String baseUrl, String endpoint, {Map<String, String>? queryParameters}) {
+    final normalizedBase = baseUrl.trim().replaceAll(RegExp(r'/+$'), '');
+    final normalizedEndpoint = endpoint.trim().replaceAll(RegExp(r'^/+'), '');
+    final endpointWithoutApiPrefix = normalizedEndpoint.startsWith('api/')
+        ? normalizedEndpoint.substring('api/'.length)
+        : normalizedEndpoint == 'api'
+            ? ''
+            : normalizedEndpoint;
+
+    final baseHasApiRoot = normalizedBase.toLowerCase().endsWith('/api');
+    final pathRoot = baseHasApiRoot ? normalizedBase : '$normalizedBase/api';
+    final path = endpointWithoutApiPrefix.isEmpty ? pathRoot : '$pathRoot/$endpointWithoutApiPrefix';
+
+    return Uri.parse(path).replace(queryParameters: queryParameters);
+  }
+
+  static Uri apiUri(String endpoint, {Map<String, String>? queryParameters}) =>
+      buildApiUri(apiBaseUrl, endpoint, queryParameters: queryParameters);
 }

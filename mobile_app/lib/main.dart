@@ -24,7 +24,7 @@ void main() async {
   final baseUrl = AppConfig.apiBaseUrl;
   final services = TerraGuardOfflineServices(
     api: TerraGuardHttpSyncApi(
-      reportsEndpoint: Uri.parse('$baseUrl/api/reports/submit'),
+      reportsEndpoint: AppConfig.apiUri('reports/submit'),
     ),
   );
   await services.start();

@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:http/http.dart' as http;
 
+import 'config/app_config.dart';
 import 'offline/offline_report_store.dart';
 
 class OperationalState {
@@ -191,12 +192,15 @@ class OperationalRiskApi {
   })  : client = client ?? http.Client(),
         store = store ?? OfflineReportStore();
 
+  Uri _apiUri(String endpoint, {Map<String, String>? queryParameters}) =>
+      AppConfig.buildApiUri(baseUri.toString(), endpoint, queryParameters: queryParameters);
+
   Future<List<OperationalZone>> getZones(String state) async {
     if (await _isOffline()) {
       return _offlineZones(state);
     }
 
-    final uri = baseUri.replace(path: '${baseUri.path}/api/zones', queryParameters: {'state': state});
+    final uri = _apiUri('zones', queryParameters: {'state': state});
     final response = await _get(uri);
     final decoded = jsonDecode(response.body);
     if (decoded is! List) throw const OperationalRiskApiException('The location response was invalid.');
@@ -213,7 +217,7 @@ class OperationalRiskApi {
       return cachedRisk ?? RiskEvaluation.unavailable(zone);
     }
 
-    final uri = baseUri.replace(path: '${baseUri.path}/api/ml/location-risk');
+    final uri = _apiUri('ml/location-risk');
     try {
       final response = await client
           .post(

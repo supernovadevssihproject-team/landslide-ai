@@ -4,6 +4,7 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:terraguard_mobile/config/app_config.dart';
 import 'package:terraguard_mobile/main.dart';
 import 'package:terraguard_mobile/offline/offline_hazard_report.dart';
 import 'package:terraguard_mobile/offline/terraguard_database_models.dart';
@@ -28,6 +29,25 @@ void main() {
     ));
     await tester.pump();
     expect(find.byType(TerraGuardApp), findsOneWidget);
+  });
+
+  test('API URIs normalize to a single /api segment', () {
+    expect(
+      AppConfig.buildApiUri('https://terraguard-ner.duckdns.org/api', 'zones').toString(),
+      'https://terraguard-ner.duckdns.org/api/zones',
+    );
+    expect(
+      AppConfig.buildApiUri('https://terraguard-ner.duckdns.org/api', 'ml/location-risk').toString(),
+      'https://terraguard-ner.duckdns.org/api/ml/location-risk',
+    );
+    expect(
+      AppConfig.buildApiUri('http://10.0.2.2:8001', 'api/zones').toString(),
+      'http://10.0.2.2:8001/api/zones',
+    );
+    expect(
+      AppConfig.buildApiUri('http://10.0.2.2:8001', 'api/ml/location-risk').toString(),
+      'http://10.0.2.2:8001/api/ml/location-risk',
+    );
   });
 
   test('offline mode returns cached data instead of calling the backend', () async {
