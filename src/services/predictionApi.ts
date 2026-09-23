@@ -75,7 +75,7 @@ export const REAL_SOIL_OPTIONS: SoilOption[] = Object.keys(VERIFIED_SOIL_MAP).ma
 export async function predictLandslideRisk(
   input: PredictionRequest
 ): Promise<PredictionResponse> {
-  const url = `${BASE_URL}/predict`;
+  const url = `${BASE_URL}/api/ml/predict`;
 
   const response = await fetch(url, {
     method: 'POST',
